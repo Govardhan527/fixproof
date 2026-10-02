@@ -26,7 +26,9 @@ Tick an item only when its done-criteria pass and the evidence is stored or link
             ("forbidden attribution matched: (?im)^co-authored-by:") and the subject "Initial
             setup" ("subject must look like 'feat(M2): short summary'") were both rejected with
             "commit rejected:" and exit 1, and no commit was created.
-- [ ] M0 committed on `main`; a clean clone passes `make check`.
+- [x] M0 committed (2026-10-02): `31007da`..this commit on `main`. A clean clone passes
+      `make check` (43 tests; the 44th runs only locally), and `scripts/check_commits.py`
+      passes on `origin/main..HEAD`.
 - [ ] CI green on GitHub (after the owner says to push).
 
 ## M1 (week 2)
@@ -76,13 +78,20 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M0.
+- **Date:** 2026-10-02. **Current milestone:** M0, built and committed locally; not pushed.
 - **Changed:** M0 skeleton (pyproject, uv.lock, Makefile, CI workflow with actions pinned by SHA,
   commit-msg hook + `scripts/check_commits.py` + shared `scripts/commit_rules.py`,
   `scripts/validate_outputs.py`, PR template), ADR-0001 to ADR-0004, SPEC_NOTES from primary
-  sources, PARKED.
-- **Tests:** `make check` green: 43 unit tests, coverage 100% of `src/`, 0 example files.
-- **Waiting on the owner:** git identity for this repository (not set; commits wait for it);
-  approval of ADR-0002 to ADR-0004; answers to OQ-1 to OQ-6 (SPEC_NOTES §14).
-- **Next step:** show the hook rejecting a commit in this repo, commit M0 in slices, then wait
-  for the owner to say push.
+  sources, PARKED. The repository's git identity was set by the owner's request.
+- **Commits:** `31007da` skeleton, `cf3d384` commit rules, `27d9ef0` output validator, `82a4df0`
+  Makefile, `614dfd4` CI, `60eaf64` docs, then this status commit. `main` is ahead of
+  `origin/main` (`ad1835e`).
+- **Tests:** `make check` green: 44 tests locally (43 in a clean clone), coverage 100% of `src/`,
+  0 example files. `make release-dry` builds the wheel, sdist and SBOM. Hook rejection shown in
+  this repo.
+- **Waiting on the owner:**
+  1. Say "push"; then watch the CI run and record its id here (closes the last M0 item).
+  2. Approve ADR-0002 to ADR-0004 (`docs/DECISIONS.md`).
+  3. Answer OQ-1 to OQ-6 (`docs/SPEC_NOTES.md` §14). OQ-1, OQ-2 and OQ-6 block M1.
+- **Next steps, in order:** push on approval and record CI; accept the ADRs the owner approves;
+  on the M1 answers, propose the M1 data contracts as an ADR, then build M1.

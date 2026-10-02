@@ -12,3 +12,7 @@ waits.
   its dependencies. pip-audit is the planned tool, so this waits for an owner decision.
 - **2026-10-02, M0 research: CycloneDX 1.7 output.** 1.7.2 is the latest CycloneDX release; the
   plan pins 1.6 (OQ-3). Revisit after M5 if a consumer needs 1.7.
+- **2026-10-02, M2 scope review: `unknown` for assets the methods never ran on.** M4 needs a
+  verdict for a pod whose image digest is unresolved or whose registry is outside the allowlist
+  (the methods cannot run, so the verdict is `unknown` with the reason). M2 has no such caller,
+  so the helper was removed; it returns with the M4 inventory.

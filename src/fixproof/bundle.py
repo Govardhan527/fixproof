@@ -37,7 +37,7 @@ class OutputExistsError(FixproofError):
 
 @dataclass(frozen=True)
 class Assessment:
-    """One asset's verdict with the method outcomes behind it (empty when not assessed)."""
+    """One asset's verdict with the method outcomes behind it."""
 
     verdict: AssetVerdict
     outcomes: tuple[MethodOutcome, ...] = ()

@@ -32,8 +32,3 @@ def combine(asset: Asset, grype: MethodResult, sbom: MethodResult) -> AssetVerdi
     verdict, summary = TABLE[(grype.status, sbom.status)]
     reason = f"{summary}. grype: {grype.detail}. sbom_version: {sbom.detail}."
     return AssetVerdict(asset=asset, verdict=verdict, reason=reason, results=(grype, sbom))
-
-
-def not_assessed(asset: Asset, reason: str) -> AssetVerdict:
-    """An asset fixproof could not run the methods on (for example, outside the allowlist)."""
-    return AssetVerdict(asset=asset, verdict=Verdict.UNKNOWN, reason=reason)

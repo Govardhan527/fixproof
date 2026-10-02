@@ -11,9 +11,8 @@ from fixproof.model import (
     MethodResult,
     MethodStatus,
     Verdict,
-    WorkloadAsset,
 )
-from fixproof.verdict import TABLE, combine, not_assessed
+from fixproof.verdict import TABLE, combine
 
 N, P, E = MethodStatus.NOT_PRESENT, MethodStatus.PRESENT, MethodStatus.ERROR
 ASSET = ImageAsset(image=ImageRef.parse("localhost:5001/app@sha256:" + "ab" * 32))
@@ -73,13 +72,3 @@ def test_results_must_belong_to_the_asset_and_come_from_each_method_once() -> No
         combine(ASSET, result(Method.GRYPE, N, other), result(Method.SBOM_VERSION, N))
     with pytest.raises(ValueError, match="expected the grype result first"):
         combine(ASSET, result(Method.SBOM_VERSION, N), result(Method.GRYPE, N))
-
-
-def test_assets_that_were_not_assessed_are_unknown_with_the_reason() -> None:
-    pod = WorkloadAsset(cluster="kind", namespace="demo", pod="p", container="c", image=None)
-    outcome = not_assessed(pod, "image digest not resolved")
-    assert (outcome.verdict, outcome.reason, outcome.results) == (
-        Verdict.UNKNOWN,
-        "image digest not resolved",
-        (),
-    )

@@ -18,6 +18,7 @@ from fixproof.bundle import check_output_dir, summarise, write_bundle
 from fixproof.errors import FixproofError
 from fixproof.inputs import load_fix, load_scope
 from fixproof.model import Verdict
+from fixproof.report import verify_summary
 from fixproof.verify import assess_images
 from fixproof.vex import build_document
 
@@ -92,19 +93,7 @@ def verify(
 
     summary = summarise(verdicts)
     if as_json:
-        report = {
-            "cve": cve,
-            "out": str(out),
-            "summary": summary.model_dump(),
-            "assets": [
-                {
-                    "asset": v.asset.image.reference if v.asset.image else None,
-                    "verdict": v.verdict.value,
-                    "reason": v.reason,
-                }
-                for v in verdicts
-            ],
-        }
+        report = verify_summary(cve, str(out), verdicts).model_dump(mode="json")
         typer.echo(json.dumps(report, indent=2, sort_keys=True))
     else:
         for item in verdicts:

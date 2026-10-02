@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "AssetLine": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Asset"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        }
+      },
+      "required": [
+        "asset",
+        "verdict",
+        "reason"
+      ],
+      "title": "AssetLine",
+      "type": "object"
+    },
+    "Summary": {
+      "additionalProperties": false,
+      "properties": {
+        "fixed": {
+          "title": "Fixed",
+          "type": "integer"
+        },
+        "still_affected": {
+          "title": "Still Affected",
+          "type": "integer"
+        },
+        "unknown": {
+          "title": "Unknown",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fixed",
+        "still_affected",
+        "unknown"
+      ],
+      "title": "Summary",
+      "type": "object"
+    },
+    "Verdict": {
+      "enum": [
+        "fixed",
+        "still_affected",
+        "unknown"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/verify-summary/1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/AssetLine"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "cve": {
+      "pattern": "^CVE-[0-9]{4}-[0-9]{4,19}$",
+      "title": "Cve",
+      "type": "string"
+    },
+    "out": {
+      "minLength": 1,
+      "title": "Out",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary"
+    }
+  },
+  "required": [
+    "schema_version",
+    "cve",
+    "out",
+    "summary",
+    "assets"
+  ],
+  "title": "VerifySummary",
+  "type": "object"
+}

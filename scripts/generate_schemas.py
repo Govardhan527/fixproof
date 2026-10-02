@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from fixproof.bundle import BUNDLE_VERSION, MANIFEST_VERSION, Bundle, Manifest
 from fixproof.inputs import FIX_VERSION, SCOPE_VERSION, FixFile, ScopeFile
+from fixproof.report import SUMMARY_VERSION, VerifySummary
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "src" / "fixproof" / "schemas"
@@ -27,6 +28,7 @@ FORMATS: dict[str, tuple[type[BaseModel], str]] = {
     "fix": (FixFile, FIX_VERSION),
     "manifest": (Manifest, MANIFEST_VERSION),
     "scope": (ScopeFile, SCOPE_VERSION),
+    "verify-summary": (VerifySummary, SUMMARY_VERSION),
 }
 
 

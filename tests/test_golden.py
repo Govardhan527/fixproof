@@ -14,6 +14,7 @@ import yaml
 from fixproof.bundle import write_bundle
 from fixproof.canonical import to_json
 from fixproof.inputs import FixFile, ScopeFile
+from fixproof.report import verify_summary
 from fixproof.verify import assess_images
 from fixproof.vex import build_document
 from scenario import FINISH, FIX_YAML, SCOPE_YAML, START, runner
@@ -66,6 +67,20 @@ def test_golden_bundle(tmp_path: Path, name: str) -> None:
     )
     produced = (tmp_path / "out" / f"{name}.json").read_bytes()
     path = EXAMPLES / name / "three-images.json"
+    if UPDATE:
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(produced)
+    assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"
+
+
+def test_golden_verify_summary() -> None:
+    """The `verify --json` summary of the three-image scenario."""
+    fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
+    assessments = assess_images(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
+    produced = to_json(
+        verify_summary(CVE, "evidence", [a.verdict for a in assessments]).model_dump(mode="json")
+    )
+    path = EXAMPLES / "verify-summary" / "three-images.json"
     if UPDATE:
         path.parent.mkdir(exist_ok=True)
         path.write_bytes(produced)

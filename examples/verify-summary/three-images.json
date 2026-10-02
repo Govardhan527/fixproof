@@ -1,0 +1,27 @@
+{
+  "assets": [
+    {
+      "asset": "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627",
+      "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
+      "verdict": "still_affected"
+    },
+    {
+      "asset": "localhost:5001/fixproof/demo-fixed@sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7",
+      "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 3 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
+      "verdict": "fixed"
+    },
+    {
+      "asset": "localhost:5001/fixproof/demo-broken@sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5",
+      "reason": "grype failed, so fixed cannot be proven. grype: grype exited 1: ERROR failed to fetch image: unexpected status 500. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
+      "verdict": "unknown"
+    }
+  ],
+  "cve": "CVE-2023-32681",
+  "out": "evidence",
+  "schema_version": "1.0.0",
+  "summary": {
+    "fixed": 1,
+    "still_affected": 1,
+    "unknown": 1
+  }
+}

@@ -8,6 +8,7 @@ import pytest
 import typer
 
 from fixproof import cli
+from fixproof.validation import build_validator, load_schema, schema_errors
 from scenario import AUTHOR, FINISH, FIX_YAML, FIXED, SCOPE_YAML, START, VULNERABLE, install_tools
 from tool_outputs import CVE
 
@@ -62,6 +63,9 @@ def test_verify_json_summary(
 ) -> None:
     assert run(monkeypatch, *verify_args(inputs, "--json")) == cli.EXIT_AFFECTED
     report = json.loads(capsys.readouterr().out)
+    validator = build_validator(load_schema("verify-summary.schema.json"))
+    assert schema_errors(validator, report) == []
+    assert report["schema_version"] == "1.0.0"
     assert report["summary"] == {"fixed": 1, "still_affected": 1, "unknown": 1}
     assert [a["verdict"] for a in report["assets"]] == ["still_affected", "fixed", "unknown"]
     assert report["assets"][0]["asset"] == VULNERABLE.reference

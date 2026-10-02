@@ -95,7 +95,11 @@ Real public images, real Syft and Grype, the Grype DB as published that day.
       still_affected (requests 2.28.2, both methods); v2.7.0 fixed (2.31.0); v5.8.0 fixed
       (2.34.2); debian 12.0 still_affected (Grype matched libc6 and libc-bin 2.36-9; no Debian
       comparator yet); python:3.12-slim-bookworm unknown (no match, no comparator).
-- [ ] Weekly workflow `.github/workflows/live.yml` green on its first run (manual dispatch).
+- [x] Weekly workflow `.github/workflows/live.yml` green on its first run (manual dispatch,
+      2026-10-02): run 37009932265 on `ae7ea86`, 2 passed in 58 s on GitHub's runner (Syft
+      1.54.0, Grype 0.119.0, DB v6.1.9 built 2026-10-02T06:31:53Z). The push's CI run
+      37009910036 was green on all six jobs, including the integration job on the shared
+      scanner install.
 
 ## M3 (week 5)
 
@@ -140,11 +144,10 @@ Packaging, docs, demo, hardening only.
 - **M2 closed:** CI run 37006601557 on `f2f90b3` green on all six jobs; the integration job ran
   real Syft 1.54.0 and Grype 0.119.0 against the 8 fixture images with the expected verdicts.
   ADR-0007 and its Amendment 1 are Accepted. Scope and spec reviews done.
-- **State of `main`:** M2 closure pushed. Since then, local and not pushed: the live checks
-  (ADR-0008; owner request): `tests/live/`, `make live`, `scripts/install_scanners.sh`,
-  `.github/workflows/live.yml`. The live suite passed here against Docker Hub (2 tests, 193 s).
-- **Waiting on the owner (live checks):** say "push"; then dispatch `live.yml` once
-  (`gh workflow run live.yml`) and watch it to green, which ticks the last live-check item.
+- **State of `main`:** pushed. The live checks (ADR-0008; owner request) are done: green here
+  and on GitHub (live run 37009932265; CI run 37009910036). `live.yml` now runs every Monday at
+  06:17 UTC; GitHub emails failures to whoever last edited its cron line, and disables the
+  schedule after 60 days without repository activity (the repository is public).
 - **M3 scope:** comparators for dpkg, rpm, apk, npm and Maven with spec-derived test tables (PyPI
   was built in M2). Until they exist, a package from those ecosystems makes the SBOM method
   return `error`, so the verdict is `unknown`.

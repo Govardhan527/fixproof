@@ -492,7 +492,8 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   outputs as the evidence? Recommended: no for the MVP; always `fixed`, so `not_affected` never
   appears. **Answered 2026-10-02: as proposed, and no `not_affected` in the MVP.**
 - **OQ-3 (blocks M5): CycloneDX version.** The plan names 1.6; 1.7.2 is the latest. Recommended:
-  stay on 1.6 (patch 1.6.2) unless the library or a buyer needs 1.7.
+  stay on 1.6 (patch 1.6.2) unless the library or a buyer needs 1.7. **Answered 2026-10-03: stay
+  on 1.6 (patch 1.6.2).**
 - **OQ-4 (blocks M3): dpkg comparator and the GPL.** `python-debian` (1.1.1) is
   GPL-2.0-or-later and the project is Apache-2.0. (a) Depend on it, accepting GPL terms for the
   distributed combination; (b) write the §6 algorithm in this project (it is short and fully
@@ -502,7 +503,7 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `unknown` in the success test? (a) An image in a registry fixproof has no credentials for;
   (b) an image Syft cannot catalogue (no package database), so the SBOM method fails; (c) a pod
   whose container has no resolved `imageID` (for example ImagePullBackOff). Recommended: (a),
-  the most common real case; the others are covered by unit tests.
+  the most common real case; the others are covered by unit tests. **Answered 2026-10-03: (a).**
 - **OQ-6 (blocks M1): range syntax in `fix.yaml`.** (a) A single `fixed_version`, meaning every
   version at or above it is fixed; (b) a vers string (§5); (c) both, (a) required and (b)
   optional for backports. Recommended: (c), because distributions backport fixes to several

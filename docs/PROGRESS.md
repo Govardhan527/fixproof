@@ -120,16 +120,19 @@ Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived te
       CVE-2023-0286 on almalinux:9.0 still_affected (1:3.0.1-43.el9_0) and almalinux:9 fixed
       (1:3.5.5-6.el9_8); CVE-2021-44228 (KEV) in a Spring Boot jar still_affected (log4j-core
       2.14.1; ADR-0008 Amendment 1).
-- [ ] The full live suite green on GitHub (dispatch `live.yml` after the push).
-- [ ] Spec-source review of the M3 diff done and its gaps closed; scope review done (its one
-      finding became ADR-0008 Amendment 1).
+- [x] The full live suite green on GitHub: live run 37014662509 on `a834f51` (5 tests, 10 real
+      images); CI run 37017378838 on `e90d574` green on all six jobs.
+- [x] Spec-source review of the M3 diff done and its 13 gaps closed (`b2f5f6a`); scope review
+      done (its one finding became ADR-0008 Amendment 1). **M3 closed 2026-10-03.**
 
 ## M4 (weeks 6-7)
 
 Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 - [ ] Done: SUCCESS TEST step 1 passes (2 `fixed`, 3 `still_affected` with image digests and
       pod names, 1 `unknown` with the reason).
-- [ ] OQ-5 (the unreadable workload) answered; `imageID` format verified (SPEC_NOTES §12).
+- [x] OQ-5 (the unreadable workload) answered 2026-10-03: (a), an image in a registry fixproof
+      has no credentials for.
+- [ ] `imageID` format verified (SPEC_NOTES §12).
 - [ ] Read-only Role and RoleBinding YAML shipped.
 - [ ] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
       only fixture images.
@@ -140,7 +143,7 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
 - [ ] Done: SUCCESS TEST steps 2 and 3 pass (OpenVEX validates against the pinned schema with no
       `not_affected` without evidence; `fixproof gate` exits non-zero on a reintroduced closed
       CVE and zero otherwise).
-- [ ] OQ-3 (CycloneDX version) answered.
+- [x] OQ-3 (CycloneDX version) answered 2026-10-03: stay on 1.6 (patch 1.6.2).
 - [ ] Live data (ADR-0008 item 5): KEV enrichment checked against the live CISA feed in the live
       suite.
 
@@ -154,14 +157,12 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M3, done-criterion met; closing waits on the live
-  suite on GitHub and the spec-source review.
-- **Done in M3:** OQ-4 answered (b); ADR-0009; comparators for dpkg (python-debian as a dev-only
-  oracle), rpm, apk (v2/v3 grey zone refused), npm (SemVer 2.0.0) and Maven (a port of Maven's
-  ComparableVersion; `_` refused), each with spec-derived tables; live cases for Debian, Alpine,
-  AlmaLinux and Log4Shell (ADR-0008 Amendment 1, owner approved).
-- **Tests:** `make check` green, coverage 100%. Live suite passed here.
-- **Next steps, in order:** watch the push's CI; dispatch `live.yml` and watch it; close the
-  spec-source review's gaps; close M3. Then M4: Kubernetes inventory on kind (OQ-5, the
-  "unreadable" workload, needs the owner's answer first).
-- **Open questions still waiting on the owner:** OQ-3 (M5), OQ-5 (M4).
+- **Date:** 2026-10-03. **Current milestone:** M3 closed; M4 starting.
+- **M3 closed:** comparators for deb, rpm, apk, npm and Maven (PyPI in M2), each passing its
+  spec-derived table; live suite green on GitHub; scope and spec reviews done. README written.
+- **All open questions answered:** OQ-3 (CycloneDX 1.6), OQ-5 ((a), a registry without
+  credentials).
+- **Next steps, in order (M4):** verify the Kubernetes facts M4 relies on (`imageID` format under
+  containerd and for kind, the Python client's pod and ReplicaSet fields, RBAC verbs, a kind
+  local registry); propose the M4 design as an ADR (cluster scope, workload assets, pod names in
+  the output, the `kubernetes` dependency, the Role and RoleBinding); wait for approval; build.

@@ -140,7 +140,11 @@ Packaging, docs, demo, hardening only.
 - **M2 closed:** CI run 37006601557 on `f2f90b3` green on all six jobs; the integration job ran
   real Syft 1.54.0 and Grype 0.119.0 against the 8 fixture images with the expected verdicts.
   ADR-0007 and its Amendment 1 are Accepted. Scope and spec reviews done.
-- **State of `main`:** pushed; the commit recording this closure is the last one.
+- **State of `main`:** M2 closure pushed. Since then, local and not pushed: the live checks
+  (ADR-0008; owner request): `tests/live/`, `make live`, `scripts/install_scanners.sh`,
+  `.github/workflows/live.yml`. The live suite passed here against Docker Hub (2 tests, 193 s).
+- **Waiting on the owner (live checks):** say "push"; then dispatch `live.yml` once
+  (`gh workflow run live.yml`) and watch it to green, which ticks the last live-check item.
 - **M3 scope:** comparators for dpkg, rpm, apk, npm and Maven with spec-derived test tables (PyPI
   was built in M2). Until they exist, a package from those ecosystems makes the SBOM method
   return `error`, so the verdict is `unknown`.

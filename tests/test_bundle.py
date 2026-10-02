@@ -10,7 +10,7 @@ from fixproof.errors import OutputValidationError
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.model import Verdict
 from fixproof.validation import build_validator, load_schema, schema_errors
-from fixproof.verify import assess_images
+from fixproof.verify import assess
 from fixproof.vex import build_document
 from scenario import AUTHOR, FINISH, FIX_YAML, SCOPE_YAML, START, runner
 from tool_outputs import CVE, MARKER
@@ -20,7 +20,7 @@ SCOPE = ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML))
 
 
 def write(out: Path) -> None:
-    assessments = assess_images(FIX, SCOPE, runner())
+    assessments = assess(FIX, SCOPE, runner())
     vex = build_document(FIX, [a.verdict for a in assessments], author=AUTHOR, now=FINISH)
     write_bundle(
         out,
@@ -35,7 +35,7 @@ def write(out: Path) -> None:
 
 
 def test_the_scenario_gives_one_of_each_verdict() -> None:
-    verdicts = [a.verdict.verdict for a in assess_images(FIX, SCOPE, runner())]
+    verdicts = [a.verdict.verdict for a in assess(FIX, SCOPE, runner())]
     assert verdicts == [Verdict.STILL_AFFECTED, Verdict.FIXED, Verdict.UNKNOWN]
 
 

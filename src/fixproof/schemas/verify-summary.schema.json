@@ -14,6 +14,20 @@
           ],
           "title": "Asset"
         },
+        "owner": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The pod's controller, e.g. Deployment/api.",
+          "title": "Owner"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
@@ -21,6 +35,20 @@
         },
         "verdict": {
           "$ref": "#/$defs/Verdict"
+        },
+        "workload": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "cluster/namespace/pod/container, for a running workload.",
+          "title": "Workload"
         }
       },
       "required": [
@@ -65,7 +93,7 @@
       "type": "string"
     }
   },
-  "$id": "https://github.com/Govardhan527/fixproof/schemas/verify-summary/1.0.0",
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/verify-summary/1.1.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -87,7 +115,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "1.0.0",
+      "const": "1.1.0",
       "title": "Schema Version",
       "type": "string"
     },

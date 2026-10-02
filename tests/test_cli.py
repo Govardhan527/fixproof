@@ -65,7 +65,7 @@ def test_verify_json_summary(
     report = json.loads(capsys.readouterr().out)
     validator = build_validator(load_schema("verify-summary.schema.json"))
     assert schema_errors(validator, report) == []
-    assert report["schema_version"] == "1.0.0"
+    assert report["schema_version"] == "1.1.0"
     assert report["summary"] == {"fixed": 1, "still_affected": 1, "unknown": 1}
     assert [a["verdict"] for a in report["assets"]] == ["still_affected", "fixed", "unknown"]
     assert report["assets"][0]["asset"] == VULNERABLE.reference
@@ -111,14 +111,15 @@ def test_bad_input_exits_3(
     assert message in capsys.readouterr().err
 
 
-def test_clusters_are_refused_until_they_are_supported(
+def test_an_unreadable_cluster_is_a_usage_error(
     inputs: dict[str, Path], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     inputs["scope"].write_text(
         SCOPE_YAML + "clusters:\n  - context: kind\n    namespaces: [demo]\n", encoding="utf-8"
     )
+    monkeypatch.setenv("KUBECONFIG", str(inputs["fix"].parent / "no-kubeconfig"))
     assert run(monkeypatch, *verify_args(inputs)) == cli.EXIT_USAGE
-    assert "clusters are not supported yet" in capsys.readouterr().err
+    assert "cannot load kubeconfig context 'kind'" in capsys.readouterr().err
     assert not inputs["out"].exists()
 
 

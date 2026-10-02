@@ -15,7 +15,7 @@ from fixproof.bundle import write_bundle
 from fixproof.canonical import to_json
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.report import verify_summary
-from fixproof.verify import assess_images
+from fixproof.verify import assess
 from fixproof.vex import build_document
 from scenario import FINISH, FIX_YAML, SCOPE_YAML, START, runner
 from tool_outputs import CVE
@@ -50,7 +50,7 @@ def test_golden_files_are_never_regenerated_in_ci() -> None:
 def test_golden_bundle(tmp_path: Path, name: str) -> None:
     """The three-image scenario's bundle.json and manifest.json (tests/scenario.py)."""
     fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
-    assessments = assess_images(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
+    assessments = assess(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
     vex = build_document(
         fix, [a.verdict for a in assessments], author=AUTHOR, now=FINISH, tool_version=TOOL_VERSION
     )
@@ -76,7 +76,7 @@ def test_golden_bundle(tmp_path: Path, name: str) -> None:
 def test_golden_verify_summary() -> None:
     """The `verify --json` summary of the three-image scenario."""
     fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
-    assessments = assess_images(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
+    assessments = assess(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
     produced = to_json(
         verify_summary(CVE, "evidence", [a.verdict for a in assessments]).model_dump(mode="json")
     )

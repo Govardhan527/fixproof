@@ -1,9 +1,12 @@
-"""The evidence bundle (ADR-0007 item 7): formats `bundle` and `manifest`, 1.0.0.
+"""The evidence bundle (ADR-0007 item 7): formats `bundle` 1.1.0 and `manifest` 1.0.0.
 
     <out>/openvex.json            the VEX document (ADR-0005)
     <out>/bundle.json             run, inputs, tool versions, every asset's verdict and results
     <out>/raw/NNN-<method>.json   each method's tool output, sanitised (fixproof.sanitize)
     <out>/manifest.json           SHA-256 and size of every other file, sorted by path
+
+Workloads running the same image share its method outcomes, so its raw files are written once,
+numbered after the first asset that used them, and every such asset points at them (ADR-0010).
 
 Every file is canonical JSON. `<out>` must not exist or must be empty: a bundle is never
 overwritten, so evidence once written stays as it was.
@@ -124,13 +127,14 @@ def write_bundle(
     (out / "raw").mkdir(parents=True, exist_ok=True)
     files: dict[str, bytes] = {"openvex.json": to_json(vex)}
     records, tools = [], []
+    raw_refs: dict[int, str] = {}  # id() of a shared outcome -> its raw file
     for index, assessment in enumerate(assessments, start=1):
         results, scanned = [], {}
         for outcome in assessment.outcomes:
             method = outcome.result.method.value
-            raw_ref = None
-            if outcome.raw is not None:
-                raw_ref = f"raw/{index:03d}-{method}.json"
+            raw_ref = raw_refs.get(id(outcome))
+            if raw_ref is None and outcome.raw is not None:
+                raw_ref = raw_refs[id(outcome)] = f"raw/{index:03d}-{method}.json"
                 files[raw_ref] = to_json(outcome.raw)
             results.append(outcome.result.model_copy(update={"raw_ref": raw_ref}))
             if outcome.scanned:

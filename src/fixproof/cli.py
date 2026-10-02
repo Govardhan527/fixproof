@@ -17,9 +17,9 @@ from fixproof import __version__
 from fixproof.bundle import check_output_dir, summarise, write_bundle
 from fixproof.errors import FixproofError
 from fixproof.inputs import load_fix, load_scope
-from fixproof.model import Verdict
+from fixproof.model import AssetVerdict, Verdict, WorkloadAsset
 from fixproof.report import verify_summary
-from fixproof.verify import assess_images
+from fixproof.verify import assess
 from fixproof.vex import build_document
 
 EXIT_FIXED, EXIT_AFFECTED, EXIT_UNKNOWN, EXIT_USAGE = 0, 1, 2, 3
@@ -57,23 +57,25 @@ def _root(
 def verify(
     cve: Annotated[str, typer.Option(help="The CVE id the fix claims to close.")],
     fix: Annotated[Path, typer.Option(help="fix.yaml: the packages and fixed versions.")],
-    scope: Annotated[Path, typer.Option(help="scope.yaml: registries and images to check.")],
+    scope: Annotated[
+        Path, typer.Option(help="scope.yaml: registries, images and clusters to check.")
+    ],
     out: Annotated[Path, typer.Option(help="New or empty directory for the evidence bundle.")],
     author: Annotated[str, typer.Option(help="Who issues the VEX document (OpenVEX author).")],
     as_json: Annotated[bool, typer.Option("--json", help="Print the summary as JSON.")] = False,
 ) -> None:
-    """Check every image in scope with Grype and the SBOM version check, then write the VEX
-    and the evidence bundle. Needs syft and grype on PATH and a current Grype DB; registry
-    credentials come from the usual Docker config or environment, and are never stored.
+    """Check every image and workload in scope with Grype and the SBOM version check, then
+    write the VEX and the evidence bundle. Needs syft and grype on PATH and a current Grype DB;
+    registry credentials come from the usual Docker config or environment and are never stored.
+    Clusters are read through their kubeconfig context, with get and list on pods and
+    replicasets only (deploy/kubernetes/fixproof-reader.yaml).
     """
     try:
         fix_file = load_fix(fix, cve)
         scope_file = load_scope(scope)
-        if scope_file.clusters:
-            raise FixproofError(f"{scope}: clusters are not supported yet; list images only")
         check_output_dir(out)
         started = now()
-        assessments = assess_images(fix_file, scope_file)
+        assessments = assess(fix_file, scope_file)
         finished = now()
         verdicts = [a.verdict for a in assessments]
         vex = build_document(fix_file, verdicts, author=author, now=finished)
@@ -97,13 +99,25 @@ def verify(
         typer.echo(json.dumps(report, indent=2, sort_keys=True))
     else:
         for item in verdicts:
-            name = item.asset.image.reference if item.asset.image else "?"
-            typer.echo(f"{item.verdict.value:<15} {name}\n{'':<15} {item.reason}")
+            typer.echo(_human(item))
         typer.echo(
             f"{summary.fixed} fixed, {summary.still_affected} still_affected, "
             f"{summary.unknown} unknown; evidence in {out}"
         )
     raise typer.Exit(verdict_exit_code([item.verdict for item in verdicts]))
+
+
+def _human(item: AssetVerdict) -> str:
+    """`verdict  image` or `verdict  cluster/namespace/pod/container  owner` and its image, then
+    the reason, each detail line indented under the verdict."""
+    asset, pad = item.asset, " " * 16
+    image = asset.image.reference if asset.image else "image not resolved"
+    if isinstance(asset, WorkloadAsset):
+        owner = f"  {asset.owner}" if asset.owner else ""
+        head = f"{asset.location}{owner}\n{pad}{image}"
+    else:
+        head = image
+    return f"{item.verdict.value:<15} {head}\n{pad}{item.reason}"
 
 
 def main() -> None:

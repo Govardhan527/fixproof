@@ -36,11 +36,18 @@ Tick an item only when its done-criteria pass and the evidence is stored or link
 ## M1 (week 2)
 
 Data model, `fix.yaml` and `scope.yaml` schemas, OpenVEX writer with schema validation.
-- [ ] Done: golden VEX files validate.
+- [x] Done: golden VEX files validate (2026-10-02). `examples/openvex/mixed.json` (all three
+      statuses, two pods on one image, a registry outside scope, an unresolved pod) and
+      `examples/openvex/single-fixed.json` match the writer byte for byte
+      (`tests/test_golden.py`), and `make schemas` validates both against the official OpenVEX
+      schema with `date-time`, `uri` and `iri` checked.
 - [x] OQ-1, OQ-2 and OQ-6 in `docs/SPEC_NOTES.md` §14 answered by the owner (2026-10-02: the
       recommended options).
-- [ ] OpenVEX schema vendored at the ADR-0002 pin; `format` checking settled (SPEC_NOTES §1).
-- [ ] ADR for the M1 data contracts (output formats, input file formats).
+- [x] OpenVEX schema vendored at the ADR-0002 pin (SHA-256 pinned by
+      `tests/test_validation.py`); `format` checking settled (SPEC_NOTES §1, ADR-0006).
+- [x] ADR for the M1 data contracts: ADR-0005 (with Amendment 1) and ADR-0006, Accepted.
+- [x] Scope review of the M1 diff (2026-10-02): all in scope; its one finding became ADR-0005
+      Amendment 1. The spec-source review was still running at close (see Last session).
 
 ## M2 (weeks 3-4)
 
@@ -81,20 +88,26 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M0 complete (all items ticked); M1 waits on the
-  owner's answers.
-- **Changed:** M0 skeleton (pyproject, uv.lock, Makefile, CI workflow with actions pinned by SHA,
-  commit-msg hook + `scripts/check_commits.py` + shared `scripts/commit_rules.py`,
-  `scripts/validate_outputs.py`, PR template), ADR-0001 to ADR-0004, SPEC_NOTES from primary
-  sources, PARKED. The repository's git identity was set by the owner's request.
-- **Commits:** `31007da` skeleton, `cf3d384` commit rules, `27d9ef0` output validator, `82a4df0`
-  Makefile, `614dfd4` CI, `60eaf64` docs, `bc56f42` status; pushed to `origin/main`. CI run
-  36983082166 on `bc56f42` green (all six jobs).
-- **Tests:** `make check` green: 44 tests locally (43 in a clean clone), coverage 100% of `src/`,
-  0 example files. `make release-dry` builds the wheel, sdist and SBOM. Hook rejection shown in
-  this repo.
-- **Waiting on the owner:**
-  1. Approve ADR-0002 to ADR-0004 (`docs/DECISIONS.md`).
-  2. Answer OQ-1 to OQ-6 (`docs/SPEC_NOTES.md` §14). OQ-1, OQ-2 and OQ-6 block M1.
-- **Next steps, in order:** accept the ADRs the owner approves;
-  on the M1 answers, propose the M1 data contracts as an ADR, then build M1.
+- **Date:** 2026-10-02. **Current milestone:** M1 closed; M2 is next.
+- **Changed in M1:** dependencies (ADR-0006); `validation.py` with the vendored official OpenVEX
+  schema and format checking; `purl.py` (canonical purls, checked against the official
+  purl-spec v1.0.1 build vectors); `model.py`, `vers.py`, `inputs.py` (`fix.yaml` and
+  `scope.yaml`, ADR-0005 and Amendment 1); generated `fix` and `scope` schemas with synthetic
+  examples; `vex.py` and `canonical.py` (OpenVEX writer); golden VEX files.
+- **Tests:** `make check` green: 207 tests locally (206 in CI), coverage 100% of `src/`, 5 example files
+  valid. All test data is synthetic (CVE-2099-xxxx, demo package names).
+- **Decisions:** owner approved ADR-0002 to ADR-0006 and ADR-0005 Amendment 1; OQ-1, OQ-2 and
+  OQ-6 answered with the recommended options.
+- **Spec-source review of the M1 diff:** still running when M1 closed; any SPEC_NOTES gaps it
+  reports are fixed before M2 code relies on them.
+- **Open questions still waiting on the owner:** OQ-3 (blocks M5), OQ-4 (blocks M3), OQ-5
+  (blocks M4), in `docs/SPEC_NOTES.md` §14.
+- **Next steps, in order (M2):**
+  1. Verify the Syft and Grype JSON fields, the Grype DB version and build date, and how Grype
+     reports a fixed-in version (SPEC_NOTES §12, UNVERIFIED); decide whether `packageurl-python`
+     parses Syft's purls (ADR-0006).
+  2. Propose the M2 design as an ADR: method contracts, the verdict truth table, the evidence
+     bundle and manifest formats (record the asset `kind` field there), the `verify` CLI for
+     images, and the 8 pinned fixture Dockerfiles. Wait for approval.
+  3. Build `methods/grype.py`, `methods/sbom_version.py` and `verdict.py` test first; wire Syft
+     and Grype into the CI `integration` job pinned by checksum; remove the exit-5 allowance.

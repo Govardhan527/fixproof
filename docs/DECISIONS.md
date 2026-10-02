@@ -204,6 +204,15 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** M1's golden VEX files exercise all three statuses and validate against the
   official schema with formats checked. `fix.yaml`, `scope.yaml` and the VEX layout become public
   interfaces at 1.0.0; changing them needs an ADR.
+- **Amendment 1** (2026-10-02, from the M1 scope review; owner approved 2026-10-02). The loaders
+  are stricter than items 1 and 2 said, and this records it:
+  - `fix.yaml`: each package (by its purl) may be listed once, and `fixed_vers` may not be `*`.
+    vers allows `*`, but as a fixed range it would mark every version fixed, which no fix can
+    prove.
+  - `scope.yaml`: registries, images, cluster contexts and each cluster's namespaces may each be
+    listed once.
+  - Assets carry a `kind` discriminator (`image` or `workload`). No M1 output contains it; it
+    becomes public with the M2 evidence bundle, and that ADR records it.
 
 ## ADR-0006: M1 runtime dependencies
 

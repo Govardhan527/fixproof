@@ -133,6 +133,6 @@ def test_identity_rejects_non_purls(purl: str, reason: str) -> None:
         identity(purl)
 
 
-def test_identity_of_a_syft_purl_drops_qualifiers() -> None:
-    syft = "pkg:deb/debian/LibSSL3@3.0.11-1~deb12u2?arch=amd64&distro=debian-12"
-    assert identity(syft) == Identity("deb", "debian", "libssl3", "3.0.11-1~deb12u2")
+def test_identity_drops_qualifiers_and_normalises() -> None:
+    purl = "pkg:deb/debian/LibDemo1@1.0-1~deb12u2?arch=amd64&distro=example"  # synthetic
+    assert identity(purl) == Identity("deb", "debian", "libdemo1", "1.0-1~deb12u2")

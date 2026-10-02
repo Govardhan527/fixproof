@@ -225,7 +225,7 @@ def test_stored_output_never_holds_image_config_files_or_tool_configuration() ->
         assert MARKER not in stored
         assert "bWFya2Vy" not in stored  # the planted file contents
         assert '"configuration"' not in stored
-        assert "vulnerability.db" not in stored
+        assert "vulnerability.db" not in stored  # Grype's local DB file (SPEC_NOTES §17)
         assert '"labels"' not in stored
         assert result.raw is not None
         assert "files" not in result.raw  # Syft's file listing; package metadata may list files

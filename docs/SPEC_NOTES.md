@@ -219,8 +219,10 @@ the exact files read.
     "and" nor "or".
   - §5.3.3.2: `>`, `<`, `=`, `!`, `*`, `|` and `%` inside a version are percent-encoded;
     whitespace other than `%20` is an error.
-  - §5.4: constraints are sorted by version, versions are unique, and after removing `!=` and
-    equality constraints the comparators alternate between `>`/`>=` and `<`/`<=`.
+  - §5.4: constraints are sorted by version, versions are unique; ignoring `!=`, an equality
+    constraint "shall be followed only by a constraint with one of: null, '>', or '>='"; after
+    removing `!=` and equality constraints the comparators alternate between `>`/`>=` and
+    `<`/`<=`.
   - Printable ASCII only: §5.3.3.2 ("A **version** contains only printable ASCII letters, digits
     and punctuation") and `docs/specification/specification.md` (SHA-256
     `dc1c60ab552780b00f825c51b1c4c15d5ba07612d0a1d3c4acc5b6faa387980f`, "A version range specifier
@@ -310,6 +312,9 @@ the exact files read.
   `1.0b1.dev456`, `1.0b2`, `1.0b2.post345.dev456`, `1.0b2.post345`, `1.0rc1.dev456`, `1.0rc1`,
   `1.0`, `1.0+abc.5`, `1.0+abc.7`, `1.0+5`, `1.0.post456.dev34`, `1.0.post456`, `1.0.15`,
   `1.1.dev1`. VERIFIED; `tests/test_versions.py` uses it verbatim.
+- Normalisation (same page): "All ascii letters should be interpreted case insensitively within
+  a version" (`1.1RC1` is `1.1rc1`); a leading `v` "MUST be ignored for all purposes"; `c` is
+  an alternative spelling of `rc`. VERIFIED.
 - `packaging` (26.3) implements this; fixproof's tests check it against the list above rather
   than trusting it (ADR-0007 Q2 moved this comparator into M2).
 
@@ -367,8 +372,8 @@ the exact files read.
   **Grype v0.119.0**: tag object `dd0f59a2ba584e4241b84d9dbb899e8db978c23d`;
   `grype_0.119.0_linux_amd64.tar.gz` SHA-256
   `3fa2dc4b924621ab65404cf08d0b8438d896d80ab949c9d5a4ca283c36004c9b`. VERIFIED.
-  Their JSON output schemas, how to read the Grype DB version and build date, and how Grype
-  reports a fixed-in version: UNVERIFIED, block M2.
+  Their JSON output, how to read the Grype DB version and build date, and how Grype reports a
+  fixed-in version: VERIFIED in M2, see §17.
 - **kind v0.33.0**: `kind-linux-amd64` SHA-256
   `aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d`; default node image
   `kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5`
@@ -487,6 +492,9 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `anchore.io/schema/syft/json/16.1.11/document`. VERIFIED:
   - Document requires `artifacts`, `artifactRelationships`, `source`, `distro`, `descriptor`,
     `schema`; `files` is optional.
+  - `Descriptor`: `name`, `version` (required), `configuration`. `Schema`: `version`, `url`.
+    `Source`: `id`, `name`, `version`, `type`, `metadata` (required), `supplier`. `Location`:
+    `path`, `accessPath` (required), `layerID`, `annotations`.
   - `Package` requires `id`, `name`, `version`, `type`, `foundBy`, `locations`, `licenses`,
     `language`, `cpes`, `purl`; optional `metadataType`, `metadata`.
   - `File` has `id`, `location`, `metadata`, `contents`, `digests`, `licenses`, `executable`,
@@ -515,13 +523,22 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     `cvss`, `knownExploited`, `epss`, `cwes`. Vulnerability adds `fix` (`versions`, `state`,
     `available`) and `advisories`.
   - Descriptor: `name`, `version`, `configuration`, `db`, `timestamp`.
+  - Package (`package.go`, SHA-256
+    `69ab0ebb88ffdc5d7f4457f65b0affac8663f087c1510e0abd5a871164d43005`), the match's `artifact`:
+    `id`, `name`, `version`, `type`, `locations`, `language`, `licenses`, `cpes`, `purl`,
+    `upstreams`, `metadataType`, `metadata`.
+  - `source.target` for an image is Syft's image metadata: observed keys `architecture`,
+    `config`, `imageID`, `imageSize`, `layers`, `manifest`, `manifestDigest`, `mediaType`, `os`,
+    `repoDigests`, `tags`, `userInput` (`labels` and `annotations` are `omitempty` in
+    `image_metadata.go`, so they appear only when set).
 - **Grype DB** (`grype db check -o json`, 2026-10-02): candidate `schemaVersion` `v6.1.9`,
   `built` `2026-10-02T06:31:53Z`, archive `vulnerability-db_v6.1.9_2026-10-02T00:35:12Z_1790922713.tar.zst`,
   `checksum` `sha256:3c368df5c3624fe083ad646ca3be59525739dfe9caa4b6d14c7f252d155fbd98`.
   `grype db status -o json` reports `schemaVersion`, `path`, `valid` and `error` when no DB
   exists; once installed: `schemaVersion`, `from` (download URL carrying the checksum), `built`,
   `path`, `valid`. Grype's scan output repeats this under `descriptor.db.status`. The DB takes
-  3.0 GB on disk. VERIFIED.
+  3.0 GB on disk, as `<cache-dir>/6/vulnerability.db`; `grype db update` downloads and installs
+  it (3 minutes 16 seconds here). VERIFIED by running it.
 - **Observed behaviour, Grype v0.119.0 with that DB (2026-10-02).** VERIFIED by running it:
   - A PyPI match is reported with `vulnerability.id` = the GHSA id and the CVE only in
     `relatedVulnerabilities`: `requests` 2.30.0 gives `GHSA-j8r2-6x86-q33q` (namespace
@@ -534,8 +551,10 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     `db.validate-by-hash-on-start` (true), `db.require-update-check` (false); environment form
     `GRYPE_` + upper-case path with `_`.
 - **Observed behaviour, Syft v1.54.0 (2026-10-02).** VERIFIED by running it:
-  - Settings (`syft config`): `check-for-app-update` (default true);
-    `file.metadata.selection` (default `owned-by-package`; `none` captures no files);
+  - Settings (`syft config`; environment names from its comments): `check-for-app-update`
+    (`SYFT_CHECK_FOR_APP_UPDATE`, default true);
+    `file.metadata.selection` (`SYFT_FILE_METADATA_SELECTION`, default `owned-by-package`;
+    `none` captures no files);
     `file.content.globs` (default empty, so no file contents). A scan of `registry:2` gave 234
     `files` entries, none with `contents`.
   - Exit code 1 when the image cannot be fetched.
@@ -546,6 +565,14 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   (`sha256:46faa9a1...`); the requested index digest appears in `repoDigests` (as
   `index.docker.io/library/registry@sha256:a3d8aaa6...`) and, for Syft, in `source.version`. So
   a verdict covers the scanned platform only.
+- **Where the tools find registry credentials:** go-containerregistry v0.22.1
+  `pkg/authn/keychain.go` (SHA-256
+  `d3ca9c480e184bfd1e697a7e3f5b6f830620b573fdec68be197b83f311709404`), the default keychain: if
+  `$HOME/.docker/config.json` or `$DOCKER_CONFIG/config.json` exists, the Docker config is loaded
+  from `$DOCKER_CONFIG` (default `~/.docker`); otherwise `$REGISTRY_AUTH_FILE` or Podman's
+  `containers/auth.json`; otherwise anonymous. VERIFIED. The integration tests set `DOCKER_CONFIG`
+  to an empty directory, so fixproof runs with no credentials, and CI run 36990675252 showed the
+  image in the credential-protected registry coming out `unknown`.
 - **Image config in tool output:** both tools' JSON carries the raw image config (Syft
   `source.metadata.config`, Grype `source.target.config`) and raw manifest. VERIFIED.
 - **Fixture advisory:** CVE-2023-32681 = GHSA-j8r2-6x86-q33q, "Unintended leak of
@@ -564,7 +591,8 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   Syft's and Grype's registry access), `pkg/name/registry.go` (SHA-256
   `88618463d047e23a991fcc6f3b5304ac0a56fce5a7c5b22660f137d6e89999ef`), `Registry.Scheme()`: `http`
   for `localhost:<port>`, loopback, `*.local` and RFC 1918 addresses, `https` otherwise. VERIFIED
-  in the source; the version Syft and Grype embed is confirmed by the CI integration job.
+  in the source, and in practice by CI run 36990675252 (2026-10-02), where Syft 1.54.0 and Grype
+  0.119.0 read `localhost:5000` and `localhost:5001` over plain HTTP.
 - **Syft registry auth settings** (`syft config`, v1.54.0): `registry.auth[]` entries with
   `authority`, `username`, `password`, `token`, `tls-cert` (env `SYFT_REGISTRY_AUTH_*`). This is
   why the stored output never keeps the tool's own `descriptor.configuration`. VERIFIED.
@@ -576,3 +604,41 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     2.32.3 `70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6`.
   - `library/httpd:2.4-alpine` index `sha256:4e585da9d0125dec36d4500a9f5c5df7b2c0a01f67cb47865a91a4b05bdbec1b`
     (Docker Hub registry API), used only for its `htpasswd` in CI.
+
+## 18. Fixture build and CI plumbing (M2)
+
+- **Tool-output fixtures** (`tests/fixtures/tools/*.json`): derived on 2026-10-02 from real runs
+  of Syft 1.54.0 and Grype 0.119.0 (DB v6.1.9): `matches` and `artifacts` from `dir:` scans of
+  `requests` 2.30.0 and 2.31.0 installs; `source`, `distro` and `descriptor` from the
+  `registry:2` image scan (§17). The image identity is synthetic (repository
+  `localhost:5001/fixproof/demo-app`, digest = SHA-256 of `fixproof/demo-app`, manifest digest
+  `sha256:56272f4e...`), local paths are replaced, `descriptor.configuration` is cut down, and a
+  marker (`MARKER=must-not-be-stored`) is planted in the image config and in a file's `contents`
+  so tests prove neither is stored. They are test data, not a record of a real image.
+- **Docker and local registries:** Docker documentation, `dockerd` reference, "insecure
+  registries" (https://docs.docker.com/reference/cli/dockerd/): "Local registries, whose IP
+  address falls in the 127.0.0.0/8 range, are automatically marked as insecure as of Docker
+  1.3.2. It isn't recommended to rely on this". VERIFIED; CI run 36990675252 pushed to and logged
+  in to `localhost:5000` and `localhost:5001` that way (Docker 28.0.4). After a push,
+  `docker image inspect` `RepoDigests` held `localhost:5000/fixproof/<name>@sha256:...`, the
+  digest the tools then matched. VERIFIED by that run.
+- **registry:2 configuration** (https://distribution.github.io/distribution/about/configuration/):
+  any setting can be overridden by an environment variable named `REGISTRY_` plus its upper-case
+  path (`REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY`), hence `REGISTRY_AUTH=htpasswd`,
+  `REGISTRY_AUTH_HTPASSWD_REALM`, `REGISTRY_AUTH_HTPASSWD_PATH` for `auth.htpasswd.realm/path`;
+  "The only supported password format is bcrypt" (so `htpasswd -B`). VERIFIED. The registry
+  answering `GET /v2/` on port 5000 is observed in the CI run.
+- **pip** 26.2.1 (`docs/html/topics/configuration.md`, SHA-256
+  `3d66de39ea7fa4bb86e504e9b7dbda5bec8cd4cad86fde7fdcd74ee75ad0fdbd`: environment variables
+  `PIP_<UPPER_LONG_NAME>`, so `PIP_DISABLE_PIP_VERSION_CHECK` and `PIP_NO_CACHE_DIR`;
+  `docs/html/topics/secure-installs.md`, SHA-256
+  `b145105b41ec1a5e01811b4f8c52bde20352ad114d64e9610a512eec1c6924ff`: `--require-hashes` forces
+  hash-checking mode; `pip install --help`: `--no-deps` "Don't install package dependencies").
+  VERIFIED.
+- **GitHub Actions** (docs.github.com, 2026-10-02): the `add-mask` workflow command ("Masking a
+  value in a log", the command form of `core.setSecret`); default variable `CI` "Always set to
+  true". VERIFIED. Service-container port mapping (`services.<id>.ports`) is shown working by
+  run 36990675252.
+- **Click usage errors** (the copy vendored in typer 0.27.2, `typer/_click/exceptions.py`):
+  `UsageError.exit_code = 2`, which is why `fixproof` maps usage errors to its own exit code 3.
+  VERIFIED.

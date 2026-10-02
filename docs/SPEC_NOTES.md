@@ -225,6 +225,14 @@ the exact files read.
     version is IN, above a trailing `>`/`>=` version is IN, strictly between a `>`/`>=` and the
     next `<`/`<=` is IN, and between a `<`/`<=` and the next `>`/`>=` is NOT IN; anything else
     is NOT IN. Versions compare with the type's own rules; mixing types is an error.
+  - **Gap in that algorithm, and how fixproof resolves it:** as written it only examines pairs
+    of range constraints, so a range with one bound (for example `vers:pypi/>=2.31.0`) would
+    contain no version, against Clause 5.3.3.1's definition (`>=` "includes all versions greater
+    than or equal to the provided version"). The reference implementation by the vers authors,
+    univers v32.0.1 (`src/univers/version_constraint.py`, SHA-256
+    `767af67ed909685ac7f1044546ac2310b6edec61108ce79cab173204d9ce2950`, `contains_version`),
+    evaluates a lone constraint, and a lone remaining range constraint, by its comparator.
+    fixproof does the same (`versions.contains`). VERIFIED (both texts read 2026-10-02).
   - **Internal conflict, recorded:** Clause 5.3.3.1 (normative text) says a constraint starting
     with `=` is an error, while `specification.md` ("Normalized, canonical representation")
     lists `=` as a comparator and adds `%` to the characters that must be encoded. fixproof
@@ -288,7 +296,13 @@ the exact files read.
   - Epoch numeric, implicit 0. Release segments compare as integer tuples padded with zeros.
   - Within a release: `.devN`, `aN`, `bN`, `rcN`, (none), `.postN`; `c` sorts as `rc`.
   - Within a pre-release: `.devN`, (none), `.postN`. Within a post-release: `.devN`, (none).
-- `packaging` (26.3 on PyPI) implements this; the M3 table tests it rather than trusting it.
+- The section's own example ordering ("The following example covers many of the possible
+  combinations"): `1.dev0`, `1.0.dev456`, `1.0a1`, `1.0a2.dev456`, `1.0a12.dev456`, `1.0a12`,
+  `1.0b1.dev456`, `1.0b2`, `1.0b2.post345.dev456`, `1.0b2.post345`, `1.0rc1.dev456`, `1.0rc1`,
+  `1.0`, `1.0+abc.5`, `1.0+abc.7`, `1.0+5`, `1.0.post456.dev34`, `1.0.post456`, `1.0.15`,
+  `1.1.dev1`. VERIFIED; `tests/test_versions.py` uses it verbatim.
+- `packaging` (26.3) implements this; fixproof's tests check it against the list above rather
+  than trusting it (ADR-0007 Q2 moved this comparator into M2).
 
 ## 10. npm versions (SemVer 2.0.0 and node-semver, M3)
 

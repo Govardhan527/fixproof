@@ -453,3 +453,10 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** fixproof reads running clusters with get and list on two resource types only,
   never pulls from a registry outside the allowlist, and reports pods it cannot resolve as
   `unknown`.
+- **Amendment 1 (2026-10-03, implementation detail; to confirm with the owner):** item 7's
+  manifest is two files in `deploy/kubernetes/`, not one. `fixproof-reader.yaml` holds the
+  `fixproof` namespace and the `fixproof-reader` ServiceAccount (no mounted token);
+  `fixproof-reader-role.yaml` holds the Role and the RoleBinding with no namespace, so the same
+  file is applied to each namespace in scope with `kubectl apply -n`. One file cannot do both,
+  because kubectl refuses `-n` for an object that names another namespace (SPEC_NOTES §12). The
+  permissions are exactly as accepted: get and list on pods and replicasets, nothing else.

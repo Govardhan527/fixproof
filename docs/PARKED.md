@@ -16,3 +16,13 @@ waits.
   verdict for a pod whose image digest is unresolved or whose registry is outside the allowlist
   (the methods cannot run, so the verdict is `unknown` with the reason). M2 has no such caller,
   so the helper was removed; it returns with the M4 inventory.
+- **2026-10-03, M4 build: the platform a pod actually runs.** For a multi-platform image the
+  kubelet reports the index digest, and Syft and Grype scan the platform of the machine running
+  fixproof (recorded in the bundle's `scanned`). A pod on an arm64 node running an amd64-scanned
+  index is therefore checked on the wrong platform. Reading the node's architecture needs `get`
+  on nodes, a cluster-wide permission ADR-0010 does not grant; revisit if mixed-architecture
+  clusters matter.
+- **2026-10-03, M4 build: a cluster where no workload resolves.** If every workload in scope
+  has no image digest (all pending), there is no product for an OpenVEX statement, the schema
+  needs at least one, and `verify` exits 3. Exit 2 with no VEX file would be more accurate;
+  it waits because it changes the bundle layout (ADR-0007 item 7).

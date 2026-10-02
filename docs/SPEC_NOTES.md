@@ -494,6 +494,26 @@ the exact files read.
   `aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d`; default node image
   `kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5`
   (release notes). VERIFIED.
+- **kubectl v1.37.1** (`https://dl.k8s.io/release/stable.txt` read `v1.37.1` on 2026-10-03):
+  `bin/linux/amd64/kubectl` SHA-256
+  `65691ff77eb6fa44c908b77a1082c9f092c3b9733b5cefabec0d1104890e21a8`, from the `.sha256` file
+  published next to it. VERIFIED.
+- **kind local registry, v0.33.0 example** (`site/static/examples/kind-with-registry.sh` at tag
+  v0.33.0): "the containerd config patch is not necessary with images from kind v0.27.0+", so
+  the demo cluster only writes `hosts.toml` per registry port and connects each registry to the
+  `kind` network. VERIFIED (2026-10-03).
+- **Applying the RBAC files** (2026-10-03):
+  - `kubectl apply -n <ns>` refuses an object whose own `metadata.namespace` differs: "the
+    namespace from the provided object %q does not match the namespace %q"
+    (`staging/src/k8s.io/cli-runtime/pkg/resource/visitor.go` at v1.37.1, SHA-256
+    `6c4caad6296e4e0db489c9bc1ffc7e7f5e72c3847da6955f68abda2347176dc0`). An object with no
+    namespace takes the one given. VERIFIED.
+  - A RoleBinding subject of kind `ServiceAccount` names the account's namespace (RBAC docs,
+    "Referring to subjects": `kind: ServiceAccount`, `name: default`, `namespace: kube-system`),
+    so one account in namespace `fixproof` can be bound in every namespace in scope. VERIFIED.
+  - Hence two files: `fixproof-reader.yaml` (the namespace and the account, applied once) and
+    `fixproof-reader-role.yaml` (Role and RoleBinding with no namespace, applied with `-n` to
+    each namespace in scope). See ADR-0010 Amendment 1.
 
 ## 13. Figures in the project plan (not used by code)
 

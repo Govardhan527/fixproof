@@ -16,7 +16,8 @@ It writes the answer as an [OpenVEX](https://github.com/openvex/spec) document p
 bundle (every tool output, hashed), and exits with a code your CI can act on.
 
 > **Status: early development.** Image verification works today and is exercised weekly against
-> real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads, the release
+> real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workload verification
+> is built and unit-tested; its first run on a real kind cluster is still to come. The release
 > gate command, CISA KEV enrichment, the HTML report and CycloneDX VEX are planned; see
 > [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
 
@@ -374,8 +375,8 @@ tracker, Red Hat security data, Alpine secdb, GitHub advisories), not from the s
 |---|---|---|
 | `schema_version` | yes | `"1.0.0"` |
 | `registries` | yes | The allowlist: registry hosts fixproof may read from (`host[:port]`). |
-| `images` | yes, for now | Full references **pinned by digest**: `registry/repository@sha256:<64 hex>`. The registry host is required (no implied Docker Hub) and must be in `registries`. Tags are refused: a tag can move, a digest cannot. |
-| `clusters` | not yet | Kubernetes namespaces to inventory (planned; refused today rather than skipped silently). |
+| `images` | `images`, `clusters` or both | Full references **pinned by digest**: `registry/repository@sha256:<64 hex>`. The registry host is required (no implied Docker Hub) and must be in `registries`. Tags are refused: a tag can move, a digest cannot. |
+| `clusters` | `images`, `clusters` or both | Running workloads to check: each entry names a kubeconfig `context` and the `namespaces` to read. See [Kubernetes workloads](#kubernetes-workloads). |
 
 ```yaml
 schema_version: "1.0.0"
@@ -385,10 +386,65 @@ images:
   - docker.io/library/nginx@sha256:…
 ```
 
+```yaml
+# Running workloads: every container in these namespaces, by the digest it actually runs.
+schema_version: "1.0.0"
+registries: [registry.example.com, docker.io]
+clusters:
+  - context: prod-eu-1          # a context in your kubeconfig
+    namespaces: [payments, checkout]
+```
+
 To find an image's digest: `docker buildx imagetools inspect IMAGE:TAG`, `crane digest IMAGE:TAG`,
 or `skopeo inspect docker://IMAGE:TAG`. JSON Schemas for both files ship in
 [`src/fixproof/schemas/`](src/fixproof/schemas/); point your editor's YAML schema support at them
 to catch mistakes while you type.
+
+### Kubernetes workloads
+
+fixproof lists the pods in each namespace and takes every container's image from its status
+(`imageID`): the digest the node actually pulled, not the tag in the pod spec. Init containers
+count; ephemeral debug containers do not. Each image is scanned once however many pods run it,
+and every workload gets that image's verdict, shown with its pod name and owner:
+
+```text
+still_affected  prod-eu-1/payments/api-7d9f8-x2kq4/app  Deployment/api
+                registry.example.com/payments/api@sha256:4c1c5b3a…
+                both methods find the vulnerable component. grype: … sbom_version: …
+unknown         prod-eu-1/payments/worker-5c6b7-p9zt1/app  Deployment/worker
+                image not resolved
+                image digest not resolved: the container has not started (ImagePullBackOff)
+```
+
+A workload is `unknown`, with the reason, when its container has not started, when its image
+has no registry digest (for example one side-loaded into the node), or when its registry is not
+in `registries`: fixproof never reads an image from outside the allowlist.
+
+**Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
+reads, and nothing else. [`deploy/kubernetes/`](deploy/kubernetes/) ships a ServiceAccount and a
+namespaced Role and RoleBinding for exactly that. As a cluster admin:
+
+```console
+$ kubectl apply -f deploy/kubernetes/fixproof-reader.yaml          # once: the account
+$ kubectl apply -n payments -f deploy/kubernetes/fixproof-reader-role.yaml
+$ kubectl apply -n checkout -f deploy/kubernetes/fixproof-reader-role.yaml
+```
+
+Then give fixproof a kubeconfig with a short-lived token for that account, and nothing more:
+
+```console
+$ TOKEN="$(kubectl create token fixproof-reader -n fixproof --duration=1h)"
+$ kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' \
+    | base64 -d > ca.crt
+$ export KUBECONFIG="$PWD/fixproof.kubeconfig"
+$ kubectl config set-cluster prod-eu-1 --server=https://… --certificate-authority=ca.crt --embed-certs=true
+$ kubectl config set-credentials fixproof-reader --token="$TOKEN"
+$ kubectl config set-context prod-eu-1 --cluster=prod-eu-1 --user=fixproof-reader
+```
+
+Run the `view` command against your admin kubeconfig before switching `KUBECONFIG`. fixproof
+reads `KUBECONFIG` (or `~/.kube/config`) like kubectl, and the context name in `scope.yaml` is
+the one shown in its output.
 
 ### Step 3. Run
 
@@ -414,8 +470,8 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 
 | Code | Meaning | Typical action |
 |---|---|---|
-| `0` | Every image is `fixed` | Close with the evidence attached |
-| `1` | At least one image is `still_affected` | Keep the ticket open; fix the listed images |
+| `0` | Every image and workload is `fixed` | Close with the evidence attached |
+| `1` | At least one is `still_affected` | Keep the ticket open; fix the listed images |
 | `2` | None still affected, but at least one `unknown` | Investigate the reason (credentials, stale DB, disagreement) |
 | `3` | Bad input or usage (invalid file, wrong CVE, existing `--out`, …) | Fix the command or the input files |
 
@@ -424,8 +480,8 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | File | What it holds |
 |---|---|
 | `openvex.json` | One OpenVEX v0.2.0 statement per image, validated against the official schema before it is written |
-| `bundle.json` | Run times, fixproof version, SHA-256 of `fix.yaml` and `scope.yaml`, Syft/Grype/DB versions, and per image: verdict, reason, both check results, scanned manifest digest and platform |
-| `raw/NNN-grype.json`, `raw/NNN-sbom_version.json` | Each tool's own output for image NNN, minus anything that is not package metadata (see below) |
+| `bundle.json` | Run times, fixproof version, SHA-256 of `fix.yaml` and `scope.yaml`, Syft/Grype/DB versions, and per image or workload: verdict, reason, both check results, scanned manifest digest and platform; a workload also has its cluster, namespace, pod, container and owner |
+| `raw/NNN-grype.json`, `raw/NNN-sbom_version.json` | Each tool's own output for asset NNN, minus anything that is not package metadata (see below). Workloads running the same image share its files. |
 | `manifest.json` | SHA-256 and size of every other file |
 
 ### How verdicts become VEX
@@ -501,7 +557,9 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 ## Limitations
 
 - **One platform per image.** For a multi-platform image, both tools scan the host's platform
-  (here `linux/amd64`); the bundle records which. A verdict covers that platform only.
+  (here `linux/amd64`); the bundle records which. A verdict covers that platform only. For a pod,
+  fixproof does not check which platform its node runs (that would need cluster-wide read access
+  to nodes), so a pod on an arm64 node is checked against the platform fixproof scanned.
 - **A shared blind spot.** Grype uses Syft's cataloguing internally, so a package Syft cannot
   see (for example, a vendored copy without package metadata) is invisible to both checks. The
   two checks are independent in their decision (advisory data versus your stated fix), not in
@@ -521,8 +579,8 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M0 | Project skeleton, CI, commit rules | done |
 | M1 | Data model, `fix.yaml`/`scope.yaml`, OpenVEX writer with schema validation | done |
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
-| M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done, closing |
-| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | planned |
+| M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
+| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | built; first kind run pending |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | planned |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 

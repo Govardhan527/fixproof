@@ -135,14 +135,19 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 - [x] `imageID` format verified (SPEC_NOTES §12, 2026-10-03, from the kubelet and containerd
       source).
 - [x] M4 design accepted: ADR-0010 (owner approved 2026-10-03).
-- [ ] `kubernetes` dependency; `WorkloadAsset.owner`; bundle and verify-summary 1.1.0.
-- [ ] Inventory (`fixproof.inventory`) with unit tests on a fake Kubernetes API.
-- [ ] `verify` handles clusters: per-workload verdicts, each image scanned once, pod names in
-      the output.
-- [ ] kind setup script and the CI integration job for the 6 success-test workloads.
-- [ ] Read-only Role and RoleBinding YAML shipped.
+- [x] `kubernetes` dependency; `WorkloadAsset.owner`; bundle and verify-summary 1.1.0
+      (367d534, bd2a951, a0b408a).
+- [x] Inventory (`fixproof.inventory`) with unit tests on a fake Kubernetes API (bd2a951).
+- [x] `verify` handles clusters: per-workload verdicts, each image scanned once, pod names in
+      the output (a0b408a; unit tests on a fake cluster).
+- [ ] kind setup script and the CI integration job for the 6 success-test workloads: written
+      (`scripts/demo_cluster.sh`, `tests/integration/test_cluster.py`, 78cffd9); not yet run,
+      because the integration job runs on GitHub only (no Docker here).
+- [x] Read-only Role and RoleBinding YAML shipped (`deploy/kubernetes/`, 78cffd9), with a unit
+      test that every inventory API call is granted; split in two files (ADR-0010 Amendment 1).
 - [ ] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
-      only fixture images.
+      only fixture images. Written: namespace `fixproof-live` runs certbot v2.6.0 and v2.7.0;
+      not yet run.
 
 ## M5 (week 8)
 
@@ -164,12 +169,13 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M3 closed; M4 starting.
-- **M3 closed:** comparators for deb, rpm, apk, npm and Maven (PyPI in M2), each passing its
-  spec-derived table; live suite green on GitHub; scope and spec reviews done. README written.
-- **All open questions answered:** OQ-3 (CycloneDX 1.6), OQ-5 ((a), a registry without
-  credentials).
-- **Next steps, in order (M4):** verify the Kubernetes facts M4 relies on (`imageID` format under
-  containerd and for kind, the Python client's pod and ReplicaSet fields, RBAC verbs, a kind
-  local registry); propose the M4 design as an ADR (cluster scope, workload assets, pod names in
-  the output, the `kubernetes` dependency, the Role and RoleBinding); wait for approval; build.
+- **Date:** 2026-10-03. **Current milestone:** M4 (built; CI run pending).
+- **M4 so far:** ADR-0010 accepted. Committed locally, not pushed: 2b4a81c, 3588bf1, 367d534,
+  bd2a951, a0b408a, 78cffd9 and the docs commit after them. `make check` green, 100% coverage.
+  Inventory, per-workload verdicts, verify-summary and bundle 1.1.0, the reader account and
+  Role, the kind demo cluster script and its CI integration test are written.
+- **Not yet run:** the kind cluster. The `integration` job runs on `main` or on dispatch only,
+  and there is no Docker here, so the first real run needs a push (the owner's call).
+- **Next steps, in order:** push when the owner says so; watch the `integration` job; fix the
+  kind setup until SUCCESS TEST step 1 passes on GitHub (2 / 3 / 1 with digests, pod names and
+  the reason); then the M4 scope and spec reviews, README updates, and close M4.

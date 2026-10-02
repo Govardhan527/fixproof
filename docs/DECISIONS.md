@@ -123,3 +123,103 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   commit message ("Merge pull request #...") would fail `commit-hygiene` on `main`. The owner's
   `Initial commit` (`ad1835e`) predates the rules and is already on `origin/main`, so the range
   check never reaches it.
+
+## ADR-0005: M1 data contracts, input formats and the OpenVEX writer
+
+- **Date:** 2026-10-02. **Status:** Proposed (input file formats and the VEX output are public
+  interfaces).
+- **Context:** M1 is the data model, the `fix.yaml` and `scope.yaml` schemas and an OpenVEX writer
+  with schema validation. OQ-1, OQ-2 and OQ-6 are answered (SPEC_NOTES §14). Facts used: CVE id
+  pattern (SPEC_NOTES §2), OpenVEX v0.2.0 (§1), purl canonical form (§5), OCI references (§15).
+- **Decision:**
+  1. **`fix.yaml`** (format `fix`, `schema_version` 1.0.0). Unknown keys are errors.
+     - `cve` (required): the CVE id, pattern `^CVE-[0-9]{4}-[0-9]{4,19}$`. It must equal the
+       `--cve` given on the command line, so a fix file for another CVE can never prove this one.
+     - `packages` (required, at least one): each has `ecosystem` (`deb`, `rpm`, `apk`, `pypi`,
+       `npm` or `maven`: the purl type names), `namespace` (required, optional or forbidden
+       exactly as the purl type definition says: required for deb, rpm, apk and maven, optional
+       for npm, forbidden for pypi), `name`, `fixed_version` (required) and `fixed_vers`
+       (optional vers string whose type equals the ecosystem, for backports).
+     - Meaning: an installed version V is fixed when V >= `fixed_version` or V is inside
+       `fixed_vers` (comparison per ecosystem arrives in M3). M1 checks vers syntax only
+       (scheme, type, comparators, percent-encoding); the §5.4 ordering checks need the M3
+       comparators.
+     - Several packages cover a fix shipped in several binary packages (for example `libssl3`
+       and `openssl`).
+  2. **`scope.yaml`** (format `scope`, `schema_version` 1.0.0). Unknown keys are errors.
+     - `registries` (required): registry hosts (`host[:port]`) fixproof may read images from.
+       This is the allowlist: an image from any other registry, explicit or found in a cluster,
+       is never pulled and gets `unknown` with the reason "registry not in scope".
+     - `images` (optional): full references `registry/repository@sha256:<64 hex>`. The registry
+       host is required (no Docker Hub defaulting) and must be in `registries`; duplicates are
+       errors.
+     - `clusters` (optional): `context` (kubeconfig context name) and `namespaces` (at least
+       one). Name validation against Kubernetes rules is M4.
+     - At least one of `images` and `clusters` is non-empty.
+  3. **Data model** (pydantic v2, frozen): `ImageRef(registry, repository, digest)`;
+     `ImageAsset(image)`; `WorkloadAsset(cluster, namespace, pod, container, image | None)`;
+     `MethodResult(asset, method, status, detail, raw_ref)` with `method` in `grype`,
+     `sbom_version` and `status` in `present`, `not_present`, `error` (the planned contract plus
+     `method`, so a result says which method produced it); `Verdict` in `fixed`,
+     `still_affected`, `unknown`; `AssetVerdict(asset, verdict, reason, results)`. The rule that
+     combines results (`verdict.py`) is M2.
+  4. **OpenVEX document** (one per run):
+     - `@context` `https://openvex.dev/ns/v0.2.0`; `version` 1; `author` supplied by the caller
+       (required, non-empty); `timestamp` from an injected clock, UTC, RFC 3339 with `Z` and
+       whole seconds; `tooling` `fixproof <version>` (Syft, Grype and DB versions join in M2).
+     - `@id` = prefix + `vex-` + the first 32 hex digits of the SHA-256 of the canonical document
+       without `@id`. The default prefix `https://openvex.dev/docs/fixproof/` uses OpenVEX's
+       shared namespace; a caller may pass its own prefix. Same inputs, same `@id`.
+     - One statement per distinct image digest, sorted by product `@id`. `vulnerability.name` is
+       the CVE id. The product `@id` and `identifiers.purl` are the canonical OCI purl: name = the
+       last repository segment, lowercased; version = the digest; qualifier `repository_url` =
+       `registry/repository`. `subcomponents` are the unversioned package purls from `fix.yaml`.
+     - Status per OQ-2: `fixed` -> `fixed`; `still_affected` -> `affected` with
+       `action_statement` "Upgrade <package> to <fixed_version> or later" (plus the backport
+       ranges when given); `unknown` -> `under_investigation`. `status_notes` carries the verdict
+       reason. The writer has no path that produces `not_affected`, and a test proves it.
+     - Workloads whose image digest is unknown get no statement (a statement needs a product);
+       they stay in the run report and the evidence bundle. Two different verdicts for the same
+       digest are an error, never resolved by picking one.
+     - Output: UTF-8 JSON, sorted keys, 2-space indent, trailing newline. Before writing, the
+       document is validated against the vendored official schema with format checking on; an
+       invalid document raises an error and nothing is written.
+  5. **purls are built by fixproof** (`purl.py`) for the seven types it emits (oci, deb, rpm,
+     apk, pypi, npm, maven), following the v1.0.1 encoding and build rules, and tested against
+     the official `build` vectors for those types, vendored with their SHA-256 under
+     `tests/fixtures/purl-spec/` (MIT, licence kept).
+  6. **Schemas and examples:** the official OpenVEX schema is vendored at
+     `src/fixproof/schemas/official/openvex.schema.json` (CC0-1.0; a test pins its SHA-256 to the
+     ADR-0002 value). `fix.schema.json` and `scope.schema.json` are generated from the models and
+     committed (a test fails on drift). Examples: `examples/openvex/*.json` (golden output from
+     fixed synthetic verdicts, regenerated with `FIXPROOF_UPDATE_GOLDEN=1 make test`),
+     `examples/fix/*.yaml` and `examples/scope/*.yaml`. `scripts/validate_outputs.py` learns to
+     read `.yaml` examples.
+  7. **No CLI command in M1.** `verify` arrives with the first end-to-end path in M2.
+  8. **Errors:** `FixproofError` base; `InputError` (file, field and reason) for bad `fix.yaml`
+     or `scope.yaml`; `OutputValidationError` when the VEX fails its schema.
+  9. **Format set** (ADR-0003): inputs `fix`, `scope` (M1) and `closed` (M5); outputs `openvex`
+     (M1), `bundle` and `manifest` (M2), `gate-result` and `cyclonedx` (M5). Each schema lands
+     in its milestone.
+- **Consequence:** M1's golden VEX files exercise all three statuses and validate against the
+  official schema with formats checked. `fix.yaml`, `scope.yaml` and the VEX layout become public
+  interfaces at 1.0.0; changing them needs an ADR.
+
+## ADR-0006: M1 runtime dependencies
+
+- **Date:** 2026-10-02. **Status:** Proposed (new runtime dependencies need owner approval).
+- **Decision:** add, all MIT:
+  - `pydantic>=2.13`: data contracts (planned).
+  - `pyyaml>=6.0.3`: reading `fix.yaml` and `scope.yaml` with `safe_load` only.
+  - `jsonschema>=4.26`: moves from dev to runtime, to validate the VEX before it is written.
+  - `rfc3339-validator>=0.1.4`, `rfc3986-validator>=0.1.1`, `rfc3987-syntax>=1.1.0` (pulling
+    `six` and `lark`): without them jsonschema silently skips the `date-time`, `uri` and `iri`
+    formats the OpenVEX schema uses (SPEC_NOTES §1). They are jsonschema's own `format-nongpl`
+    choices; the alternative `rfc3987` is GPL-3.0-or-later.
+  - Dev: `types-pyyaml`.
+- **Not added:** `packageurl-python`, which the plan lists. Version 0.17.6 does not produce the
+  v1.0.1 canonical form for qualifier values (SPEC_NOTES §5), and M1 only builds purls. Whether it
+  parses Syft's purls in M2 (it passes every official parse test) is decided then.
+- **Consequence:** PyYAML and three small format validators join the plan's list. The validators
+  make the success test's "validates against the pinned OpenVEX schema" check dates and IRIs, not
+  just shapes.

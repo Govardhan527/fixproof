@@ -437,6 +437,11 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   | rfc3339-validator, rfc3986-validator, rfc3987-syntax | 0.1.4, 0.1.1, 1.1.0 | MIT | `date-time`, `uri`, `iri` checks (§1) |
   | six, lark | 1.17.0, 1.3.1 | MIT | pulled in by rfc3339-validator and rfc3987-syntax |
 
+  Added in M2 (ADR-0007 item 11): `typer` 0.27.2 (MIT) and `packaging` 26.3 (Apache-2.0 OR
+  BSD-2-Clause), pulling in `rich` 15.0.0 (MIT), `pygments` 2.21.0 (BSD-2-Clause),
+  `markdown-it-py` 4.2.0 and `mdurl` 0.1.2 (MIT, by their PyPI classifiers), `shellingham` 1.5.4
+  (ISC) and `annotated-doc` 0.0.5 (MIT).
+
   Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0. The per-file hashes are recorded by
   `uv.lock` itself and are not repeated here.
 - **Vendored files:** the OpenVEX schema comes from https://github.com/openvex/spec, licence

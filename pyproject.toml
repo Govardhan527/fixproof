@@ -14,6 +14,7 @@ classifiers = [
 # Runtime dependencies are added in the milestone that first uses them (ADR-0002).
 dependencies = [
     "jsonschema>=4.26",
+    "packaging>=26.3",
     "pydantic>=2.13",
     "pyyaml>=6.0.3",
     # jsonschema checks the OpenVEX schema's date-time, uri and iri formats only when these are
@@ -21,6 +22,7 @@ dependencies = [
     "rfc3339-validator>=0.1.4",
     "rfc3986-validator>=0.1.1",
     "rfc3987-syntax>=1.1.0",
+    "typer>=0.27",
 ]
 
 [dependency-groups]

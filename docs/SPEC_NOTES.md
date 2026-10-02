@@ -379,3 +379,9 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `domain := host [':' port-number]`; host is a domain name, IPv4 or bracketed IPv6 address.
   VERIFIED. Its implicit defaults (a missing domain means Docker Hub, `library/` for single-path
   names) are not applied by fixproof in M1: `scope.yaml` requires the registry host explicitly.
+- **Which segment is the registry:** `normalize.go` at the same commit (SHA-256
+  `7bad23a44f1bca325c5de6185092b9992c55b7db211fa4f5444b2d80853e7599`), `splitDockerDomain`: the
+  first `/`-separated segment is a domain when it equals `localhost`, contains `.` or `:`, or is
+  not all lowercase; otherwise the name is on Docker Hub (`docker.io`, with `library/` added to
+  single-segment names). VERIFIED. fixproof uses the same test to require an explicit registry
+  in `scope.yaml` and rejects references that would fall back to Docker Hub.

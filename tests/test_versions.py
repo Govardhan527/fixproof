@@ -125,3 +125,9 @@ def test_is_fixed_uses_the_fixed_version_and_the_backport_ranges() -> None:
 def test_is_fixed_reports_versions_it_cannot_compare() -> None:
     with pytest.raises(VersionError):
         is_fixed(package(fixed_version="2.31.0"), "not.a.version!")
+
+
+def test_containment_rejects_malformed_ranges_as_version_errors() -> None:
+    with pytest.raises(VersionError, match="expected 'pypi'"):
+        contains("vers:npm/>=1.0", "pypi", "1.0")
+    assert not contains("vers:pypi/1.0|1.5", "pypi", "1.2")  # equalities only, no range

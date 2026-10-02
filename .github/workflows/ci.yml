@@ -119,19 +119,9 @@ jobs:
         with:
           version: "0.12.9"
       - run: uv sync --locked
-      - name: Install Syft 1.54.0 and Grype 0.119.0 (SHA-256 from each release's checksums file)
+      - name: Install Syft 1.54.0 and Grype 0.119.0 (checksum-verified)
         run: |
-          mkdir -p "$RUNNER_TEMP/bin"
-          curl -sSfL -o "$RUNNER_TEMP/syft.tar.gz" \
-            https://github.com/anchore/syft/releases/download/v1.54.0/syft_1.54.0_linux_amd64.tar.gz
-          curl -sSfL -o "$RUNNER_TEMP/grype.tar.gz" \
-            https://github.com/anchore/grype/releases/download/v0.119.0/grype_0.119.0_linux_amd64.tar.gz
-          printf '%s  %s\n' \
-            54a87372498168b2d033e876fd41fa4e8035b872699e525a57046e1f2f09c860 "$RUNNER_TEMP/syft.tar.gz" \
-            3fa2dc4b924621ab65404cf08d0b8438d896d80ab949c9d5a4ca283c36004c9b "$RUNNER_TEMP/grype.tar.gz" \
-            | sha256sum --check --strict
-          tar -xzf "$RUNNER_TEMP/syft.tar.gz" -C "$RUNNER_TEMP/bin" syft
-          tar -xzf "$RUNNER_TEMP/grype.tar.gz" -C "$RUNNER_TEMP/bin" grype
+          scripts/install_scanners.sh "$RUNNER_TEMP/bin"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Download the Grype DB and record its status
         env:

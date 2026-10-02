@@ -1,0 +1,41 @@
+# Weekly live checks (ADR-0008): real public images from Docker Hub, real Syft and Grype, and the
+# Grype DB as published that day. Each image has an expected verdict with an independent source
+# (SPEC_NOTES §19); a changed verdict fails the run, so drift in the tools, the advisory data or
+# fixproof is noticed. Third-party actions are pinned to full commit SHAs, as in ci.yml.
+name: live
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - name: Install Syft 1.54.0 and Grype 0.119.0 (checksum-verified)
+        run: |
+          scripts/install_scanners.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Download today's Grype DB and record its status
+        env:
+          GRYPE_CHECK_FOR_APP_UPDATE: "false"
+        run: |
+          grype db update
+          grype db status -o json
+      - name: Run the live checks (anonymous Docker Hub reads, no credentials)
+        run: make live

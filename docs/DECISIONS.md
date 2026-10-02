@@ -232,3 +232,89 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** PyYAML and three small format validators join the plan's list. The validators
   make the success test's "validates against the pinned OpenVEX schema" check dates and IRIs, not
   just shapes.
+
+## ADR-0007: M2 design: two methods per image, the verdict table and the evidence bundle
+
+- **Date:** 2026-10-02. **Status:** Proposed (dependencies, the `verify` CLI, the evidence bundle
+  format and the verdict rule are public interfaces; items marked (Q) need an owner answer).
+- **Context:** M2 is image-level verification with both methods on 8 fixture images built in CI
+  from pinned Dockerfiles; done when the truth-table test covers every agree and disagree
+  combination. Facts: SPEC_NOTES §12 and §17 (Syft, Grype), §5 (vers containment), §9 (PEP 440).
+- **Decision:**
+  1. (Q1) **Verdict table.** The plan's rule ("both say not present -> fixed; any says present ->
+     still_affected; disagreement or failure -> unknown") does not say which wins when one method
+     says present and the other says not present. Proposed, for the 9 combinations of
+     `present` (P), `not_present` (N) and `error` (E):
+
+     | grype | sbom_version | verdict | reason |
+     |---|---|---|---|
+     | N | N | fixed | both methods agree the vulnerable component is gone |
+     | P | P | still_affected | both methods find it |
+     | P | E | still_affected | Grype finds it; the SBOM method failed (named) |
+     | E | P | still_affected | the SBOM method finds it; Grype failed (named) |
+     | P | N | unknown | the methods disagree (both details given) |
+     | N | P | unknown | the methods disagree (both details given) |
+     | N | E | unknown | the SBOM method failed, so `fixed` cannot be proven |
+     | E | N | unknown | Grype failed, so `fixed` cannot be proven |
+     | E | E | unknown | both methods failed |
+
+     `still_affected` needs positive evidence and no contradicting evidence; a contradiction is
+     `unknown`, never `fixed` and never `still_affected`.
+  2. (Q2) **Version comparison in M2.** The SBOM method compares versions, but the comparators are
+     M3. Proposed: M2 adds the comparator interface and PyPI only (`packaging`, already in the
+     planned stack, PEP 440 per SPEC_NOTES §9) and vers containment (§5); the fixtures use a real
+     PyPI advisory (CVE-2023-32681, `requests` >= 2.3.0, < 2.31.0, SPEC_NOTES §17). dpkg, rpm,
+     apk, npm and Maven stay in M3 as planned; until then a package in another ecosystem makes
+     the SBOM method return `error` (so the verdict is `unknown`, never `fixed`).
+  3. **Method `grype`:** run `grype registry:<registry>/<repository>@<digest> -o json` on the
+     image itself (not on fixproof's SBOM), with `GRYPE_DB_AUTO_UPDATE=false` (no download during
+     a run) and `GRYPE_CHECK_FOR_APP_UPDATE=false` (no update check, no telemetry). `present` when
+     any match has `vulnerability.id` equal to the CVE or lists it in `relatedVulnerabilities`
+     (PyPI matches carry the GHSA id with the CVE only there, SPEC_NOTES §17); `not_present`
+     when Grype exits 0 with no such match; `error` otherwise (non-zero exit, unparsable output,
+     missing or stale DB). Grype's own DB age check (default 120 hours) stays on, so a stale DB
+     gives `unknown`, not `fixed`. The DB used is read from Grype's `descriptor.db.status`.
+  4. **Method `sbom_version`:** run `syft registry:...@<digest> -o json` with
+     `SYFT_CHECK_FOR_APP_UPDATE=false` and `SYFT_FILE_METADATA_SELECTION=none` (no file listing;
+     file contents are off by default and stay off). Select artifacts whose purl has the fix package's
+     type, namespace and name (purl rules, version and qualifiers ignored). `present` when any
+     selected artifact's version is neither >= `fixed_version` nor inside `fixed_vers`;
+     `not_present` when none is (including when the package is absent); `error` when Syft fails,
+     its output is not schema 16.x, or a version cannot be compared.
+  5. **Independence, stated honestly:** both tools catalogue with Syft code (Grype embeds Syft),
+     so a package Syft cannot see is invisible to both. What differs is the decision: Grype's
+     vulnerability data against fixproof's comparison with the claimed fix. The docs say so.
+  6. **Digest and platform:** the requested digest must equal the scanned `manifestDigest` or
+     appear in `repoDigests`, or the method returns `error`. Given a multi-platform index, both
+     tools scan the host platform only (SPEC_NOTES §17), so the bundle records the scanned
+     platform and manifest digest, and the docs say a verdict covers that platform.
+  7. **Evidence bundle** (formats `bundle` and `manifest`, 1.0.0), written to `--out DIR`, which
+     must not exist or be empty (never overwritten):
+     - `openvex.json` (ADR-0005);
+     - `bundle.json`: run times from the injected clock, fixproof version, the CVE, SHA-256 of
+       `fix.yaml` and `scope.yaml`, tool versions (Syft version and JSON schema; Grype version,
+       DB schema version, build time and checksum), and per asset the verdict, reason and both
+       `MethodResult`s (asset `kind` included, as ADR-0005 Amendment 1 said);
+     - `raw/<asset-index>-<method>.json`: the tools' JSON with the raw image config (which holds
+       the image's environment variables), raw manifest, labels, annotations, `files` and the
+       local DB `path` removed, so nothing from an image layer except package metadata is stored;
+     - `manifest.json`: SHA-256 of every other file, sorted by path.
+  8. **CLI `fixproof verify --cve ID --fix FILE --scope FILE --out DIR --author TEXT [--json]`.**
+     M2 verifies `images`; a scope with `clusters` is an error until M4 (no silent skipping).
+     Exit codes: 0 every asset `fixed`; 1 any `still_affected`; 2 no `still_affected` but any
+     `unknown`; 3 bad input or usage. `--json` prints a summary (verdict counts and per-asset
+     verdicts) to stdout. Syft and Grype are found on `PATH`; their versions are recorded, not
+     enforced, and output from another major JSON schema is an `error`.
+  9. **Fixtures (8 images, `tests/fixtures/images/<name>/Dockerfile`)**, each `FROM
+     python:3.12-slim-bookworm@sha256:54c85f3c...` (pinned index digest, looked up 2026-10-02):
+     `requests` 2.30.0 (still_affected); 2.25.1 (still_affected); 2.31.0 (fixed); 2.32.x pinned
+     (fixed); absent (fixed); 2.31.0 system-wide plus 2.30.0 in a venv (still_affected); 2.30.0 in
+     a venv only (still_affected); and the 2.31.0 image pushed to a second registry that needs
+     credentials fixproof is not given (unknown). A second `fix.yaml` claiming `fixed_version`
+     2.32.0 run against the 2.31.0 image gives the real disagreement (unknown).
+  10. **CI integration job:** `registry:2` (pinned digest) as an open and an authenticated
+      service, Syft and Grype pinned by checksum, `grype db update` then status recorded, the 8
+      images built and pushed, `fixproof verify` run, verdicts and VEX validity asserted. The
+      truth-table unit test (done-criterion) uses fake method results and needs none of this.
+  11. **Dependencies:** `typer` (CLI) and `packaging` (PEP 440), both in the planned stack.
+- **Consequence:** the verdict rule, the bundle layout and the CLI become public at 1.0.0.

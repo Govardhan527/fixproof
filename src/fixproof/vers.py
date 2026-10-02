@@ -32,7 +32,7 @@ def check_vers(value: str, expected_type: str) -> list[tuple[str, str]]:
     if scheme != "vers" or not colon:
         raise ValueError(f"{value!r} does not start with 'vers:'")
     vers_type, slash, constraints = rest.partition("/")
-    if not slash or not _TYPE.match(vers_type):
+    if not slash or not _TYPE.fullmatch(vers_type):
         raise ValueError(f"{value!r} has no valid lowercase type before '/'")
     if vers_type != expected_type:
         raise ValueError(f"{value!r} has type {vers_type!r}; expected {expected_type!r}")

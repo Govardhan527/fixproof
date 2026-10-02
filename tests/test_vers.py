@@ -42,3 +42,8 @@ def test_valid_ranges_parse(value: str, expected: list[tuple[str, str]]) -> None
 def test_invalid_ranges_are_rejected(value: str, expected_type: str, reason: str) -> None:
     with pytest.raises(ValueError, match=reason):
         check_vers(value, expected_type)
+
+
+def test_a_trailing_newline_never_passes_as_a_type() -> None:
+    with pytest.raises(ValueError, match="no valid lowercase type"):
+        check_vers("vers:deb\n/>=1.0", "deb\n")

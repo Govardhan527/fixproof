@@ -104,3 +104,8 @@ def test_name_and_qualifier_key_are_checked() -> None:
         build("npm", "/")
     with pytest.raises(ValueError, match="invalid purl qualifier key"):
         build("npm", "x", qualifiers={"1bad": "v"})
+
+
+def test_a_trailing_newline_never_passes_as_a_key() -> None:
+    with pytest.raises(ValueError, match="invalid purl qualifier key"):
+        build("npm", "x", qualifiers={"tag\n": "v"})

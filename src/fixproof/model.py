@@ -122,4 +122,4 @@ class AssetVerdict(Contract):
 
 
 def is_cve_id(value: str) -> bool:
-    return re.match(CVE_PATTERN, value) is not None
+    return re.fullmatch(CVE_PATTERN, value) is not None

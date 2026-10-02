@@ -60,6 +60,7 @@ def test_bad_image_references_are_rejected(reference: str, reason: str) -> None:
         ("cve-2023-0286", False),
         ("CVE-23-0286", False),
         ("CVE-2023-0286 ", False),
+        ("CVE-2023-0286\n", False),
     ],
 )
 def test_cve_id_pattern(value: str, valid: bool) -> None:

@@ -77,7 +77,7 @@ def build(
         parts.append("@" + _encode(_normal(purl_type, "version", version)))
     pairs = []
     for key, value in (qualifiers or {}).items():
-        if not _KEY.match(key.lower()):
+        if not _KEY.fullmatch(key.lower()):
             raise ValueError(f"invalid purl qualifier key {key!r}")
         if value:
             pairs.append(f"{key.lower()}={_encode(value)}")

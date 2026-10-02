@@ -367,3 +367,38 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** fixproof is exercised weekly on images it did not build, against current
   advisory data. Anonymous Docker Hub reads are rate-limited, so a failed fetch shows up as an
   `unknown` verdict and a failed run, never as a pass.
+
+## ADR-0009: M3 version comparators
+
+- **Date:** 2026-10-02. **Status:** Accepted (the owner asked to start M3 with OQ-4 answered (b)
+  on 2026-10-02; no public interface changes; the one new dependency is the dev-only oracle
+  OQ-4 (b) names).
+- **Context:** the SBOM method compares versions per ecosystem. PyPI exists (ADR-0007 Q2); M3 adds
+  dpkg, rpm, apk, npm and Maven, each passing a spec-derived table that includes epochs and
+  pre-releases. Facts: SPEC_NOTES §6 to §11.
+- **Decision:**
+  1. One comparator class per ecosystem in `fixproof.versions`, behind the existing `Comparator`
+     protocol. Each validates versions against its own grammar; an invalid version raises
+     `VersionError`, so the SBOM method reports `error` and the verdict is `unknown`, never
+     `fixed`.
+  2. **dpkg:** Debian Policy §5.6.12 (§6), written here. `python-debian` (GPL-2.0-or-later) is a
+     dev-only dependency used as an oracle: a test compares the two on a seeded, generated corpus
+     and on the policy's examples. `src/` never imports it (a test checks).
+  3. **rpm:** `rpm-version(7)` (§7): epoch, version, release, `~` and `^`, segment rules.
+     Versions are `[epoch:]version[-release]`.
+  4. **apk:** apk-tools v3.0.8 behaviour (§8), re-implemented, never copied. Versions with a
+     leading-zero digit group after a `.` (such as `1.05`) or a `~hash`, where apk-tools v2
+     (Alpine 3.20 to 3.22) and v3 (3.23 onward) can disagree, raise `VersionError`.
+  5. **npm:** SemVer 2.0.0 precedence (§10), strict syntax; build metadata ignored.
+  6. **Maven:** the POM reference's version order specification (§11).
+  7. **Test tables:** each spec's own examples, plus rule-derived cases for epochs, pre-releases
+     and the edge cases above. Licence-compatible upstream test vectors are vendored as data
+     with their licence: Maven's `ComparableVersionTest` (Apache-2.0) and node-semver's
+     comparison fixtures (ISC). GPL-licensed test data (dpkg, rpm, apk-tools) is never copied
+     into the repository; agreement with it is checked during development and recorded in
+     SPEC_NOTES.
+  8. **Live data (ADR-0008 item 5):** the live suite gains real Debian, Alpine and RPM-based
+     images with real OS-package CVEs, and CVE-2023-4911 on `python:3.12-slim-bookworm` changes
+     from `unknown` to `fixed`.
+- **Consequence:** every ecosystem `fix.yaml` accepts can now prove `fixed`. apk versions in the
+  v2/v3 grey zone stay `unknown` until a later decision.

@@ -294,8 +294,27 @@ the exact files read.
   **GPL-2.0-only**: it is a behavioural reference, never copied (ADR-0001).
   - Grammar comment: `digit{.digit}...{letter}{_suf{#}}...{~hash}{-r#}`. Suffix order in the
     source: `alpha`, `beta`, `pre`, `rc`, (none), `cvs`, `svn`, `git`, `hg`, `p`. VERIFIED.
-  - The full comparison algorithm, the v2 (`v2.14.12`) versus v3 differences, and which Alpine
-    releases ship which apk-tools: UNVERIFIED, blocks M3.
+  - **Algorithm (v3.0.8), read 2026-10-02.** VERIFIED. A version is an initial digit run, then
+    any of: `.` digits; one letter `a`-`z` (only after digits); `_suffix` with an optional
+    number (suffix exactly one of `alpha`, `beta`, `pre`, `rc`, `cvs`, `svn`, `git`, `hg`, `p`);
+    `~` plus hex digits (a commit hash); `-r` plus digits (the package revision), in that order
+    (`apk_version_validate` rejects anything else). Two versions are compared token by token
+    while both tokens are of the same kind: digits numerically, except that if either digit
+    group after a `.` starts with `0` the two are compared as strings ("similar to Gentoo
+    spec"); a letter by its character; a suffix by the order `alpha` < `beta` < `pre` < `rc` <
+    (none) < `cvs` < `svn` < `git` < `hg` < `p`; suffix and revision numbers numerically; commit
+    hashes as strings. When the kinds differ or one version ends: a version continuing with a
+    pre-release suffix (`alpha` to `rc`) is lower; otherwise the token kinds rank, in source
+    order, digit < letter < suffix < suffix number < hash < revision < end, and the version
+    whose next token ranks higher in that order is the lower one (so `1.0` > `1`, `1.0a` <
+    `1.0.1`, `1.0_p1` > `1.0`, `1.0-r1` > `1.0`).
+  - **v2 (`v2.14.12`, `src/version.c`, SHA-256
+    `88f36759bc84dc5364ec9e69e537c640dea06bf5ed56a1a6ef612e3c23486b4c`) differs:** no `~hash`
+    token, and a digit group with leading zeros is encoded as a negative number instead of being
+    compared as a string. VERIFIED (source read).
+  - **Which Alpine ships which:** aports `main/apk-tools/APKBUILD` `pkgver` per branch
+    (gitlab.alpinelinux.org, 2026-10-02): 3.20-stable 2.14.4, 3.21-stable 2.14.6, 3.22-stable
+    2.14.12, 3.23-stable and master 3.0.8. VERIFIED.
 
 ## 9. Python versions (PEP 440, M3)
 
@@ -330,8 +349,10 @@ the exact files read.
   `README.md` SHA-256 `f1a789dcec285150be24db2ea04dd3175031554fa9834ec92fab83fb5e025a57`,
   section "Prerelease Tags": a range admits a pre-release version only if some comparator in the
   same set has a pre-release on the same `[major, minor, patch]` tuple, unless
-  `includePrerelease` is set. VERIFIED. Full range grammar (hyphen, X, tilde and caret ranges):
-  UNVERIFIED, blocks M3.
+  `includePrerelease` is set. VERIFIED. Range grammar (hyphen, X, tilde and caret ranges) is
+  not needed: `fix.yaml` states ranges in vers, and the vers `npm` type (vers-spec v1.2.0,
+  `types/npm-definition.json`) maps node-semver ranges to vers constraints, with node-semver as
+  the version reference. So fixproof needs only SemVer 2.0.0 precedence for npm. VERIFIED.
 
 ## 11. Maven version ordering (M3)
 
@@ -347,8 +368,19 @@ the exact files read.
     `ga` = `release` < `sp`; `a`, `b`, `m` abbreviate alpha, beta, milestone when directly
     followed by a number; other qualifiers sort case-insensitively, and alphabetic tokens sort
     before numeric ones.
-  - The rules when the separators differ, and the "Version Order Testing" examples: UNVERIFIED,
-    block M3.
+  - When the separators differ: `.qualifier = -qualifier < -number < .number`; with the
+    abbreviations the qualifier order is `alpha < a1 < beta < b1 < milestone < m1 < rc = cr <
+    snapshot < "" = final = ga = release < sp`. VERIFIED.
+  - "End Result Examples" (the page's own table): `1 < 1.1`; `1-snapshot < 1 < 1-sp`;
+    `1-foo2 < 1-foo10`; `1.foo = 1-foo < 1-1 < 1.1`; `1.ga = 1-ga = 1-0 = 1_0 = 1.0 = 1`;
+    `1-sp > 1-ga`; `1-sp.1 > 1-ga.1`; `1-sp-1 < 1-ga-1`; `1-a1 = 1-alpha-1`;
+    `1.0-alpha1 = 1.0-ALPHA1`; `1.7 > 1.K`; `5.zebra > 5.aardvark`; `1.α > 1.b`. VERIFIED.
+  - "Version Order Testing" says the examples were produced with Maven's own comparator
+    (`maven-artifact`). Its test class at tag `maven-3.9.16`,
+    `maven-artifact/src/test/java/org/apache/maven/artifact/versioning/ComparableVersionTest.java`
+    (SHA-256 `6e180a9c3107261e5e2686c216d6b6bf4a0c8f456902010c504cfb81bcd631ae`, Apache-2.0),
+    holds ordered lists (`VERSIONS_QUALIFIER`, `VERSIONS_NUMBER`) and equality and order pairs.
+    VERIFIED (file read).
 
 ## 12. Kubernetes, Syft, Grype and kind (M2, M4)
 

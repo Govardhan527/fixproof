@@ -27,7 +27,7 @@ the exact files read.
   `timestamp`, `version` (integer >= 1, "must be incremented when any content ... changes") and
   `statements` (array, `minItems` 1, `uniqueItems`). Optional: `role`, `last_updated`, `tooling`.
   `additionalProperties: false`. VERIFIED.
-- **`@context`: OPEN (OQ-1).** The spec at tag `v0.2.0` says it is "Fixed to
+- **`@context`: `https://openvex.dev/ns/v0.2.0`** (OQ-1, owner decision 2026-10-02). The spec at tag `v0.2.0` says it is "Fixed to
   `https://openvex.dev/ns` before 1.0 is released". The spec on `main` says "The URL is structured
   as https://openvex.dev/ns/v[version] ... If the version is omitted, it defaults to v0.0.1", and
   its examples use `https://openvex.dev/ns/v0.2.0`. The schema only requires `format: uri`.
@@ -53,7 +53,10 @@ the exact files read.
   recommended". VERIFIED.
 - **Format keywords:** the schema uses `format` values `iri`, `uri` and `date-time`. Which of
   these jsonschema checks, and with which optional packages: UNVERIFIED, blocks M1.
-- **How fixproof verdicts map to statuses:** OPEN (OQ-2), blocks M1.
+- **How fixproof verdicts map to statuses** (OQ-2, owner decision 2026-10-02): `fixed` ->
+  `fixed`; `still_affected` -> `affected` with an `action_statement`; `unknown` ->
+  `under_investigation` with the reason in `status_notes`. `not_affected` is never emitted in the
+  MVP, including when a fix removed the package.
 
 ## 2. CVE JSON 5 record format (CVE ids, M1)
 
@@ -285,10 +288,12 @@ the exact files read.
 
 ## 14. Open questions for the owner
 
+Answered questions keep their text and gain the answer, so the reasoning stays on record.
+
 - **OQ-1 (blocks M1): OpenVEX `@context`.** (a) `https://openvex.dev/ns/v0.2.0`, as the current
   spec text and its examples say; (b) `https://openvex.dev/ns`, as the `v0.2.0` tag says (which
   the current text reads as v0.0.1). Recommended: (a), because it names the version the
-  documents are validated against.
+  documents are validated against. **Answered 2026-10-02: (a).**
 - **OQ-2 (blocks M1): verdict to OpenVEX status.** Proposed: `fixed` -> `fixed`;
   `still_affected` -> `affected` with an `action_statement` (the schema requires one) naming the
   fixed version from `fix.yaml`; `unknown` -> `under_investigation` with the reason in
@@ -296,7 +301,7 @@ the exact files read.
   the package rather than upgrading it is also `fixed` under the verdict rule. Should that be
   emitted as `not_affected` + `component_not_present` instead, with the stored SBOM and Grype
   outputs as the evidence? Recommended: no for the MVP; always `fixed`, so `not_affected` never
-  appears.
+  appears. **Answered 2026-10-02: as proposed, and no `not_affected` in the MVP.**
 - **OQ-3 (blocks M5): CycloneDX version.** The plan names 1.6; 1.7.2 is the latest. Recommended:
   stay on 1.6 (patch 1.6.2) unless the library or a buyer needs 1.7.
 - **OQ-4 (blocks M3): dpkg comparator and the GPL.** `python-debian` (1.1.1) is
@@ -312,5 +317,5 @@ the exact files read.
 - **OQ-6 (blocks M1): range syntax in `fix.yaml`.** (a) A single `fixed_version`, meaning every
   version at or above it is fixed; (b) a vers string (§5); (c) both, (a) required and (b)
   optional for backports. Recommended: (c), because distributions backport fixes to several
-  branches, and vers is the standard notation for that.
+  branches, and vers is the standard notation for that. **Answered 2026-10-02: (c).**
 

@@ -37,7 +37,8 @@ Tick an item only when its done-criteria pass and the evidence is stored or link
 
 Data model, `fix.yaml` and `scope.yaml` schemas, OpenVEX writer with schema validation.
 - [ ] Done: golden VEX files validate.
-- [ ] OQ-1, OQ-2 and OQ-6 in `docs/SPEC_NOTES.md` §14 answered by the owner (they block M1).
+- [x] OQ-1, OQ-2 and OQ-6 in `docs/SPEC_NOTES.md` §14 answered by the owner (2026-10-02: the
+      recommended options).
 - [ ] OpenVEX schema vendored at the ADR-0002 pin; `format` checking settled (SPEC_NOTES §1).
 - [ ] ADR for the M1 data contracts (output formats, input file formats).
 

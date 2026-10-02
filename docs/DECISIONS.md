@@ -409,3 +409,48 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      from `unknown` to `fixed`.
 - **Consequence:** every ecosystem `fix.yaml` accepts can now prove `fixed`. apk versions in the
   v2/v3 grey zone stay `unknown` until a later decision.
+
+## ADR-0010: M4 design: Kubernetes inventory and a verdict per workload
+
+- **Date:** 2026-10-03. **Status:** Proposed (cluster scope, new output fields, a new runtime
+  dependency and the RBAC manifest are public interfaces).
+- **Context:** M4 is the Kubernetes inventory on kind, mapping pods to image digests and giving a
+  verdict per workload; done when SUCCESS TEST step 1 passes (6 workloads: exactly 2 `fixed`,
+  3 `still_affected` with image digests and pod names, 1 `unknown` with the reason). OQ-5 chose
+  the unreadable workload: an image in a registry fixproof has no credentials for. Facts:
+  SPEC_NOTES §12.
+- **Decision:**
+  1. **Inventory** (`fixproof.inventory`): for each `clusters[]` entry, load that kubeconfig
+     context (`KUBECONFIG` or `~/.kube/config`, the standard places), list the pods in each
+     listed namespace, and turn every container and init container into a `WorkloadAsset`
+     (cluster, namespace, pod, container, image). The image comes from the container status
+     `imageID` (`registry/repository@sha256:…`). Ephemeral debug containers are skipped.
+  2. **Owner:** follow the pod's controller reference; a ReplicaSet is read once more to reach
+     its Deployment. The result (for example `Deployment/payments-api`) goes in a new optional
+     `owner` field of `WorkloadAsset`.
+  3. **No guessing:** a container with no usable `imageID` (still waiting, or an image with no
+     repository digest) gets `unknown` with the reason, and so does an image whose registry is
+     not in `registries` (it is never pulled).
+  4. **Each image is scanned once**, however many workloads run it; every workload takes that
+     image's verdict and points at the same raw evidence. VEX stays one statement per image.
+  5. **`scope.yaml`:** `clusters` is accepted (the format is unchanged, ADR-0005); `images` and
+     `clusters` may be combined.
+  6. **Output:** the human output lists each workload as `cluster/namespace/pod/container` with
+     its owner and image digest. `verify-summary` 1.1.0 and `bundle` 1.1.0 add the optional
+     workload fields (MINOR bumps, ADR-0003). Exit codes are unchanged.
+  7. **Least privilege:** `deploy/kubernetes/fixproof-reader.yaml` ships a ServiceAccount, a
+     namespaced Role with `get` and `list` on `pods` (core) and `replicasets` (apps) and nothing
+     else, and a RoleBinding. The docs show how to give fixproof a kubeconfig for that account.
+  8. **Dependency:** `kubernetes` 36.0.3 (Apache-2.0), as planned, with the transitive packages
+     listed in SPEC_NOTES §12.
+  9. **Tests:** unit tests use a fake Kubernetes API. The CI `integration` job creates a kind
+     v0.33.0 cluster (node image pinned by digest) wired to the open and the credentialed test
+     registries the kind way (SPEC_NOTES §12), deploys the 6 success-test workloads in their own
+     namespace, and runs `fixproof verify` with a kubeconfig for the `fixproof-reader` account
+     and no registry credentials, asserting 2 / 3 / 1 with digests, pod names and the reason.
+     A second namespace runs workloads from real public images (certbot v2.6.0 and v2.7.0) for
+     the live-data criterion (ADR-0008 item 5). The cluster setup lives in a script that
+     `make demo` reuses in M6.
+- **Consequence:** fixproof reads running clusters with get and list on two resource types only,
+  never pulls from a registry outside the allowlist, and reports pods it cannot resolve as
+  `unknown`.

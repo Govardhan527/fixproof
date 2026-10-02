@@ -447,9 +447,36 @@ the exact files read.
     may not match the image used in the PodSpec, as it may have been resolved by the runtime."
   - `imageID`: "the image ID of the container's image. The image ID may not match the image ID
     of the image used in the PodSpec, as it may have been resolved by the runtime."
-  - The API does not promise that `imageID` is a registry manifest digest. Its format under
-    containerd, and for images side-loaded into kind (`kind load`), which may have no registry
-    digest: UNVERIFIED, blocks M4.
+  - The API does not promise that `imageID` is a registry manifest digest. VERIFIED in source
+    (2026-10-03) for the M4 stack:
+    - Kubernetes v1.37.1 kubelet: `pkg/kubelet/kubelet_pods.go` sets `ImageID: cs.ImageRef` ("is
+      historically intentional and should not change"); `kuberuntime_container.go` (SHA-256
+      `80c123a39a9e9f47c669e802cd6b5f0fd16965e0de2e1c25df5c5f9dcbdd8e3b`) has
+      `imageID := status.ImageRef`. So `imageID` is the CRI `ImageRef`.
+    - containerd v2.3.4 (the version kind v0.33.0's base image builds: `images/base/Dockerfile`
+      `ARG CONTAINERD_VERSION="v2.3.4"`), `internal/cri/server/container_status.go` (SHA-256
+      `f24834f19abe806be933ea50eb57065526f068e824a2456e1ee445dfda46d653`): `ImageRef` starts as
+      the container's platform-specific image reference and is replaced by `repoDigests[0]`
+      ("the manifest list digest for multi-arch images") when the image has a repository
+      digest; the platform digest is reported separately as `ImageId`.
+    - So a pod pulled from a registry reports `registry/repository@sha256:<digest>` (the index
+      digest for a multi-platform image), which fixproof can scan; an image with no repository
+      digest (for example one side-loaded with `kind load`) does not, and fixproof reports such a
+      workload as `unknown`. The M4 demo therefore pulls from a local registry.
+  - **Kubernetes Python client** `kubernetes` 36.0.3 (PyPI, Apache-2.0): `V1PodStatus` has
+    `container_statuses`, `init_container_statuses`, `ephemeral_container_statuses`;
+    `V1ContainerStatus` has `name`, `image`, `image_id`, `state`, `ready`; `V1OwnerReference` has
+    `api_version`, `kind`, `name`, `uid`, `controller`; `CoreV1Api.list_namespaced_pod`,
+    `AppsV1Api.read_namespaced_replica_set`; `config.new_client_from_config(context=...)`.
+    Runtime dependencies it pulls in: certifi, six, python-dateutil, pyyaml, websocket-client,
+    requests, requests-oauthlib, urllib3, durationpy, aiohttp (and theirs). VERIFIED (installed
+    and inspected 2026-10-03).
+  - **kind local registry** (https://kind.sigs.k8s.io/docs/user/local-registry/, 2026-10-03):
+    run a `registry` container, create the cluster with containerd's
+    `config_path = "/etc/containerd/certs.d"`, write
+    `/etc/containerd/certs.d/localhost:<port>/hosts.toml` with `[host."http://<registry-name>:5000"]`
+    on each node ("localhost in the container is not localhost on the host"), and connect the
+    registry to the `kind` network. VERIFIED.
 - **RBAC:** https://kubernetes.io/docs/reference/access-authn-authz/rbac/: a `Role`
   (`rbac.authorization.k8s.io/v1`) lists `rules` of `apiGroups`, `resources` and `verbs`; `""`
   is the core group (pods). ReplicaSet is in group `apps`, version `v1`

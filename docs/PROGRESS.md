@@ -148,6 +148,8 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
 
 Packaging, docs, demo, hardening only.
 - [ ] Done: `make demo` runs the SUCCESS TEST end to end; docs match the CLI.
+- [x] README with diagrams, a live demo and a user guide (owner request, 2026-10-02; written
+      early, to be kept true as M4 to M6 land).
 - [ ] Add the CI `release` job (tag `v*`: build, SBOM, PyPI trusted publishing), only after M6.
 
 ## Last session (resume here)

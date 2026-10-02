@@ -119,7 +119,98 @@ class Dpkg:
         return _sign(le - re_) or self._part(lu, ru) or self._part(lr, rr)
 
 
-_COMPARATORS: dict[str, Comparator] = {"deb": Dpkg(), "pypi": Pypi()}
+class Rpm:
+    """RPM versions, `rpm-version(7)` at rpm 6.1.0 (SPEC_NOTES §7).
+
+    `[epoch:]version[-release]`: the epoch is the leading digits before a `:` (0 when absent),
+    the release follows the last `-`. Epoch, version and release are compared in turn; an EVR
+    with a release ranks above the same EVR without one. Within a component, runs of letters
+    and of digits are segments; `.`, `_` and `+` only separate them; `~` sorts a segment older
+    and `^` newer, as rpm's own comparison does.
+    """
+
+    _COMPONENT = re.compile(r"^[A-Za-z0-9._+~^]+$")
+
+    @classmethod
+    def parse(cls, version: str) -> tuple[int, str, str | None]:
+        epoch, colon, rest = version.partition(":")
+        if not colon:
+            epoch, rest = "0", version
+        upstream, dash, release = rest.rpartition("-")
+        if not dash:
+            upstream, release = rest, ""
+        if (
+            not (epoch.isdigit() and epoch.isascii())
+            or not cls._COMPONENT.match(upstream)
+            or (dash and not cls._COMPONENT.match(release))
+        ):
+            raise VersionError(f"{version!r} is not an RPM version")
+        return int(epoch), upstream, release if dash else None
+
+    @staticmethod
+    def vercmp(left: str, right: str) -> int:
+        """rpm's segment comparison of one component."""
+        if left == right:
+            return 0
+        i = j = 0
+        while i < len(left) or j < len(right):
+            while i < len(left) and not left[i].isalnum() and left[i] not in "~^":
+                i += 1
+            while j < len(right) and not right[j].isalnum() and right[j] not in "~^":
+                j += 1
+            a = left[i] if i < len(left) else ""
+            b = right[j] if j < len(right) else ""
+            if "~" in (a, b):  # sorts before everything, even the end
+                if a != "~":
+                    return 1
+                if b != "~":
+                    return -1
+                i, j = i + 1, j + 1
+                continue
+            if "^" in (a, b):  # sorts after the end, before anything else
+                if not a:
+                    return -1
+                if not b:
+                    return 1
+                if a != "^":
+                    return 1
+                if b != "^":
+                    return -1
+                i, j = i + 1, j + 1
+                continue
+            if not (a and b):
+                break
+            numeric = a.isdigit()
+            same_kind = str.isdigit if numeric else str.isalpha
+            end_i, end_j = i, j
+            while end_i < len(left) and same_kind(left[end_i]):
+                end_i += 1
+            while end_j < len(right) and same_kind(right[end_j]):
+                end_j += 1
+            one, two = left[i:end_i], right[j:end_j]
+            if not two:  # numeric segments are newer than alphabetic ones
+                return 1 if numeric else -1
+            if numeric:
+                one, two = one.lstrip("0"), two.lstrip("0")
+                if len(one) != len(two):
+                    return _sign(len(one) - len(two))
+            if one != two:
+                return -1 if one < two else 1
+            i, j = end_i, end_j
+        if i >= len(left) and j >= len(right):
+            return 0
+        return -1 if i >= len(left) else 1
+
+    def compare(self, left: str, right: str) -> int:
+        (le, lv, lr), (re_, rv, rr) = self.parse(left), self.parse(right)
+        if order := _sign(le - re_) or self.vercmp(lv, rv):
+            return order
+        if lr is None or rr is None:
+            return (lr is not None) - (rr is not None)
+        return self.vercmp(lr, rr)
+
+
+_COMPARATORS: dict[str, Comparator] = {"deb": Dpkg(), "pypi": Pypi(), "rpm": Rpm()}
 _LOWER = ("<", "<=")
 _UPPER = (">", ">=")
 

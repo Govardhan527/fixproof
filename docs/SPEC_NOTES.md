@@ -284,6 +284,21 @@ the exact files read.
   - `~` sorts a segment older (`1.0` < `2.0~beta1` < `2.0~rc1` < `2.0`); `^` sorts it newer
     but before the next release (`2.0` < `2.0^150825` < `2.0.1`).
   - Known quirks (BUGS section): non-ASCII characters are ignored; `1.f` is newer than `1c.f`.
+- **rpm's own code, read as a behavioural reference (GPL; never copied), tag
+  `rpm-6.1.0-release`.** VERIFIED 2026-10-02:
+  - `rpmio/rpmvercmp.cc` (SHA-256 `52b0bcdd06ad179862f08291cd4e9cd6b37999e2ee07294253a0aa3ac547f8bc`):
+    separators are any non-alphanumeric character other than `~` and `^`; `~` sorts before
+    everything including the end; `^` sorts after the end of one string but before any segment;
+    numeric segments compare ignoring leading zeros, longer wins, then by string; an empty
+    segment on the other side means numeric wins; leftover characters win.
+  - `rpmio/rpmver.cc` (SHA-256 `bca89ee0bd9568757f77185453bacb8fcdee1b23260c7ab0ec45e6c94a10a44e`):
+    `parseEVR` takes the leading digits before `:` as the epoch and everything after the last
+    `-` as the release; `rpmverCmp` compares epoch (absent = `0`), version, then release, where a
+    missing release ranks below a present one.
+  - `tests/rpmvercmp.at` (SHA-256 `55df5ca66658a69b36d251f1ecef151a798baaac47d20a312ac8274718659438`):
+    fixproof's `Rpm` comparator agrees with all 91 active vectors. The 12 further lines are
+    disabled (`dnl`) in rpm itself: the BUGS cases (implicit segments such as `1b.fc17`, and
+    non-ASCII characters, which fixproof rejects as invalid, as `rpmbuild` does).
 
 ## 8. Alpine apk version comparison (M3)
 

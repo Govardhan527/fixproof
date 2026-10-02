@@ -87,6 +87,7 @@ pythonpath = ["scripts"]
 addopts = ["-ra", "--strict-markers", "--strict-config", "--disable-socket"]
 markers = [
     "integration: needs Docker, kind, Syft, Grype or network; runs in its own CI job",
+    "live: reads real public images from Docker Hub with real Syft, Grype and the live DB",
 ]
 xfail_strict = true
 filterwarnings = ["error"]

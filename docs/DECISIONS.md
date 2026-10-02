@@ -321,3 +321,13 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
       truth-table unit test (done-criterion) uses fake method results and needs none of this.
   11. **Dependencies:** `typer` (CLI) and `packaging` (PEP 440), both in the planned stack.
 - **Consequence:** the verdict rule, the bundle layout and the CLI become public at 1.0.0.
+- **Amendment 1** (2026-10-02, from the M2 scope review; Proposed). Interface details built in M2
+  that items 7 and 8 did not spell out:
+  - `fixproof --version` prints `fixproof <version>` and exits 0.
+  - `bundle.json` carries `summary`: the count of `fixed`, `still_affected` and `unknown`.
+  - Each `manifest.json` entry carries `size` (bytes) as well as `path` and `sha256`.
+  - The stored tool output also drops each tool's own `descriptor.configuration`, which can hold
+    registry credentials (SPEC_NOTES §17), on top of the fields item 7 lists.
+  - `verify --json` prints `{cve, out, summary, assets: [{asset, verdict, reason}]}`. As an output
+    format it gets a model, a generated schema (`verify-summary`, `schema_version` 1.0.0) and an
+    example, as ADR-0003 requires; that is built once this amendment is approved.

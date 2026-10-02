@@ -69,8 +69,16 @@ range) on 8 fixture images, built in CI from pinned Dockerfiles.
       the spec's own PEP 440 example ordering.
 - [x] Methods `grype` and `sbom_version`, evidence bundle and manifest, `verify` CLI, with
       golden bundle files and end-to-end CLI tests against stand-in tools.
-- [ ] 8 fixture images and the CI integration job (ADR-0007 items 9 and 10): written; green
-      only once the job has run on GitHub (it needs Docker, and runs on `main` or by dispatch).
+- [x] 8 fixture images and the CI integration job (ADR-0007 items 9 and 10): green in run
+      36990675252 on `10db705` (2026-10-02). Real Syft 1.54.0 and Grype 0.119.0 (DB v6.1.9 built
+      2026-10-02T06:31:53Z) gave every image its expected verdict (3 fixed, 4 still_affected,
+      1 unknown for the credential-protected registry), and an over-stated fix claim gave
+      `unknown` (the methods disagree). All six jobs passed.
+- [x] Scope review of the M2 diff (2026-10-02): in scope; `verdict.not_assessed` (no M2 caller)
+      removed and parked for M4; four interface details recorded as ADR-0007 Amendment 1.
+- [x] Spec-source review of the M2 diff (2026-10-02): 19 gaps (17 missing citations, 2
+      unverified), all closed in SPEC_NOTES §5, §9, §12, §17 and §18.
+- [ ] ADR-0007 Amendment 1 approved by the owner; the `--json` summary schema built.
 - [x] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
 
 ## M3 (week 5)
@@ -105,21 +113,18 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M2, code complete locally; the integration job has
-  not run yet.
-- **Done in M2:** ADR-0007 accepted (disagreement gives `unknown`; PyPI comparison moved into
-  M2); `verdict.py` with the full truth table; `versions.py` (PEP 440 and vers containment);
-  `purl.identity`; `tools.py`, `sanitize.py`, `methods/grype.py`, `methods/sbom_version.py`;
-  `bundle.py` (bundle and manifest formats, schemas, golden files); `verify.py` and the
-  `fixproof verify` CLI (exit codes 0 to 3); 7 pinned fixture Dockerfiles (8 images with the
-  authenticated registry), `scripts/build_fixtures.py`, `tests/integration/`, the CI
-  `integration` job. SPEC_NOTES §17 holds the verified Syft and Grype behaviour.
-- **Tests:** `make check` green: 364 unit tests locally, coverage 100%, 7 example files valid.
-  `make integration` skips locally (no Docker here).
-- **Local commits not yet pushed:** everything after `0e0d995`. M1's CI run was 36986334645.
-- **Waiting on the owner:** say "push", so the `integration` job runs real Syft and Grype on the
-  fixtures. M2 closes only when it is green.
-- **Next steps, in order:** push on approval; watch CI (the integration job downloads the
-  3 GB Grype DB); fix what the real run shows; run the scope and spec reviews on the M2 diff;
-  close M2. Then M3 (dpkg, rpm, apk, npm, Maven; OQ-4 waits on the owner).
+- **Date:** 2026-10-02. **Current milestone:** M2, done-criteria met and the integration job
+  green; closing waits on one owner approval.
+- **M2 state:** CI run 36990675252 on `10db705`: all six jobs green, including the integration job
+  (real Syft and Grype on the 8 fixture images: 3 fixed, 4 still_affected, 1 unknown, plus the
+  disagreement case). Both milestone reviews ran; the scope review's `not_assessed` was parked
+  (`ee8e5ed`), and the spec review's 19 gaps were closed (`4bffe74`).
+- **Local commits not yet pushed:** `ee8e5ed` onward.
+- **Waiting on the owner:**
+  1. Approve ADR-0007 Amendment 1 (`--version`, `bundle.summary`, manifest `size`, dropping each
+     tool's `descriptor.configuration`, and a schema for the `verify --json` summary).
+  2. Say "push" once it is built.
+- **Next steps, in order:** on approval, build the `verify-summary` model, schema and example;
+  mark the amendment Accepted; close M2; push and watch CI. Then M3: dpkg, rpm, apk, npm and Maven
+  comparators (OQ-4, the dpkg licence question, must be answered first).
 - **Open questions still waiting on the owner:** OQ-3 (M5), OQ-4 (M3), OQ-5 (M4).

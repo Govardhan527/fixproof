@@ -332,3 +332,38 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   - `verify --json` prints `{cve, out, summary, assets: [{asset, verdict, reason}]}`. As an output
     format it has a model (`fixproof.report`), a generated schema (`verify-summary`,
     `schema_version` 1.0.0) and an example, as ADR-0003 requires.
+
+## ADR-0008: Live checks against public images
+
+- **Date:** 2026-10-02. **Status:** Accepted (the owner asked for both on 2026-10-02: a run
+  against real public images now, and a scheduled job that keeps doing it).
+- **Context:** the unit tests use synthetic data by design, and the integration job builds its
+  own images so their verdicts are known in advance. Neither shows fixproof on images someone
+  else built. Ground truth is the hard part: a check is only useful when the expected verdict
+  comes from a source independent of fixproof and its tools.
+- **Decision:**
+  1. A `live` test marker and `tests/live/`: `fixproof verify` with real Syft and Grype and the
+     Grype DB as published that day, against public Docker Hub images pinned by digest, read
+     anonymously (`DOCKER_CONFIG` empty). `make live` runs them; `make test` and the push CI
+     exclude them. Without the scanners on PATH they skip locally and fail in CI.
+  2. Cases, each with an independent source for its expected verdict (SPEC_NOTES §19):
+     - CVE-2023-32681 (`requests`) on `certbot/certbot` v2.6.0 (certbot pins `requests==2.28.2`:
+       `still_affected`), v2.7.0 (`2.31.0`, the first fixed release: `fixed`) and v5.8.0
+       (`2.34.2`: `fixed`).
+     - CVE-2023-4911 (glibc, in CISA KEV) on `debian:12.0-slim` (`libc6 2.36-9`, before Debian's
+       fix `2.36-9+deb12u3`): `still_affected`, because Grype finds it even though fixproof
+       cannot compare Debian versions until M3; and on the current `python:3.12-slim-bookworm`
+       (Debian 12.15, fix installed): `unknown`, because without the comparator fixproof will
+       not call it `fixed`. M3 changes that expectation to `fixed`, on purpose.
+  3. `.github/workflows/live.yml` runs them every Monday at 06:17 UTC and on manual dispatch,
+     after installing the pinned scanners and downloading that day's DB. A changed verdict
+     fails the run. GitHub emails scheduled-run failures to whoever last edited the cron line,
+     and, because the repository is public, disables the schedule after 60 days without
+     repository activity (SPEC_NOTES §19).
+  4. `scripts/install_scanners.sh` installs the pinned Syft and Grype for both workflows, so
+     their checksums live in one place.
+  5. Each later milestone adds live cases for what it builds: M3 real Debian, Alpine and RPM
+     images with OS-package CVEs; M4 the kind cluster; M5 the live CISA KEV feed.
+- **Consequence:** fixproof is exercised weekly on images it did not build, against current
+  advisory data. Anonymous Docker Hub reads are rate-limited, so a failed fetch shows up as an
+  `unknown` verdict and a failed run, never as a pass.

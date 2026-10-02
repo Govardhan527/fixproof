@@ -642,3 +642,31 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
 - **Click usage errors** (the copy vendored in typer 0.27.2, `typer/_click/exceptions.py`):
   `UsageError.exit_code = 2`, which is why `fixproof` maps usage errors to its own exit code 3.
   VERIFIED.
+
+## 19. Live-check ground truth (ADR-0008)
+
+All retrieved 2026-10-02.
+
+- **Certbot pins `requests`:** https://github.com/certbot/certbot, `tools/requirements.txt` at each
+  release tag: v2.5.0 and v2.6.0 `requests==2.28.2`; v2.7.0 to v2.10.0 `requests==2.31.0`;
+  v2.11.0 `requests==2.32.3`; v5.8.0 `requests==2.34.2`. `tools/pip_install.py` (v2.5.0) installs
+  with `PIP_CONSTRAINT` set to `tools/requirements.txt`, and `tools/docker/core/Dockerfile` builds
+  the image through it. VERIFIED.
+- **Certbot images** (Docker Hub registry API, manifest-list digests): `certbot/certbot:v2.6.0`
+  `sha256:92092d214a4eb75d049720d04f7acc50b40ea226d77736bce6a6bf43981b6e86`, `v2.7.0`
+  `sha256:68e0f51ce9037d3b022d446772277beb1e9c0fe801e75fbf87db105ab165ad54`, `v5.8.0`
+  `sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20`. VERIFIED.
+- **CVE-2023-4911** (glibc, "Looney Tunables"): Debian security tracker,
+  https://security-tracker.debian.org/tracker/CVE-2023-4911: source package `glibc` fixed in
+  bookworm `2.36-9+deb12u3` and bullseye `2.31-13+deb11u7` (both DSA-5514-1), unstable `2.37-12`;
+  buster not affected. CISA KEV (§3 copy): listed, GNU C Library, added 2023-11-21, due
+  2023-12-12. VERIFIED.
+- **Debian images:** `debian:12.0-slim` `sha256:9bd077d2f77c754f4f7f5ee9e6ded9ff1dff92c6dce877754da21b917c122c77`
+  (Grype with the 2026-10-02 DB: distro Debian 12.0, `libc6 2.36-9`, CVE-2023-4911 matched with
+  fix `2.36-9+deb12u3`); `python:3.12-slim-bookworm` (§17 digest): distro Debian 12.15, and no
+  Debian match with an available fix. VERIFIED by running Grype.
+- **GitHub scheduled workflows** (docs.github.com, "Events that trigger workflows", `schedule`):
+  run only on the default branch; "In a public repository, scheduled workflows are automatically
+  disabled when no repository activity has occurred in 60 days"; "Notifications for scheduled
+  workflows are sent to the user who last modified the cron syntax"; runs may be delayed at high
+  load, especially "the start of every hour". The repository is public. VERIFIED.

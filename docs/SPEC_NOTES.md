@@ -330,6 +330,11 @@ the exact files read.
   - **Which Alpine ships which:** aports `main/apk-tools/APKBUILD` `pkgver` per branch
     (gitlab.alpinelinux.org, 2026-10-02): 3.20-stable 2.14.4, 3.21-stable 2.14.6, 3.22-stable
     2.14.12, 3.23-stable and master 3.0.8. VERIFIED.
+  - **Dev-time agreement** (not copied: GPL): apk-tools v3.0.8 `test/unit/version.data` (SHA-256
+    `daa0a0cd6ec90f42769398e9d01516d3665b61f37046a5dfd9cd7464982542b6`, 788 lines). fixproof's
+    `Apk` comparator agrees with 709 comparison and validity lines and disagrees with none; it
+    refuses 60 lines that use a leading-zero group or a `~hash` (ADR-0009 item 4); 16 lines use
+    apk's fuzzy `~` dependency operator, which fixproof does not need. Checked 2026-10-02.
 
 ## 9. Python versions (PEP 440, M3)
 

@@ -210,7 +210,75 @@ class Rpm:
         return self.vercmp(lr, rr)
 
 
-_COMPARATORS: dict[str, Comparator] = {"deb": Dpkg(), "pypi": Pypi(), "rpm": Rpm()}
+class Apk:
+    """Alpine versions, apk-tools v3.0.8 behaviour (SPEC_NOTES §8), re-implemented.
+
+    `digits{.digits}{letter}{_suffix{number}}...{-rN}`, compared token by token. Two forms are
+    refused because apk-tools 2 (Alpine 3.20 to 3.22) and 3 (3.23 onward) can order them
+    differently: a digit group after `.` with a leading zero (`1.05`), and a `~hash`.
+    """
+
+    INITIAL, DIGIT, LETTER, SUFFIX, SUFFIX_NO, HASH, REVISION, END = range(8)
+    # Suffix order; index 4 is "no suffix", so indexes below it are pre-releases.
+    _SUFFIXES = ("alpha", "beta", "pre", "rc", "", "cvs", "svn", "git", "hg", "p")
+    _NO_SUFFIX = 4
+    _NAMED = frozenset(_SUFFIXES) - {""}
+    _TOKEN = re.compile(r"\.([0-9]+)|([a-z])|_([a-z]*)|([0-9]+)|-r([0-9]+)")
+
+    @classmethod
+    def tokens(cls, version: str) -> list[tuple[int, int]]:
+        """(kind, value) pairs; raises VersionError for an invalid or grey-zone version."""
+        initial = re.match(r"[0-9]+", version)
+        if initial is None or not version.isascii():
+            raise VersionError(f"{version!r} is not an apk version")
+        if "~" in version:
+            raise VersionError(f"{version!r} has a commit hash, ordered differently by apk 2 and 3")
+        tokens, position = [(cls.INITIAL, int(initial.group()))], initial.end()
+        while position < len(version):
+            match = cls._TOKEN.match(version, position)
+            kind = tokens[-1][0]
+            if match is None:
+                raise VersionError(f"{version!r} is not an apk version")
+            digits, letter, suffix, number, revision = match.groups()
+            if digits is not None and kind <= cls.DIGIT:
+                if len(digits) > 1 and digits.startswith("0"):
+                    raise VersionError(
+                        f"{version!r} has a leading-zero group, ordered differently by apk 2 and 3"
+                    )
+                tokens.append((cls.DIGIT, int(digits)))
+            elif letter is not None and kind <= cls.DIGIT:
+                tokens.append((cls.LETTER, ord(letter)))
+            elif suffix is not None and kind <= cls.SUFFIX_NO and suffix in cls._NAMED:
+                tokens.append((cls.SUFFIX, cls._SUFFIXES.index(suffix)))
+            elif number is not None and kind == cls.SUFFIX:
+                tokens.append((cls.SUFFIX_NO, int(number)))
+            elif revision is not None and kind < cls.REVISION:
+                tokens.append((cls.REVISION, int(revision)))
+            else:
+                raise VersionError(f"{version!r} is not an apk version")
+            position = match.end()
+        return [*tokens, (cls.END, 0)]
+
+    def compare(self, left: str, right: str) -> int:
+        a_tokens, b_tokens = self.tokens(left), self.tokens(right)
+        index = 0  # both lists end with END, so the walk stops inside them
+        while True:
+            (a_kind, a_value), (b_kind, b_value) = a_tokens[index], b_tokens[index]
+            if a_kind != b_kind or a_kind == self.END:
+                break
+            if a_value != b_value:
+                return _sign(a_value - b_value)
+            index += 1
+        if a_kind == b_kind:
+            return 0
+        if a_kind == self.SUFFIX and a_value < self._NO_SUFFIX:
+            return -1  # a pre-release suffix sorts below whatever the other version has
+        if b_kind == self.SUFFIX and b_value < self._NO_SUFFIX:
+            return 1
+        return -1 if a_kind > b_kind else 1
+
+
+_COMPARATORS: dict[str, Comparator] = {"apk": Apk(), "deb": Dpkg(), "pypi": Pypi(), "rpm": Rpm()}
 _LOWER = ("<", "<=")
 _UPPER = (">", ">=")
 

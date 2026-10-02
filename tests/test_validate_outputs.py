@@ -81,3 +81,15 @@ def test_invalid_schema_fails(tmp_path: Path, capsys: pytest.CaptureFixture[str]
     write(tmp_path / "examples" / "x" / "a.json", {})
     assert run(tmp_path) == 1
     assert "is not a valid JSON Schema" in capsys.readouterr().out
+
+
+def test_yaml_examples_are_validated(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    write(tmp_path / "schemas" / "fix.schema.json", SCHEMA)
+    (tmp_path / "examples" / "fix").mkdir(parents=True)
+    (tmp_path / "examples" / "fix" / "ok.yaml").write_text('schema_version: "1.0.0"\n')
+    (tmp_path / "examples" / "fix" / "bad.yaml").write_text("schema_version: 1.0\n")
+    (tmp_path / "examples" / "fix" / "notes.txt").write_text("ignored\n")
+    assert run(tmp_path) == 1
+    out = capsys.readouterr().out
+    assert "bad.yaml vs" in out
+    assert "validated 2 example file(s); 1 problem(s)" in out

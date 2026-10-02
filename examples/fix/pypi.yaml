@@ -1,0 +1,7 @@
+# Synthetic example: the CVE id, package and version are invented.
+schema_version: "1.0.0"
+cve: CVE-2099-0002
+packages:
+  - ecosystem: pypi
+    name: demo-parser
+    fixed_version: "2.31.0"

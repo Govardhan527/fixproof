@@ -20,7 +20,7 @@ VALID: dict[str, Any] = {
     "version": 1,
     "statements": [
         {
-            "vulnerability": {"name": "CVE-2023-0286"},
+            "vulnerability": {"name": "CVE-2099-0001"},
             "products": [{"@id": "pkg:oci/app@sha256:" + "a" * 64}],
             "status": "fixed",
         }

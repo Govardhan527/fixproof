@@ -6,7 +6,7 @@ from fixproof.errors import InputError
 from fixproof.inputs import load_fix, load_scope
 
 DIGEST = "sha256:" + "0123456789abcdef" * 4
-CVE = "CVE-2023-0286"
+CVE = "CVE-2099-0001"  # synthetic: test data names no real CVE
 
 FIX = f"""\
 schema_version: "1.0.0"
@@ -14,11 +14,11 @@ cve: {CVE}
 packages:
   - ecosystem: deb
     namespace: debian
-    name: libssl3
+    name: libdemo1
     fixed_version: "3.0.8-1"
     fixed_vers: "vers:deb/>=3.0.7-1~deb12u1|<3.0.8"
   - ecosystem: pypi
-    name: cryptography
+    name: demo-crypto
     fixed_version: "39.0.1"
 """
 
@@ -46,14 +46,14 @@ def problems(error: pytest.ExceptionInfo[InputError]) -> str:
 def test_fix_file_loads(tmp_path: Path) -> None:
     fix = load_fix(write(tmp_path, FIX), CVE)
     assert fix.cve == CVE
-    assert [p.purl for p in fix.packages] == ["pkg:deb/debian/libssl3", "pkg:pypi/cryptography"]
+    assert [p.purl for p in fix.packages] == ["pkg:deb/debian/libdemo1", "pkg:pypi/demo-crypto"]
     assert fix.packages[0].fixed_vers == "vers:deb/>=3.0.7-1~deb12u1|<3.0.8"
 
 
 def test_fix_file_must_be_for_the_requested_cve(tmp_path: Path) -> None:
     with pytest.raises(InputError) as caught:
-        load_fix(write(tmp_path, FIX), "CVE-2024-9999")
-    assert problems(caught) == f"cve: the file is for {CVE}, not CVE-2024-9999"
+        load_fix(write(tmp_path, FIX), "CVE-2099-0002")
+    assert problems(caught) == f"cve: the file is for {CVE}, not CVE-2099-0002"
 
 
 def test_requested_cve_must_be_a_cve_id(tmp_path: Path) -> None:
@@ -66,15 +66,15 @@ def test_requested_cve_must_be_a_cve_id(tmp_path: Path) -> None:
     [
         ("    namespace: debian\n", "", "namespace is required for deb packages"),
         (
-            "    name: cryptography\n",
-            "    namespace: pypa\n    name: cryptography\n",
+            "    name: demo-crypto\n",
+            "    namespace: pypa\n    name: demo-crypto\n",
             "not allowed",
         ),
         ('fixed_version: "39.0.1"', "fixed_version: 39.1", "quote version strings in YAML"),
         ("vers:deb/>=", "vers:npm/>=", "expected 'deb'"),
         ("ecosystem: pypi", "ecosystem: gem", "Input should be"),
         ('schema_version: "1.0.0"', 'schema_version: "2.0.0"', "schema_version"),
-        ("cve: CVE-2023-0286", "cve: CVE-23-1", "cve: String should match pattern"),
+        ("cve: CVE-2099-0001", "cve: CVE-23-1", "cve: String should match pattern"),
         ("  - ecosystem: pypi", "    color: blue\n  - ecosystem: pypi", "Extra inputs"),
     ],
 )

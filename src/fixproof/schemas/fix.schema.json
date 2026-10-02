@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "FixPackage": {
+      "additionalProperties": false,
+      "description": "One package the fix changes, and the versions that carry the fix.",
+      "properties": {
+        "ecosystem": {
+          "enum": [
+            "deb",
+            "rpm",
+            "apk",
+            "pypi",
+            "npm",
+            "maven"
+          ],
+          "title": "Ecosystem",
+          "type": "string"
+        },
+        "fixed_vers": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extra fixed ranges as a vers string, for backports.",
+          "title": "Fixed Vers"
+        },
+        "fixed_version": {
+          "minLength": 1,
+          "title": "Fixed Version",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "namespace": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Namespace"
+        }
+      },
+      "required": [
+        "ecosystem",
+        "name",
+        "fixed_version"
+      ],
+      "title": "FixPackage",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/fix/1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`fix.yaml`: the claimed fix for one CVE.",
+  "properties": {
+    "cve": {
+      "pattern": "^CVE-[0-9]{4}-[0-9]{4,19}$",
+      "title": "Cve",
+      "type": "string"
+    },
+    "packages": {
+      "items": {
+        "$ref": "#/$defs/FixPackage"
+      },
+      "minItems": 1,
+      "title": "Packages",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "cve",
+    "packages"
+  ],
+  "title": "FixFile",
+  "type": "object"
+}

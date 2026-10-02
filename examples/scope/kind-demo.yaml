@@ -1,0 +1,9 @@
+# Synthetic example: a local registry and a kind cluster, as the demo uses.
+schema_version: "1.0.0"
+registries:
+  - localhost:5001
+images:
+  - localhost:5001/fixproof/demo-app@sha256:4c1c5b3a5e2e6d7f8a9b0c1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7
+clusters:
+  - context: kind-fixproof
+    namespaces: [demo]

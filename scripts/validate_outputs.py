@@ -1,7 +1,7 @@
 """Validate every example output in examples/ against its JSON Schema.
 
 Layout (ADR-0003):
-    examples/<format>/*.json                  example outputs of one format
+    examples/<format>/*.json, *.yaml          examples of one format (inputs are YAML)
     <schemas>/<format>.schema.json            the project's schema for that format
     <schemas>/official/<format>.schema.json   the standard's own schema, where one exists
 
@@ -19,29 +19,26 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import yaml
 from jsonschema.exceptions import SchemaError
-from jsonschema.validators import validator_for
+
+from fixproof.validation import build_validator, schema_errors
 
 DEFAULT_SCHEMAS = Path("src/fixproof/schemas")
+SUFFIXES = (".json", ".yaml")
 
 
-def load_json(path: Path) -> Any:
-    with path.open(encoding="utf-8") as handle:
-        return json.load(handle)
+def load(path: Path) -> Any:
+    text = path.read_text(encoding="utf-8")
+    return yaml.safe_load(text) if path.suffix == ".yaml" else json.loads(text)
 
 
-def schema_errors(schema_path: Path, instance: Any) -> list[str]:
-    schema = load_json(schema_path)
-    validator_cls = validator_for(schema)
+def problems_for(schema_path: Path, instance: Any) -> list[str]:
     try:
-        validator_cls.check_schema(schema)
+        validator = build_validator(load(schema_path))
     except SchemaError as exc:
         return [f"schema {schema_path} is not a valid JSON Schema: {exc.message}"]
-    validator = validator_cls(schema, format_checker=validator_cls.FORMAT_CHECKER)
-    return [
-        f"{'/'.join(map(str, error.absolute_path)) or '<root>'}: {error.message}"
-        for error in sorted(validator.iter_errors(instance), key=lambda e: list(map(str, e.path)))
-    ]
+    return schema_errors(validator, instance)
 
 
 def validate(examples_dir: Path, schemas_dir: Path) -> tuple[int, list[str]]:
@@ -50,7 +47,7 @@ def validate(examples_dir: Path, schemas_dir: Path) -> tuple[int, list[str]]:
     checked = 0
     if not examples_dir.is_dir():
         return 0, problems
-    for stray in sorted(examples_dir.glob("*.json")):
+    for stray in sorted(p for p in examples_dir.iterdir() if p.suffix in SUFFIXES):
         problems.append(f"{stray}: example outputs must live in examples/<format>/")
     for format_dir in sorted(p for p in examples_dir.iterdir() if p.is_dir()):
         own = schemas_dir / f"{format_dir.name}.schema.json"
@@ -59,11 +56,11 @@ def validate(examples_dir: Path, schemas_dir: Path) -> tuple[int, list[str]]:
         if not present:
             problems.append(f"{format_dir}: no schema at {own} or {official}")
             continue
-        for example in sorted(format_dir.glob("*.json")):
+        for example in sorted(p for p in format_dir.iterdir() if p.suffix in SUFFIXES):
             checked += 1
-            instance = load_json(example)
+            instance = load(example)
             for schema_path in present:
-                for error in schema_errors(schema_path, instance):
+                for error in problems_for(schema_path, instance):
                     problems.append(f"{example} vs {schema_path}: {error}")
     return checked, problems
 

@@ -1,0 +1,125 @@
+# Decisions
+
+Numbered ADRs: context, options, decision, consequence. Every dependency choice and every
+interface change gets one. Status is `Proposed` until the owner approves, then `Accepted`.
+
+## ADR-0001: Licence
+
+- **Date:** 2026-10-02. **Status:** Accepted (the owner committed the licence).
+- **Context:** M0 needs a licence.
+- **Options:** Apache-2.0, for its express patent grant; MIT, which acvp-assay uses.
+- **Decision:** Apache-2.0. The owner committed the Apache License 2.0 text as `LICENSE` in
+  `ad1835e Initial commit` (2026-10-02). `pyproject.toml` declares `license = "Apache-2.0"`.
+- **Consequence:** Contributions carry an express patent grant. Third-party code added later must
+  be Apache-2.0 compatible. Two GPL sources named in the plan are affected: `python-debian` is
+  GPL-2.0-or-later (OQ-4) and apk-tools `src/version.c` is GPL-2.0-only (SPEC_NOTES §8), so the
+  apk comparator is written from its documented behaviour and tests, never copied.
+
+## ADR-0002: Stack
+
+- **Date:** 2026-10-02. **Status:** Proposed (confirms the plan's stack; the (A) items need owner
+  approval).
+- **Context:** The stack was planned up front. This ADR confirms it, pins the versions the
+  milestones depend on, and lists where this project differs from the plan.
+- **Core stack, as planned:** Python 3.12 (`.python-version`, `requires-python >=3.12`), uv,
+  typer, pydantic v2, Syft and Grype as pinned external binaries invoked with JSON output (their
+  versions recorded in every evidence bundle), the `kubernetes` Python client with a read-only
+  ServiceAccount (get and list on pods and replicasets only), `packaging` (PyPI versions),
+  `packageurl-python` (purls), jsonschema (OpenVEX and output schema validation),
+  `cyclonedx-python-lib` (CycloneDX VEX, M5), kind (integration tests), ruff, mypy --strict,
+  pytest, pytest-cov, pytest-socket, pip-audit, gitleaks.
+- **Further choices:**
+  1. (A) **OpenVEX v0.2.0.** The specification is pinned at tag `v0.2.0`. That tag holds no JSON
+     Schema; the schema `openvex_json_schema.json` (`$id`
+     `https://github.com/openvex/spec/openvex_json_schema_0.2.0.json`) is pinned at commit
+     `a68ccd19b15a9604d28ef66ebf33f27a772ba4ec` (2025-03-31, the last change to that file),
+     SHA-256 `9373597734ed1d3ea5161a8b46d3866c4a8cfe76fd632fdd16aef01fb34b3238`. It is vendored
+     in M1. The `@context` value is open (OQ-1). See SPEC_NOTES §1.
+  2. (A) **CycloneDX 1.6, patch 1.6.2** (2026-06-02) for the M5 VEX output, as planned. 1.7.2 is
+     the latest release (OQ-3). See SPEC_NOTES §4.
+  3. (A) **Build backend `uv_build`** (`>=0.12.9,<0.13`): uv's own backend, no extra tool.
+     Alternative: hatchling.
+  4. (A) **Dev dependency `types-jsonschema`**: typeshed stubs so `mypy --strict` covers code that
+     calls jsonschema. Alternative: `ignore_missing_imports`, which turns those calls into `Any`.
+  5. **Add runtime dependencies late:** each is added, with its own ADR entry, in the milestone
+     that first imports it (typer, pydantic, jsonschema and a YAML parser in M1; `packaging` and
+     `packageurl-python` in M2 or M3; `kubernetes` in M4; `cyclonedx-python-lib` and a template
+     engine for the HTML summary in M5). M0 ships with none. `jsonschema` is a dev dependency
+     until then, used by `scripts/validate_outputs.py`.
+  6. **Version comparators (M3), proposed:** PyPI via `packaging`; dpkg, rpm, apk and Maven
+     written in this project from the primary specifications with spec-derived test tables
+     (dpkg pending OQ-4); npm per SemVer 2.0.0 precedence and node-semver range rules, library
+     or in-house decided in the M3 ADR. Ecosystems: deb, rpm, apk, pypi, npm, maven, the six
+     named for M3.
+  7. **External binaries (pinned by version and SHA-256 when first installed):** Syft v1.54.0
+     (2026-10-01), Grype v0.119.0 (2026-09-17), kind v0.33.0 (2026-08-26, default node image
+     `kindest/node:v1.37.0`). These are the latest releases on 2026-10-02 and are re-checked when
+     M2 and M4 install them. See SPEC_NOTES §12.
+  8. **CI installs with `uv sync --locked`**, which also fails when `uv.lock` is out of date with
+     `pyproject.toml`. That is stricter than `--frozen`.
+  9. **gitleaks runs from its release tarball** (v8.30.1, SHA-256 checked against the release's
+     `checksums.txt`) instead of `gitleaks-action`, so no third-party action and no licence key.
+  10. **pip-audit audits `uv export` output** (hashed requirements, `--disable-pip
+      --require-hashes --strict`), so it audits exactly what `uv.lock` pins.
+  11. **mypy covers `scripts/` as well as `src/`.**
+  12. **The SBOM comes from `uv export --format cyclonedx1.5`** in `make release-dry`, so no extra
+      SBOM tool is needed.
+  13. **uv is pinned** to `>=0.12.9,<0.13` (`[tool.uv] required-version`, and `version` in CI).
+- **Consequence:** The toolchain is reproducible from `uv.lock`, and CI and local runs use the same
+  make targets. A change to any (A) item needs owner approval and an ADR update.
+
+## ADR-0003: Output schema versioning
+
+- **Date:** 2026-10-02. **Status:** Proposed (it defines output file formats, a public interface).
+- **Context:** Every output format needs a JSON Schema that CI checks. Vulnerability-management
+  teams and CI pipelines will parse the outputs, so changes must be visible and deliberate.
+- **Options:** (a) one tool version for everything; (b) an independent SemVer `schema_version` per
+  format; (c) date-based schema versions.
+- **Decision:** (b).
+  - Each format fixproof defines (the evidence bundle, its SHA-256 manifest, the gate result, and
+    the `fix.yaml`, `scope.yaml` and `closed.yaml` inputs; the exact set is fixed in M1) carries a
+    top-level `schema_version` (SemVer). Its schema is at
+    `src/fixproof/schemas/<format>.schema.json`, inside the package so the CLI can validate its
+    own output at run time, with `$id` ending in `/<format>/<schema_version>`.
+  - MAJOR: a field is removed or renamed, or a meaning or allowed value changes. MINOR: an
+    optional field is added. PATCH: descriptions or docs only. A MAJOR or MINOR bump is a
+    public-interface change and needs an ADR and owner approval.
+  - Schemas are generated from the pydantic models and committed. A test fails when the committed
+    schema differs from the generated one.
+  - Standard formats are versioned by their standards: OpenVEX by the pinned spec version
+    (ADR-0002 item 1) and CycloneDX by `specVersion` (item 2). Each is validated only against
+    its official schema, vendored at `src/fixproof/schemas/official/<format>.schema.json`.
+    Changing a pin needs an ADR.
+  - Example outputs are at `examples/<format>/*.json`. `scripts/validate_outputs.py` (CI job
+    `schemas`) validates each one against every schema present for its format and fails a format
+    that has none.
+  - Schema versions are independent of the package version. The first schemas ship in M1 at
+    `1.0.0`.
+- **Consequence:** A consumer can tell from `schema_version` whether it can read a file. Drift
+  between models and schemas fails CI. Bumps are rare and deliberate.
+
+## ADR-0004: Commit rules and how they are enforced
+
+- **Date:** 2026-10-02. **Status:** Proposed (the same rules the owner accepted for controlproof
+  on 2026-09-29).
+- **Context:** Commits are authored by the owner alone, and their subjects should show which
+  milestone each change serves. The rules must hold locally and in CI.
+- **Decision:**
+  - Subject: Conventional Commits with a milestone scope, `type(scope): summary`. Types feat, fix,
+    test, docs, refactor, perf, build, ci, chore. Scope `M<n>` or `infra`. The summary starts
+    with a non-space and is at most 71 characters.
+  - Rejected anywhere in the message: any `Co-authored-by:` trailer (the owner is the only
+    author), any line that starts with "Generated with" or "Generated by" (tool footers), and the
+    robot emoji.
+  - The rules live once, in `scripts/commit_rules.py`. The commit-msg hook (activated by `make
+    setup`) and the CI job `commit-hygiene` (`scripts/check_commits.py`) both import them, so they
+    cannot drift. The message is cut at git's scissors line (`# ---...--- >8 ---...---`), because
+    `git commit --verbose` appends the diff below it.
+  - `check_commits.py` checks `base..head`. When base is missing or all zeros (a push that
+    created a branch), it checks the commits on head that are not on `origin/main`, or every
+    commit when `origin/main` does not exist. A base git cannot resolve is exit 2, never a pass.
+  - Merge commits get the same subject rule. Prefer squash or rebase merges on GitHub.
+- **Consequence:** A local bypass (`--no-verify`) is still caught in CI. GitHub's default merge
+  commit message ("Merge pull request #...") would fail `commit-hygiene` on `main`. The owner's
+  `Initial commit` (`ad1835e`) predates the rules and is already on `origin/main`, so the range
+  check never reaches it.

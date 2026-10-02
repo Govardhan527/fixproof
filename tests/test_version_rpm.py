@@ -1,6 +1,7 @@
 """RPM versions (rpm-version(7) at rpm 6.1.0, SPEC_NOTES §7).
 
-Every ordering below is stated in the man page ("Comparing", "EXAMPLES" and "BUGS"). rpm's own
+The orderings are the man page's own ("Comparing", "EXAMPLES" and "BUGS") or follow from its
+rules. rpm's own
 test vectors (tests/rpmvercmp.at) were checked during development, not copied (SPEC_NOTES §7).
 """
 
@@ -62,7 +63,7 @@ def test_invalid_versions(version: str) -> None:
         RPM.compare(version, "1.0")
 
 
-def test_real_distribution_versions() -> None:
+def test_typical_distribution_version_forms() -> None:
     assert RPM.compare("3.0.7-24.el9", "3.0.7-25.el9") == -1
     assert RPM.compare("1:3.0.7-24.el9", "3.2.2-6.el9") == 1
     assert RPM.compare("3.0.7-24.el9_3", "3.0.7-24.el9") == 1

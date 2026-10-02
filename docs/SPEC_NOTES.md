@@ -274,7 +274,9 @@ the exact files read.
   points to https://rpm-software-management.github.io/rpm/manual/dependencies.html, which now
   redirects to the man pages. VERIFIED:
   - EVR `[EPOCH:]VERSION[-RELEASE]`; omitted epoch is 0; `-` cannot appear inside VERSION or
-    RELEASE.
+    RELEASE. "The string consists of ASCII alphanumeric characters, optionally segmented with the
+    separators period (.), underscore (_) and the plus sign (+), and operators tilde (~) and caret
+    (^)": the permitted set fixproof checks.
   - Components compared left to right, a segment at a time, stopping at the first difference.
     Runs of letters and runs of digits form implicit segments; `.`, `_` and `+` are separators
     and are not compared (`1.0` == `1+0` == `1+.+0`).
@@ -284,6 +286,12 @@ the exact files read.
   - `~` sorts a segment older (`1.0` < `2.0~beta1` < `2.0~rc1` < `2.0`); `^` sorts it newer
     but before the next release (`2.0` < `2.0^150825` < `2.0.1`).
   - Known quirks (BUGS section): non-ASCII characters are ignored; `1.f` is newer than `1c.f`.
+  - EXAMPLES section: `123` newer than `99`, older than `321`; `1.0.1` newer than `1.0`, older than
+    `1.0.2`; `2.60.1-1` newer than `2.0` or `2.60`, older than `3.0`; `1.0-5` newer than `1.0` or
+    `1.0-1`, older than `1.0.1`; `5:3.0-1` newer than `6.0-1` or `4:6.0-1`, older than `5:3.1-1`;
+    `1.0~beta2` newer than `0.99` and `1.0~beta1`, older than `1.0`; `2.0^20250611` newer than
+    `2.0`, older than `2.0.1`; and in "Comparing", `abc123` equals `abc0123`, `abc.123` and
+    `abc.000123`.
 - **rpm's own code, read as a behavioural reference (GPL; never copied), tag
   `rpm-6.1.0-release`.** VERIFIED 2026-10-02:
   - `rpmio/rpmvercmp.cc` (SHA-256 `52b0bcdd06ad179862f08291cd4e9cd6b37999e2ee07294253a0aa3ac547f8bc`):
@@ -373,12 +381,16 @@ the exact files read.
   not needed: `fix.yaml` states ranges in vers, and the vers `npm` type (vers-spec v1.2.0,
   `types/npm-definition.json`) maps node-semver ranges to vers constraints, with node-semver as
   the version reference. So fixproof needs only SemVer 2.0.0 precedence for npm. VERIFIED.
-- **SemVer syntax:** `semver.md` (the §10 copy) gives the suggested regular expression "with
-  named groups" for PCRE and Python: `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(...))?(?:\+(...))?$`
+- **SemVer syntax:** the FAQ "Is there a suggested regular expression (RegEx) to check a SemVer
+  string?" is on https://semver.org/spec/v2.0.0.html and in `semver.md` on `master` at commit
+  `f99d5485190a47c0863949e7da810a5553e0ed4d` (SHA-256
+  `33ebae1a97845991d0b916f3295a88b499e2ec71a6c1fe84c12429077b19ce08`, the copy read), but not in
+  the 2013 `v2.0.0` tag, which holds the precedence rules only. It gives the expression for PCRE
+  and Python: `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(...))?(?:\+(...))?$`
   (major, minor, patch, pre-release identifiers, build metadata). fixproof uses it with
   `re.ASCII`, because in Python `\d` would otherwise match non-ASCII digits. §11.4 example:
   `1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 <
-  1.0.0-rc.1 < 1.0.0`. VERIFIED.
+  1.0.0-rc.1 < 1.0.0`; §11.2 example `1.0.0 < 2.0.0 < 2.1.0 < 2.1.1`. VERIFIED.
 - **node-semver fixtures** (v7.8.5, ISC): `test/fixtures/comparisons.js` (SHA-256
   `bd632ee8a596cd04fae4752a290322a5e27e0c143356001bde4bc9e66b717509`) and `equality.js`
   (SHA-256 `ffc7ef18180a0f89ace2df1c89893774b22620743271be7fafd72e0ecdb8dac4`). The 19 strict
@@ -399,6 +411,8 @@ the exact files read.
     `ga` = `release` < `sp`; `a`, `b`, `m` abbreviate alpha, beta, milestone when directly
     followed by a number; other qualifiers sort case-insensitively, and alphabetic tokens sort
     before numeric ones.
+  - "Trimming Examples": `1.0.0 -> 1`, `1.ga -> 1`, `1.final -> 1`, `1.0 -> 1`, `1. -> 1`,
+    `1- -> 1`, `1_ -> 1`, `1.0.0-foo.0.0 -> 1-foo`, `1.0.0-0.0.0 -> 1`. VERIFIED.
   - When the separators differ: `.qualifier = -qualifier < -number < .number`; with the
     abbreviations the qualifier order is `alpha < a1 < beta < b1 < milestone < m1 < rc = cr <
     snapshot < "" = final = ga = release < sp`. VERIFIED.
@@ -545,13 +559,19 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `markdown-it-py` 4.2.0 and `mdurl` 0.1.2 (MIT, by their PyPI classifiers), `shellingham` 1.5.4
   (ISC) and `annotated-doc` 0.0.5 (MIT).
 
-  Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0. The per-file hashes are recorded by
+  Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0; `python-debian` 1.1.1, GPL-2.0-or-later
+  (PyPI metadata, 2026-10-02), the dpkg oracle that is never shipped (OQ-4, ADR-0009 item 2). The per-file hashes are recorded by
   `uv.lock` itself and are not repeated here.
 - **Vendored files:** the OpenVEX schema comes from https://github.com/openvex/spec, licence
   CC0-1.0 (GitHub licence API, 2026-10-02). The purl test vectors come from
   https://github.com/package-url/purl-spec, licence MIT; its `LICENSE` at v1.0.1 (SHA-256
   `24fb7204fd3c9396c9d83533448cb988e8e86d6f598d1ab51c6d2e5d7e42bcb1`) is kept next to them in
   `tests/fixtures/purl-spec/`. VERIFIED.
+- **Vendored in M3:** `tests/fixtures/node-semver/LICENSE` is node-semver's `LICENSE` at v7.8.5
+  (ISC, SHA-256 `4ec3d4c66cd87f5c8d8ad911b10f99bf27cb00cdfcff82621956e379186b016b`);
+  `tests/fixtures/maven/NOTICE` is Apache Maven's `NOTICE` at `maven-3.9.16` (SHA-256
+  `05ae716d43260f68b3d231d32105c2f837439e03c62440ee9f38703c0406afa1`); the test vectors are in
+  §10 and §11. VERIFIED.
 - **Generated schemas** declare `$schema` `https://json-schema.org/draft/2020-12/schema`, the
   `$id` of the published JSON Schema 2020-12 meta-schema (fetched 2026-10-02). VERIFIED.
 - **YAML numbers:** PyYAML 6.0.3 resolves YAML 1.1 implicit floats (`yaml/resolver.py`, tag
@@ -738,8 +758,9 @@ All retrieved 2026-10-02.
   2023-12-12. VERIFIED.
 - **Debian images:** `debian:12.0-slim` `sha256:9bd077d2f77c754f4f7f5ee9e6ded9ff1dff92c6dce877754da21b917c122c77`
   (Grype with the 2026-10-02 DB: distro Debian 12.0, `libc6 2.36-9`, CVE-2023-4911 matched with
-  fix `2.36-9+deb12u3`); `python:3.12-slim-bookworm` (§17 digest): distro Debian 12.15, and no
-  Debian match with an available fix. VERIFIED by running Grype.
+  fix `2.36-9+deb12u3`); `python:3.12-slim-bookworm` (§17 digest): distro Debian 12.15, no Debian
+  match with an available fix, and Syft lists `libc6` and `libc-bin` `2.36-9+deb12u14`. VERIFIED
+  by running Grype and Syft.
 - **GitHub scheduled workflows** (docs.github.com, "Events that trigger workflows", `schedule`):
   run only on the default branch; "In a public repository, scheduled workflows are automatically
   disabled when no repository activity has occurred in 60 days"; "Notifications for scheduled
@@ -751,7 +772,8 @@ All retrieved 2026-10-02.
     secfix `3.1.4-r0: CVE-2023-5363`. Images: `alpine:3.18.0`
     `sha256:02bb6f428431fbc2809c5d1b41eab5a68350194fb508869a33cb1af4444c9b11` (Grype with the
     2026-10-02 DB: Alpine 3.18.0, `libcrypto3`/`libssl3` `3.1.0-r4`, CVE matched with fix
-    `3.1.4-r0`); `alpine:3.22` `sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8`.
+    `3.1.4-r0`); `alpine:3.22` `sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8`
+    (Syft: `libcrypto3`/`libssl3` `3.5.8-r0`).
   - **CVE-2023-0286 on AlmaLinux:** Red Hat Security Data API
     `https://access.redhat.com/hydra/rest/securitydata/cve/CVE-2023-0286.json` (SHA-256
     `708bd2934e87db8281b006bd280359fe77f77dd3bd65af556527aa0e2a2ccf64`): RHEL 9
@@ -759,7 +781,8 @@ All retrieved 2026-10-02.
     (RHSA-2023:1199). Grype matches AlmaLinux 9 against this Red Hat data (namespace
     `redhat:distro:redhat:9`). Images: `almalinux:9.0`
     `sha256:a95a7766fd056b35f72f7b7f7301bcd46e40a6eecd9017e9c41cb4bf22ecb28b` (`openssl-libs`
-    `1:3.0.1-43.el9_0`); `almalinux:9` `sha256:3a3fa7f043b142bc8008c8b308d39b47d2c84008addcd52f9f9a7a82d2a90474`.
+    `1:3.0.1-43.el9_0`); `almalinux:9` `sha256:3a3fa7f043b142bc8008c8b308d39b47d2c84008addcd52f9f9a7a82d2a90474`
+    (Syft: `openssl-libs`/`openssl` `1:3.5.5-6.el9_8`).
     Syft reports RPM versions with the epoch (`1:3.0.1-43.el9_0`) and purls with namespace
     `almalinux` and an `epoch` qualifier.
   - **CVE-2021-44228 (Log4Shell, in CISA KEV since 2021-12-10):** GHSA-jfh8-c2jp-5v3q (GitHub

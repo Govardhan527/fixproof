@@ -63,8 +63,8 @@ def test_invalid_versions(version: str) -> None:
         MAVEN.compare(version, "1.0")
 
 
-def test_real_artifact_versions() -> None:
-    assert MAVEN.compare("2.14.1", "2.15.0") == -1  # log4j-core
+def test_typical_artifact_version_forms() -> None:
+    assert MAVEN.compare("2.14.1", "2.15.0") == -1  # log4j-core 2.14.1 vs the fix (SPEC_NOTES §19)
     assert MAVEN.compare("2.17.0", "2.17.1") == -1
     assert MAVEN.compare("2.0-beta9", "2.0-rc1") == -1
     assert MAVEN.compare("2.0-rc2", "2.0") == -1

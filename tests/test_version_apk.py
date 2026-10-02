@@ -20,7 +20,7 @@ ASCENDING = [
     ["2.0", "2.0a", "2.0b", "2.0.1"],  # one letter after the digits, then more digits
     ["1", "1.0", "1.0.0"],  # more digit groups is newer
     ["9", "10", "10.0", "100"],
-    ["3.1.4-r0", "3.1.4-r1", "3.1.4-r10", "3.1.5-r0"],  # real Alpine openssl releases
+    ["3.1.4-r0", "3.1.4-r1", "3.1.4-r10", "3.1.5-r0"],  # revision numbers compare numerically
     ["1.0_rc1-r5", "1.0-r0"],  # a pre-release with a revision is still below the release
 ]
 

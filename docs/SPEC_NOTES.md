@@ -51,8 +51,18 @@ the exact files read.
 - **Product / component:** `@id` (IRI) and/or `identifiers` (at least one of `purl`, `cpe22`,
   `cpe23`), optional `hashes`, `subcomponents`. Spec: "the use of Package URLs (purls) is
   recommended". VERIFIED.
-- **Format keywords:** the schema uses `format` values `iri`, `uri` and `date-time`. Which of
-  these jsonschema checks, and with which optional packages: UNVERIFIED, blocks M1.
+- **Format keywords:** the schema uses `format` values `iri`, `uri` and `date-time`. VERIFIED in
+  jsonschema 4.26.0, `jsonschema/_format.py` (read from the installed package) and its
+  `format-nongpl` extra:
+  - `uri` is checked only when `rfc3987` or `rfc3986-validator` is installed; `iri` only with
+    `rfc3987` or `rfc3987-syntax`; `date-time` only with `rfc3339-validator`. Without them the
+    format checker silently passes all three. None is installed today.
+  - `rfc3987` is GPL-3.0-or-later (PyPI metadata); `rfc3986-validator` 0.1.1, `rfc3987-syntax`
+    1.1.0 (needs `lark`) and `rfc3339-validator` 0.1.4 (needs `six`) are MIT. They are the
+    packages jsonschema's own `format-nongpl` extra names for these formats.
+- **Document `@id`:** spec "Public IRI Namespaces": OpenVEX defines the shared namespace
+  `https://openvex.dev/docs/[name]`; "Users can start issuing IRIs for their documents by
+  appending a IRI valid string" to it. `public` and `example` are reserved names. VERIFIED.
 - **How fixproof verdicts map to statuses** (OQ-2, owner decision 2026-10-02): `fixed` ->
   `fixed`; `still_affected` -> `affected` with an `action_statement`; `unknown` ->
   `under_investigation` with the reason in `status_notes`. `not_affected` is never emitted in the
@@ -139,7 +149,38 @@ the exact files read.
     | `maven` | required (groupId), case-sensitive | required (artifactId), case-sensitive | optional, case-sensitive | `classifier`, `type` |
     | `oci` | prohibited | required, case-insensitive | optional, case-insensitive | `arch`, `repository_url`, `tag` |
 
-  - The ECMA-427 text itself (parsing, encoding, canonical form): UNVERIFIED, blocks M1.
+  - **Building a canonical purl.** Source: the standard's text in the repository at v1.0.1,
+    `docs/specification/standard/specification.md` (SHA-256
+    `0d46c09534c787895e75acc719aeea03db09f3ab77fa39220790a6b9f0403fc0`) and
+    `docs/specification/how-to-build.md` (SHA-256
+    `bafb64309b6507a605e1e69482fb21cb83e938fbe368c1a15258ac867e44b3c9`). The ECMA-427 PDF itself
+    was not read. VERIFIED:
+    - "Character encoding": component strings are UTF-8, then every octet outside the allowed
+      set is percent-encoded per RFC 3986 §2.1. The allowed set is `A-Z`, `a-z`, `0-9` and
+      `. - _ ~`. The colon `:` is never encoded, "whether used as a Separator Character or
+      otherwise".
+    - Namespace segments, name, version and qualifier values are percent-encoded strings; the
+      type and qualifier keys are not. Keys are lowercase letters, digits, `.`, `-`, `_` and
+      start with a letter; a pair with an empty value is discarded.
+    - How to build: lowercase the type; join `key=value` strings and "Sort this list of
+      qualifier strings lexicographically", joined with `&`.
+  - **Official test vectors:** `tests/types/<type>-test.json` at v1.0.1 (SHA-256: oci
+    `a23376cc43bba896555178d7824f5736875038bbdacd77331ae71ca0e3687be4`, deb
+    `9a5f89212d6a3c73906fa2576bd15c2bbac83d45439beb3c319a8c7b33e51e0e`, rpm
+    `453383f8de2c7e28a8ba3cef6bcdfc1257437151b46225f1db17f9e7d680865b`, apk
+    `bdd1b7c1462136ad9f443636cc505e723f333fb3a99c4017458fcee21e700e6f`, pypi
+    `da842b6563c74c52a4b3c2001fec370b9e857fdf0abf6c44bf30d2d243dbf07d`, npm
+    `8e7d00358125a743e62163e8cc4875e7bfef4339d947a4c5e5cd8a25b3757db4`, maven
+    `13ecbb6db32b88969945be148c52a744ad89732386f86945319d55e23a2878c1`). The oci vectors fix the
+    canonical image form, for example
+    `pkg:oci/debian@sha256:244fd47e07d10?arch=amd64&repository_url=docker.io%2Flibrary%2Fdebian&tag=latest`:
+    the digest's `:` stays, `/` in `repository_url` is encoded. (The type definition's own
+    examples encode the digest colon as `%3A`; the test vectors and the encoding clause do not.)
+  - **`packageurl-python` 0.17.6 against those vectors** (run 2026-10-02): it passes every
+    `parse` test for the seven types and every `specification-test.json` case, and fails 16
+    `build` and `roundtrip` tests (8 maven, 2 npm, 6 oci), all because it leaves `/` unencoded in
+    qualifier values. Its output for an image with a `repository_url` is therefore not canonical
+    under v1.0.1.
 - **vers:** https://github.com/package-url/vers-spec, release **v1.2.0** (2026-09-09), commit
   `ec1a0c8143b105a054b0f7cb1feb368b85c9c781`, `docs/specification/standard/`. VERIFIED:
   - Clause 5: a vers is `vers:<type>/<constraints>`; constraints separated by an unencoded `|`;
@@ -319,3 +360,22 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   optional for backports. Recommended: (c), because distributions backport fixes to several
   branches, and vers is the standard notation for that. **Answered 2026-10-02: (c).**
 
+
+## 15. OCI image references (scope.yaml and assets, M1)
+
+- **Digest:** OCI image-spec **v1.1.1** (2025-03-03, the latest), `descriptor.md` §"Digests",
+  https://github.com/opencontainers/image-spec/blob/v1.1.1/descriptor.md, SHA-256
+  `89399b5ffabfeb9688b66de9afcf08b60691710d94d0f5b061cb30e6fbc75428`. Grammar
+  `digest ::= algorithm ":" encoded`; "When the _algorithm identifier_ is `sha256`, the _encoded_
+  portion MUST match `/[a-f0-9]{64}/`." VERIFIED.
+- **Repository name:** OCI distribution-spec **v1.1.1** (2025-01-29, the latest), `spec.md`,
+  SHA-256 `360b29820869bfaac5f73ebfa30669c9172c069ef619f8c6689acc3bcef6f719`: `<name>` "MUST match"
+  `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`. VERIFIED.
+- **Full reference with registry host:** the OCI specs do not define it. The de facto grammar is
+  `github.com/distribution/reference` **v0.6.0** (commit
+  `7b3d8f9323cf25dd4e1a3868cd9be990bfe06308`), `reference.go`, SHA-256
+  `39d358c9e2539646ea612a6c9eda1d671b3cd71287873a3cc5fd0ffb2be6c6f3`:
+  `reference := name [ ":" tag ] [ "@" digest ]`, `name := [domain '/'] remote-name`,
+  `domain := host [':' port-number]`; host is a domain name, IPv4 or bracketed IPv6 address.
+  VERIFIED. Its implicit defaults (a missing domain means Docker Hub, `library/` for single-path
+  names) are not applied by fixproof in M1: `scope.yaml` requires the registry host explicitly.

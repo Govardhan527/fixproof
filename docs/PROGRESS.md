@@ -9,8 +9,8 @@ Tick an item only when its done-criteria pass and the evidence is stored or link
 - [x] Project docs exist: PROGRESS.md (full milestone list), DECISIONS.md, SPEC_NOTES.md,
       PARKED.md.
 - [x] ADR-0001 (licence), ADR-0002 (stack confirmation), ADR-0003 (output schema versioning)
-      exist, plus ADR-0004 (commit rules). ADR-0001 is Accepted; ADR-0002 to ADR-0004 are
-      Proposed until the owner approves.
+      exist, plus ADR-0004 (commit rules). All four are Accepted (owner approved ADR-0002 to
+      ADR-0004 on 2026-10-02).
 - [x] SPEC_NOTES.md lists every spec source in the plan (CVE JSON 5, CISA KEV feed, OpenVEX,
       CycloneDX 1.6, purl and vers, Debian policy, RPM, PEP 440, SemVer and node-semver, Maven),
       plus apk, Kubernetes, Syft, Grype and kind, each with the primary URL and retrieval date,

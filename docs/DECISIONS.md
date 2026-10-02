@@ -17,8 +17,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0002: Stack
 
-- **Date:** 2026-10-02. **Status:** Proposed (confirms the plan's stack; the (A) items need owner
-  approval).
+- **Date:** 2026-10-02. **Status:** Accepted (owner approved 2026-10-02, including the (A) items).
 - **Context:** The stack was planned up front. This ADR confirms it, pins the versions the
   milestones depend on, and lists where this project differs from the plan.
 - **Core stack, as planned:** Python 3.12 (`.python-version`, `requires-python >=3.12`), uv,
@@ -34,7 +33,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      `https://github.com/openvex/spec/openvex_json_schema_0.2.0.json`) is pinned at commit
      `a68ccd19b15a9604d28ef66ebf33f27a772ba4ec` (2025-03-31, the last change to that file),
      SHA-256 `9373597734ed1d3ea5161a8b46d3866c4a8cfe76fd632fdd16aef01fb34b3238`. It is vendored
-     in M1. The `@context` value is open (OQ-1). See SPEC_NOTES §1.
+     in M1. `@context` is `https://openvex.dev/ns/v0.2.0` (OQ-1, answered). See SPEC_NOTES §1.
   2. (A) **CycloneDX 1.6, patch 1.6.2** (2026-06-02) for the M5 VEX output, as planned. 1.7.2 is
      the latest release (OQ-3). See SPEC_NOTES §4.
   3. (A) **Build backend `uv_build`** (`>=0.12.9,<0.13`): uv's own backend, no extra tool.
@@ -70,7 +69,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0003: Output schema versioning
 
-- **Date:** 2026-10-02. **Status:** Proposed (it defines output file formats, a public interface).
+- **Date:** 2026-10-02. **Status:** Accepted (owner approved 2026-10-02; it defines output file
+  formats, a public interface).
 - **Context:** Every output format needs a JSON Schema that CI checks. Vulnerability-management
   teams and CI pipelines will parse the outputs, so changes must be visible and deliberate.
 - **Options:** (a) one tool version for everything; (b) an independent SemVer `schema_version` per
@@ -100,8 +100,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0004: Commit rules and how they are enforced
 
-- **Date:** 2026-10-02. **Status:** Proposed (the same rules the owner accepted for controlproof
-  on 2026-09-29).
+- **Date:** 2026-10-02. **Status:** Accepted (owner approved 2026-10-02; the same rules the owner
+  accepted for controlproof on 2026-09-29).
 - **Context:** Commits are authored by the owner alone, and their subjects should show which
   milestone each change serves. The rules must hold locally and in CI.
 - **Decision:**

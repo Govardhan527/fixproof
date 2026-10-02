@@ -126,8 +126,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0005: M1 data contracts, input formats and the OpenVEX writer
 
-- **Date:** 2026-10-02. **Status:** Proposed (input file formats and the VEX output are public
-  interfaces).
+- **Date:** 2026-10-02. **Status:** Accepted (owner approved 2026-10-02; input file formats and
+  the VEX output are public interfaces).
 - **Context:** M1 is the data model, the `fix.yaml` and `scope.yaml` schemas and an OpenVEX writer
   with schema validation. OQ-1, OQ-2 and OQ-6 are answered (SPEC_NOTES §14). Facts used: CVE id
   pattern (SPEC_NOTES §2), OpenVEX v0.2.0 (§1), purl canonical form (§5), OCI references (§15).
@@ -207,7 +207,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0006: M1 runtime dependencies
 
-- **Date:** 2026-10-02. **Status:** Proposed (new runtime dependencies need owner approval).
+- **Date:** 2026-10-02. **Status:** Accepted (owner approved 2026-10-02).
 - **Decision:** add, all MIT:
   - `pydantic>=2.13`: data contracts (planned).
   - `pyyaml>=6.0.3`: reading `fix.yaml` and `scope.yaml` with `safe_load` only.

@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""commit-msg hook: reject attribution trailers and non-conventional subjects (ADR-0004).
+
+Activated by `make setup`, which runs `git config core.hooksPath scripts/hooks`.
+"""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from commit_rules import check_message  # noqa: E402
+
+
+def main() -> int:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        errors = check_message(handle.read())
+    if errors:
+        print("commit rejected:\n  " + "\n  ".join(errors), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

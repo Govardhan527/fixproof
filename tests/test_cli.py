@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 import pytest
+import typer
 
 from fixproof import cli
 from scenario import AUTHOR, FINISH, FIX_YAML, FIXED, SCOPE_YAML, START, VULNERABLE, install_tools
@@ -142,3 +143,25 @@ def test_version_and_help(
     assert capsys.readouterr().out.startswith("fixproof ")
     assert run(monkeypatch, "verify", "--help") == 0
     assert "--author" in ANSI.sub("", capsys.readouterr().out)
+
+
+def test_the_real_clock_is_timezone_aware() -> None:
+    assert cli.now().utcoffset() is not None
+
+
+@pytest.mark.parametrize(
+    ("raised", "stderr"),
+    [(typer.Abort(), ""), (typer.TyperException("boom"), "Error: boom\n")],
+)
+def test_interrupts_and_other_typer_errors_exit_3(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    raised: Exception,
+    stderr: str,
+) -> None:
+    def fail(**_: object) -> int:
+        raise raised
+
+    monkeypatch.setattr(cli, "app", fail)
+    assert run(monkeypatch) == cli.EXIT_USAGE
+    assert capsys.readouterr().err == stderr

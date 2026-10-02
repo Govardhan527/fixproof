@@ -587,6 +587,15 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `markdown-it-py` 4.2.0 and `mdurl` 0.1.2 (MIT, by their PyPI classifiers), `shellingham` 1.5.4
   (ISC) and `annotated-doc` 0.0.5 (MIT).
 
+  Added in M4 (ADR-0010 item 8; PyPI metadata, 2026-10-03): `kubernetes` 36.0.3 (Apache-2.0),
+  pulling in `aiohttp` 3.14.3 (Apache-2.0 AND MIT), `aiohappyeyeballs` 2.7.1 (PSF-2.0),
+  `aiosignal` 1.4.0, `frozenlist` 1.8.0, `multidict` 6.9.1, `propcache` 0.5.4, `yarl` 1.25.1,
+  `requests` 2.34.2, `websocket-client` 1.9.2 (Apache-2.0), `idna` 3.20 and `oauthlib` 4.0.0
+  (BSD-3-Clause), `requests-oauthlib` 2.0.0 (ISC), `durationpy` 0.11, `charset-normalizer` 3.5.2
+  and `urllib3` 2.8.0 (MIT), `python-dateutil` 2.9.0.post0 (dual Apache-2.0 / BSD-3-Clause), and
+  `certifi` 2026.7.22 (MPL-2.0: a file-level copyleft, compatible with use as an unmodified
+  dependency). pip-audit reported no known vulnerabilities in the locked tree.
+
   Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0; `python-debian` 1.1.1, GPL-2.0-or-later
   (PyPI metadata, 2026-10-02), the dpkg oracle that is never shipped (OQ-4, ADR-0009 item 2). The per-file hashes are recorded by
   `uv.lock` itself and are not repeated here.

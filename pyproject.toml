@@ -35,6 +35,8 @@ dev = [
     "pytest>=8.4",
     "pytest-cov>=7.0",
     "pytest-socket>=0.7",
+    # GPL-2.0-or-later: a dev-only oracle for the dpkg comparator, never shipped (OQ-4, ADR-0009).
+    "python-debian>=1.1.1",
     "ruff>=0.13",
     "types-jsonschema>=4.25",
     "types-pyyaml>=6.0.12",

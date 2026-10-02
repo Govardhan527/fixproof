@@ -1,14 +1,15 @@
 """Version comparison per ecosystem, and vers containment (ADR-0007 item 2).
 
-PyPI follows PEP 440 through `packaging` (SPEC_NOTES §9). The other ecosystems arrive in M3;
-until then asking for their comparator is an error, so the SBOM method reports `error` and the
-verdict is `unknown`, never `fixed`.
+PyPI follows PEP 440 through `packaging` (SPEC_NOTES §9); the others are written here from their
+specifications (ADR-0009). An ecosystem without a comparator, or a version a comparator rejects,
+is an error, so the SBOM method reports `error` and the verdict is `unknown`, never `fixed`.
 
 Containment follows vers-spec v1.2.0 (SPEC_NOTES §5): the constraints must be sorted and must
 alternate as §5.4 requires; then the how-to-parse algorithm decides, with a range of one bound
 evaluated by that bound's comparator as Clause 5.3.3.1 defines it.
 """
 
+import re
 from itertools import pairwise
 from typing import Protocol
 from urllib.parse import unquote
@@ -44,7 +45,81 @@ class Pypi:
         return (a > b) - (a < b)
 
 
-_COMPARATORS: dict[str, Comparator] = {"pypi": Pypi()}
+def _sign(value: int) -> int:
+    return (value > 0) - (value < 0)
+
+
+class Dpkg:
+    """Debian versions, Debian Policy §5.6.12 (SPEC_NOTES §6).
+
+    `[epoch:]upstream_version[-debian_revision]`, split at the first `:` and the last `-`. Parts
+    are compared in alternating runs: non-digits lexically, with `~` before everything (even the
+    end of the part) and letters before other characters; then digits numerically.
+    """
+
+    _UPSTREAM = re.compile(r"^[A-Za-z0-9.+~-]+$")
+    _REVISION = re.compile(r"^[A-Za-z0-9.+~]+$")
+
+    @classmethod
+    def parse(cls, version: str) -> tuple[int, str, str]:
+        epoch_text, colon, rest = version.partition(":")
+        if not colon:
+            epoch_text, rest = "0", version
+        upstream, dash, revision = rest.rpartition("-")
+        if not dash:
+            upstream, revision = rest, "0"
+        if (
+            not epoch_text.isdigit()
+            or not epoch_text.isascii()
+            or not cls._UPSTREAM.match(upstream)
+            or not cls._REVISION.match(revision)
+        ):
+            raise VersionError(f"{version!r} is not a Debian version")
+        return int(epoch_text), upstream, revision
+
+    @staticmethod
+    def _weight(char: str) -> int:
+        if char == "~":
+            return -1
+        return ord(char) if char.isalpha() else ord(char) + 256
+
+    @classmethod
+    def _lexical(cls, left: str, right: str) -> int:
+        for index in range(max(len(left), len(right))):
+            a = cls._weight(left[index]) if index < len(left) else 0  # end of part
+            b = cls._weight(right[index]) if index < len(right) else 0
+            if a != b:
+                return _sign(a - b)
+        return 0
+
+    @staticmethod
+    def _run(text: str) -> tuple[str, str, str]:
+        """Split off the leading non-digit run and the digit run after it."""
+        start = 0
+        while start < len(text) and not text[start].isdigit():
+            start += 1
+        end = start
+        while end < len(text) and text[end].isdigit():
+            end += 1
+        return text[:start], text[start:end], text[end:]
+
+    @classmethod
+    def _part(cls, left: str, right: str) -> int:
+        while left or right:
+            left_text, left_digits, left = cls._run(left)
+            right_text, right_digits, right = cls._run(right)
+            if order := cls._lexical(left_text, right_text):
+                return order
+            if order := _sign(int(left_digits or "0") - int(right_digits or "0")):
+                return order
+        return 0
+
+    def compare(self, left: str, right: str) -> int:
+        (le, lu, lr), (re_, ru, rr) = self.parse(left), self.parse(right)
+        return _sign(le - re_) or self._part(lu, ru) or self._part(lr, rr)
+
+
+_COMPARATORS: dict[str, Comparator] = {"deb": Dpkg(), "pypi": Pypi()}
 _LOWER = ("<", "<=")
 _UPPER = (">", ">=")
 

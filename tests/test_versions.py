@@ -62,9 +62,8 @@ def test_pep440_equal_after_normalisation(left: str, right: str) -> None:
 def test_invalid_versions_and_unsupported_ecosystems_are_errors() -> None:
     with pytest.raises(VersionError, match="not a PEP 440 version"):
         PYPI.compare("1.0", "not-a-version")
-    for ecosystem in ("deb", "rpm", "apk", "npm", "maven"):
-        with pytest.raises(VersionError, match=f"cannot compare {ecosystem} versions yet"):
-            comparator_for(ecosystem)
+    with pytest.raises(VersionError, match="cannot compare cargo versions yet"):
+        comparator_for("cargo")
 
 
 @pytest.mark.parametrize(

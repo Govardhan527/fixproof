@@ -178,24 +178,31 @@ def test_sbom_output_that_cannot_be_used_is_an_error(edit: Any, detail: str) -> 
     assert detail in result.result.detail
 
 
-def test_sbom_other_ecosystems_are_errors_until_their_comparator_exists() -> None:
+def test_sbom_compares_debian_versions() -> None:
     fix = requests_fix(ecosystem="deb", namespace="debian", name="libdemo1", fixed_version="1.0-1")
 
-    def add_deb(doc: dict[str, Any]) -> None:
-        doc["artifacts"].append(
-            {
-                **doc["artifacts"][0],
-                "name": "libdemo1",
-                "version": "0.9-1",
-                "purl": "pkg:deb/debian/libdemo1@0.9-1?arch=amd64",
-            }
-        )
+    def add_deb(version: str) -> Any:
+        def edit(doc: dict[str, Any]) -> None:
+            doc["artifacts"].append(
+                {
+                    **doc["artifacts"][0],
+                    "name": "libdemo1",
+                    "version": version,
+                    "purl": f"pkg:deb/debian/libdemo1@{version}?arch=amd64",
+                }
+            )
 
-    result = sbom_version.assess(ASSET, fix, runner({"syft": edited(SYFT_VULNERABLE, add_deb)}))
-    assert (result.result.status, result.result.detail) == (
-        MethodStatus.ERROR,
-        "fixproof cannot compare deb versions yet",
+        return edit
+
+    below = sbom_version.assess(
+        ASSET, fix, runner({"syft": edited(SYFT_VULNERABLE, add_deb("1.0~rc1-1"))})
     )
+    assert below.result.status is MethodStatus.PRESENT
+    assert "libdemo1 1.0~rc1-1" in below.result.detail
+    at = sbom_version.assess(
+        ASSET, fix, runner({"syft": edited(SYFT_VULNERABLE, add_deb("1:0.5-1"))})
+    )
+    assert at.result.status is MethodStatus.NOT_PRESENT  # the epoch outranks the version
 
 
 def test_unrelated_artifacts_without_a_purl_are_ignored() -> None:

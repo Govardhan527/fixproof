@@ -80,7 +80,9 @@ range) on 8 fixture images, built in CI from pinned Dockerfiles.
       unverified), all closed in SPEC_NOTES §5, §9, §12, §17 and §18.
 - [x] ADR-0007 Amendment 1 approved by the owner (2026-10-02); the `verify-summary` schema and
       example built.
-- [ ] CI green on the M2 closing push.
+- [x] CI green on the M2 closing push (2026-10-02): run 37006601557 on `f2f90b3`, all six jobs
+      passed (5 commits checked, 363 unit tests, 2 integration tests with real Syft and Grype,
+      8 example files valid, no leaks, no known vulnerabilities). **M2 closed.**
 - [x] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
 
 ## M3 (week 5)
@@ -115,18 +117,22 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M2, done-criteria met and the integration job
-  green; closing waits on one owner approval.
-- **M2 state:** CI run 36990675252 on `10db705`: all six jobs green, including the integration job
-  (real Syft and Grype on the 8 fixture images: 3 fixed, 4 still_affected, 1 unknown, plus the
-  disagreement case). Both milestone reviews ran; the scope review's `not_assessed` was parked
-  (`ee8e5ed`), and the spec review's 19 gaps were closed (`4bffe74`).
-- **Local commits not yet pushed:** `ee8e5ed` onward.
-- **Waiting on the owner:**
-  1. Approve ADR-0007 Amendment 1 (`--version`, `bundle.summary`, manifest `size`, dropping each
-     tool's `descriptor.configuration`, and a schema for the `verify --json` summary).
-  2. Say "push" once it is built.
-- **Next steps, in order:** on approval, build the `verify-summary` model, schema and example;
-  mark the amendment Accepted; close M2; push and watch CI. Then M3: dpkg, rpm, apk, npm and Maven
-  comparators (OQ-4, the dpkg licence question, must be answered first).
+- **Date:** 2026-10-02. **Current milestone:** M2 closed; M3 is next and has not started.
+- **M2 closed:** CI run 37006601557 on `f2f90b3` green on all six jobs; the integration job ran
+  real Syft 1.54.0 and Grype 0.119.0 against the 8 fixture images with the expected verdicts.
+  ADR-0007 and its Amendment 1 are Accepted. Scope and spec reviews done.
+- **State of `main`:** pushed; the commit recording this closure is the last one.
+- **M3 scope:** comparators for dpkg, rpm, apk, npm and Maven with spec-derived test tables (PyPI
+  was built in M2). Until they exist, a package from those ecosystems makes the SBOM method
+  return `error`, so the verdict is `unknown`.
+- **Waiting on the owner before M3 starts:** OQ-4 (SPEC_NOTES §14): `python-debian` is
+  GPL-2.0-or-later; recommended (b), write the dpkg comparison here from Debian Policy §5.6.12
+  and use `python-debian` only as a dev-only test oracle.
+- **Next steps, in order (M3):**
+  1. Get the OQ-4 answer.
+  2. Resolve the UNVERIFIED items M3 depends on: apk's full comparison algorithm and v2 versus
+     v3 behaviour (SPEC_NOTES §8), node-semver's range grammar (§10), Maven's different-
+     separator rules and the "Version Order Testing" examples (§11).
+  3. Propose the M3 design as an ADR (comparator modules, test tables, any oracle dependency),
+     wait for approval, then build test first.
 - **Open questions still waiting on the owner:** OQ-3 (M5), OQ-4 (M3), OQ-5 (M4).

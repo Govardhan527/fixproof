@@ -59,14 +59,19 @@ Data model, `fix.yaml` and `scope.yaml` schemas, OpenVEX writer with schema vali
 
 Image-level verification with both methods (Grype match; Syft SBOM version against the fixed
 range) on 8 fixture images, built in CI from pinned Dockerfiles.
-- [ ] Done: the truth-table test covers every agree and disagree combination (ADR-0007 item 1).
+- [x] Done: the truth-table test covers every agree and disagree combination (ADR-0007 item 1):
+      `tests/test_verdict.py` enumerates all 9 outcomes from the enums and checks both
+      invariants (2026-10-02).
 - [x] Syft and Grype JSON fields, exit codes, DB status and multi-platform behaviour verified
       (SPEC_NOTES §17, 2026-10-02).
 - [x] M2 design accepted: ADR-0007 (owner approved 2026-10-02).
-- [ ] PyPI comparator and vers containment (moved forward from M3 by ADR-0007 Q2).
-- [ ] Methods `grype` and `sbom_version`, evidence bundle and manifest, `verify` CLI.
-- [ ] 8 fixture images and the CI integration job (ADR-0007 items 9 and 10).
-- [ ] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
+- [x] PyPI comparator and vers containment (moved forward from M3 by ADR-0007 Q2), tested on
+      the spec's own PEP 440 example ordering.
+- [x] Methods `grype` and `sbom_version`, evidence bundle and manifest, `verify` CLI, with
+      golden bundle files and end-to-end CLI tests against stand-in tools.
+- [ ] 8 fixture images and the CI integration job (ADR-0007 items 9 and 10): written; green
+      only once the job has run on GitHub (it needs Docker, and runs on `main` or by dispatch).
+- [x] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
 
 ## M3 (week 5)
 
@@ -100,26 +105,21 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M1 closed; M2 is next.
-- **Changed in M1:** dependencies (ADR-0006); `validation.py` with the vendored official OpenVEX
-  schema and format checking; `purl.py` (canonical purls, checked against the official
-  purl-spec v1.0.1 build vectors); `model.py`, `vers.py`, `inputs.py` (`fix.yaml` and
-  `scope.yaml`, ADR-0005 and Amendment 1); generated `fix` and `scope` schemas with synthetic
-  examples; `vex.py` and `canonical.py` (OpenVEX writer); golden VEX files.
-- **Tests:** `make check` green: 207 tests locally (206 in CI), coverage 100% of `src/`, 5 example files
-  valid. All test data is synthetic (CVE-2099-xxxx, demo package names).
-- **Decisions:** owner approved ADR-0002 to ADR-0006 and ADR-0005 Amendment 1; OQ-1, OQ-2 and
-  OQ-6 answered with the recommended options.
-- **M1 pushed:** CI run 36986334645 on `73d64da` green. The spec-source review's 18 gaps were
-  closed in SPEC_NOTES after the push.
-- **Open questions still waiting on the owner:** OQ-3 (blocks M5), OQ-4 (blocks M3), OQ-5
-  (blocks M4), in `docs/SPEC_NOTES.md` §14.
-- **Next steps, in order (M2):**
-  1. Verify the Syft and Grype JSON fields, the Grype DB version and build date, and how Grype
-     reports a fixed-in version (SPEC_NOTES §12, UNVERIFIED); decide whether `packageurl-python`
-     parses Syft's purls (ADR-0006).
-  2. Propose the M2 design as an ADR: method contracts, the verdict truth table, the evidence
-     bundle and manifest formats (record the asset `kind` field there), the `verify` CLI for
-     images, and the 8 pinned fixture Dockerfiles. Wait for approval.
-  3. Build `methods/grype.py`, `methods/sbom_version.py` and `verdict.py` test first; wire Syft
-     and Grype into the CI `integration` job pinned by checksum; remove the exit-5 allowance.
+- **Date:** 2026-10-02. **Current milestone:** M2, code complete locally; the integration job has
+  not run yet.
+- **Done in M2:** ADR-0007 accepted (disagreement gives `unknown`; PyPI comparison moved into
+  M2); `verdict.py` with the full truth table; `versions.py` (PEP 440 and vers containment);
+  `purl.identity`; `tools.py`, `sanitize.py`, `methods/grype.py`, `methods/sbom_version.py`;
+  `bundle.py` (bundle and manifest formats, schemas, golden files); `verify.py` and the
+  `fixproof verify` CLI (exit codes 0 to 3); 7 pinned fixture Dockerfiles (8 images with the
+  authenticated registry), `scripts/build_fixtures.py`, `tests/integration/`, the CI
+  `integration` job. SPEC_NOTES §17 holds the verified Syft and Grype behaviour.
+- **Tests:** `make check` green: 364 unit tests locally, coverage 100%, 7 example files valid.
+  `make integration` skips locally (no Docker here).
+- **Local commits not yet pushed:** everything after `0e0d995`. M1's CI run was 36986334645.
+- **Waiting on the owner:** say "push", so the `integration` job runs real Syft and Grype on the
+  fixtures. M2 closes only when it is green.
+- **Next steps, in order:** push on approval; watch CI (the integration job downloads the
+  3 GB Grype DB); fix what the real run shows; run the scope and spec reviews on the M2 diff;
+  close M2. Then M3 (dpkg, rpm, apk, npm, Maven; OQ-4 waits on the owner).
+- **Open questions still waiting on the owner:** OQ-3 (M5), OQ-4 (M3), OQ-5 (M4).

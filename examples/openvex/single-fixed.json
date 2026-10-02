@@ -1,0 +1,33 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/fixproof/vex-a591a4cb2afa3a5dd0d698ce7be3a961",
+  "author": "Example Vulnerability Management <vm@example.com>",
+  "statements": [
+    {
+      "products": [
+        {
+          "@id": "pkg:oci/demo-parser@sha256:cc90f02f577b5ef4cdb5d6f2517f7906a52e097b1e7770b471896521f7bd5f25?repository_url=localhost:5001%2Ffixproof%2Fdemo-parser",
+          "identifiers": {
+            "purl": "pkg:oci/demo-parser@sha256:cc90f02f577b5ef4cdb5d6f2517f7906a52e097b1e7770b471896521f7bd5f25?repository_url=localhost:5001%2Ffixproof%2Fdemo-parser"
+          },
+          "subcomponents": [
+            {
+              "@id": "pkg:pypi/demo-parser",
+              "identifiers": {
+                "purl": "pkg:pypi/demo-parser"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "grype: no match; sbom: demo-parser 2.31.0 is in the fixed range",
+      "vulnerability": {
+        "name": "CVE-2099-0002"
+      }
+    }
+  ],
+  "timestamp": "2026-10-02T08:00:00Z",
+  "tooling": "fixproof 0.0.0",
+  "version": 1
+}

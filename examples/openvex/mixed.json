@@ -1,0 +1,127 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/fixproof/vex-b55e89a434ea5fa5cd13de8464a79cc0",
+  "author": "Example Vulnerability Management <vm@example.com>",
+  "statements": [
+    {
+      "action_statement": "Upgrade pkg:deb/debian/libdemo1 to 1.4.2-1 or later, or to a version in vers:deb/>=1.2.0-3+deb12u1|<1.3; Upgrade pkg:deb/debian/demo-tools to 1.4.2-1 or later.",
+      "products": [
+        {
+          "@id": "pkg:oci/demo-api@sha256:b7633b4dce44d39f2c867d32fdf29abd213853235a83453b8803b63a392425c1?repository_url=localhost:5001%2Ffixproof%2Fdemo-api",
+          "identifiers": {
+            "purl": "pkg:oci/demo-api@sha256:b7633b4dce44d39f2c867d32fdf29abd213853235a83453b8803b63a392425c1?repository_url=localhost:5001%2Ffixproof%2Fdemo-api"
+          },
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/demo-tools",
+              "identifiers": {
+                "purl": "pkg:deb/debian/demo-tools"
+              }
+            },
+            {
+              "@id": "pkg:deb/debian/libdemo1",
+              "identifiers": {
+                "purl": "pkg:deb/debian/libdemo1"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "affected",
+      "status_notes": "grype: match on libdemo1 1.4.1-2; sbom: libdemo1 1.4.1-2 is below 1.4.2-1",
+      "vulnerability": {
+        "name": "CVE-2099-0001"
+      }
+    },
+    {
+      "products": [
+        {
+          "@id": "pkg:oci/demo-batch@sha256:84f4d921f70721acd86751b278eff521ae391405b47bb10902b46ab36302dcaa?repository_url=localhost:5001%2Ffixproof%2Fdemo-batch",
+          "identifiers": {
+            "purl": "pkg:oci/demo-batch@sha256:84f4d921f70721acd86751b278eff521ae391405b47bb10902b46ab36302dcaa?repository_url=localhost:5001%2Ffixproof%2Fdemo-batch"
+          },
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/demo-tools",
+              "identifiers": {
+                "purl": "pkg:deb/debian/demo-tools"
+              }
+            },
+            {
+              "@id": "pkg:deb/debian/libdemo1",
+              "identifiers": {
+                "purl": "pkg:deb/debian/libdemo1"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "grype: no match; sbom: libdemo1 1.2.0-3+deb12u1 is in the fixed range",
+      "vulnerability": {
+        "name": "CVE-2099-0001"
+      }
+    },
+    {
+      "products": [
+        {
+          "@id": "pkg:oci/demo-web@sha256:48a9395e0dd781987526c1bf953397394b1baf3454e711dc760f71648dcebcc2?repository_url=localhost:5001%2Ffixproof%2Fdemo-web",
+          "identifiers": {
+            "purl": "pkg:oci/demo-web@sha256:48a9395e0dd781987526c1bf953397394b1baf3454e711dc760f71648dcebcc2?repository_url=localhost:5001%2Ffixproof%2Fdemo-web"
+          },
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/demo-tools",
+              "identifiers": {
+                "purl": "pkg:deb/debian/demo-tools"
+              }
+            },
+            {
+              "@id": "pkg:deb/debian/libdemo1",
+              "identifiers": {
+                "purl": "pkg:deb/debian/libdemo1"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "grype: no match; sbom: libdemo1 1.4.2-1 is in the fixed range",
+      "vulnerability": {
+        "name": "CVE-2099-0001"
+      }
+    },
+    {
+      "products": [
+        {
+          "@id": "pkg:oci/worker@sha256:8bb143804bacde085f43a473abf3dcdcccbc7ddc6d49cdc9f6f44954df099566?repository_url=registry.other.example%2Fvendor%2Fworker",
+          "identifiers": {
+            "purl": "pkg:oci/worker@sha256:8bb143804bacde085f43a473abf3dcdcccbc7ddc6d49cdc9f6f44954df099566?repository_url=registry.other.example%2Fvendor%2Fworker"
+          },
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/demo-tools",
+              "identifiers": {
+                "purl": "pkg:deb/debian/demo-tools"
+              }
+            },
+            {
+              "@id": "pkg:deb/debian/libdemo1",
+              "identifiers": {
+                "purl": "pkg:deb/debian/libdemo1"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "under_investigation",
+      "status_notes": "registry not in scope: registry.other.example",
+      "vulnerability": {
+        "name": "CVE-2099-0001"
+      }
+    }
+  ],
+  "timestamp": "2026-10-02T08:00:00Z",
+  "tooling": "fixproof 0.0.0",
+  "version": 1
+}

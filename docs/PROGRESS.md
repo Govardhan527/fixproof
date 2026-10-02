@@ -78,7 +78,9 @@ range) on 8 fixture images, built in CI from pinned Dockerfiles.
       removed and parked for M4; four interface details recorded as ADR-0007 Amendment 1.
 - [x] Spec-source review of the M2 diff (2026-10-02): 19 gaps (17 missing citations, 2
       unverified), all closed in SPEC_NOTES §5, §9, §12, §17 and §18.
-- [ ] ADR-0007 Amendment 1 approved by the owner; the `--json` summary schema built.
+- [x] ADR-0007 Amendment 1 approved by the owner (2026-10-02); the `verify-summary` schema and
+      example built.
+- [ ] CI green on the M2 closing push.
 - [x] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
 
 ## M3 (week 5)

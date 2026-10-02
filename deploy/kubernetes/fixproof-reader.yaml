@@ -1,0 +1,17 @@
+# fixproof's own account (ADR-0010 item 7). Apply it once, as a cluster admin:
+#   kubectl apply -f deploy/kubernetes/fixproof-reader.yaml
+# then give it read access in each namespace that scope.yaml lists:
+#   kubectl apply -n <namespace> -f deploy/kubernetes/fixproof-reader-role.yaml
+# fixproof runs outside the cluster with a short-lived token for this account (README,
+# "Kubernetes access"). The token is never mounted into a pod.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fixproof
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fixproof-reader
+  namespace: fixproof
+automountServiceAccountToken: false

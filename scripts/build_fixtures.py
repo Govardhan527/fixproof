@@ -1,6 +1,8 @@
 """Build the M2 fixture images, push them to the test registries, and record their digests.
 
-    build_fixtures.py --registry localhost:5000 --auth-registry localhost:5001 --out images.json
+    build_fixtures.py --registry localhost:5001 --auth-registry localhost:5002 --out images.json
+
+scripts/demo_cluster.sh runs it with the demo cluster's registries.
 
 Each directory under tests/fixtures/images/ is built and pushed to `--registry` (open). The
 `requests-2.31.0` image is also pushed to `--auth-registry`, which needs credentials: log in

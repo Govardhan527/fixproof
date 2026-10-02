@@ -24,8 +24,10 @@ test:
 schemas:
 	$(UV_RUN) python scripts/validate_outputs.py
 
-# Needs Docker, the fixture images and Syft and Grype on PATH (the CI `integration` job sets them
-# up). Without FIXPROOF_IT_IMAGES the tests skip locally and fail in CI.
+# Needs the demo cluster from `scripts/demo_cluster.sh up WORKDIR` (registries, fixture images,
+# kind) and Syft and Grype on PATH, with FIXPROOF_IT_IMAGES and FIXPROOF_IT_KUBECONFIG pointing at
+# WORKDIR/fixture-images.json and WORKDIR/reader.kubeconfig. Without them the tests skip locally
+# and fail in CI.
 integration:
 	$(UV_RUN) pytest -m integration --force-enable-socket
 

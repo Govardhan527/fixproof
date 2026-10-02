@@ -1,0 +1,28 @@
+# Read access for fixproof in one namespace (ADR-0010 item 7): get and list on pods and
+# replicasets, nothing else. It names no namespace, so apply it to each namespace in scope:
+#   kubectl apply -n <namespace> -f deploy/kubernetes/fixproof-reader-role.yaml
+# The account it binds is in deploy/kubernetes/fixproof-reader.yaml.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fixproof-reader
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [replicasets]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fixproof-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fixproof-reader
+subjects:
+  - kind: ServiceAccount
+    name: fixproof-reader
+    namespace: fixproof

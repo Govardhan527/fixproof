@@ -192,6 +192,15 @@ the exact files read.
     `pkg:oci/debian@sha256:244fd47e07d10?arch=amd64&repository_url=docker.io%2Flibrary%2Fdebian&tag=latest`:
     the digest's `:` stays, `/` in `repository_url` is encoded. (The type definition's own
     examples encode the digest colon as `%3A`; the test vectors and the encoding clause do not.)
+  - **Parsing a purl** (M2, to match Syft's packages): `docs/specification/how-to-parse.md` at
+    v1.0.1 (SHA-256 `9a8677da3368cd0e39e0f46541f92876946128fc454b5ef7acbb179f30c2010e`): split
+    off `#subpath` and `?qualifiers` from the right, then `scheme:`, strip leading `/`, take the
+    type up to the first `/`, the version after an `@`, the name after the last `/`, and the
+    namespace from the remaining segments, percent-decoding each and applying the type's
+    normalisation. VERIFIED. The official vectors add one constraint: an unencoded `@` in an npm
+    scope (`pkg:npm/@babel/core`) is part of the namespace, so fixproof takes the version `@`
+    only from the last path segment. All 43 success-case `parse` vectors for the seven types
+    pass (`tests/test_purl.py`).
   - **`packageurl-python` 0.17.6 against those vectors** (run 2026-10-02): it passes every
     `parse` test for the seven types and every `specification-test.json` case, and fails 16
     `build` and `roundtrip` tests (8 maven, 2 npm, 6 oci), all because it leaves `/` unencoded in

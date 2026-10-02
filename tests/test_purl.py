@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from fixproof.purl import NAMESPACE_RULES, PurlType, build
+from fixproof.purl import NAMESPACE_RULES, Identity, PurlType, build, identity
 
 VECTORS = Path(__file__).parent / "fixtures" / "purl-spec"
 # SHA-256 of each vendored tests/types/<type>-test.json at purl-spec v1.0.1 (SPEC_NOTES §5).
@@ -22,12 +22,12 @@ VECTOR_SHA256 = {
 }
 
 
-def build_vectors() -> list[Any]:
+def vectors(test_type: str) -> list[Any]:
     cases = []
     for purl_type in sorted(VECTOR_SHA256):
         data = json.loads((VECTORS / f"{purl_type}-test.json").read_text(encoding="utf-8"))
         for number, test in enumerate(data["tests"]):
-            if test["test_type"] == "build":
+            if test["test_type"] == test_type and not test["expected_failure"]:
                 cases.append(pytest.param(test, id=f"{purl_type}-{number}"))
     return cases
 
@@ -42,7 +42,7 @@ def test_every_emitted_type_has_vectors() -> None:
     assert set(VECTOR_SHA256) == set(NAMESPACE_RULES)
 
 
-@pytest.mark.parametrize("test", build_vectors())
+@pytest.mark.parametrize("test", vectors("build"))
 def test_official_build_vector(test: dict[str, Any]) -> None:
     given = test["input"]
     assert not given["subpath"]  # fixproof never emits subpaths
@@ -109,3 +109,30 @@ def test_name_and_qualifier_key_are_checked() -> None:
 def test_a_trailing_newline_never_passes_as_a_key() -> None:
     with pytest.raises(ValueError, match="invalid purl qualifier key"):
         build("npm", "x", qualifiers={"tag\n": "v"})
+
+
+@pytest.mark.parametrize("test", vectors("parse"))
+def test_official_parse_vector_identity(test: dict[str, Any]) -> None:
+    expected = test["expected_output"]
+    assert identity(test["input"]) == Identity(
+        expected["type"], expected["namespace"], expected["name"], expected["version"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("purl", "reason"),
+    [
+        ("pypi/requests@2.0", "is not a purl"),
+        ("pkg:requests", "is not a purl"),
+        ("pkg:pypi/", "has no name"),
+        ("pkg:pypi/@1.0", "has no name"),
+    ],
+)
+def test_identity_rejects_non_purls(purl: str, reason: str) -> None:
+    with pytest.raises(ValueError, match=reason):
+        identity(purl)
+
+
+def test_identity_of_a_syft_purl_drops_qualifiers() -> None:
+    syft = "pkg:deb/debian/LibSSL3@3.0.11-1~deb12u2?arch=amd64&distro=debian-12"
+    assert identity(syft) == Identity("deb", "debian", "libssl3", "3.0.11-1~deb12u2")

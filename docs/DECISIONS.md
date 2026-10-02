@@ -229,6 +229,9 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Not added:** `packageurl-python`, which the plan lists. Version 0.17.6 does not produce the
   v1.0.1 canonical form for qualifier values (SPEC_NOTES §5), and M1 only builds purls. Whether it
   parses Syft's purls in M2 (it passes every official parse test) is decided then.
+  **M2 follow-up (2026-10-02):** still not added. M2 needs only a purl's type, namespace, name
+  and version, which `purl.identity` parses per the spec and passes all 43 official parse
+  vectors for the seven types; one small function is cheaper than a dependency.
 - **Consequence:** PyYAML and three small format validators join the plan's list. The validators
   make the success test's "validates against the pinned OpenVEX schema" check dates and IRIs, not
   just shapes.

@@ -1,0 +1,361 @@
+{
+  "$defs": {
+    "AssetRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "discriminator": {
+            "mapping": {
+              "image": "#/$defs/ImageAsset",
+              "workload": "#/$defs/WorkloadAsset"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ImageAsset"
+            },
+            {
+              "$ref": "#/$defs/WorkloadAsset"
+            }
+          ],
+          "title": "Asset"
+        },
+        "index": {
+          "minimum": 1,
+          "title": "Index",
+          "type": "integer"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/MethodResult"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "scanned": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "description": "Per method: the manifest digest and platform the tool scanned.",
+          "title": "Scanned",
+          "type": "object"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        }
+      },
+      "required": [
+        "index",
+        "asset",
+        "verdict",
+        "reason",
+        "results",
+        "scanned"
+      ],
+      "title": "AssetRecord",
+      "type": "object"
+    },
+    "ImageAsset": {
+      "additionalProperties": false,
+      "description": "An image named in scope.yaml.",
+      "properties": {
+        "image": {
+          "$ref": "#/$defs/ImageRef"
+        },
+        "kind": {
+          "const": "image",
+          "default": "image",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "image"
+      ],
+      "title": "ImageAsset",
+      "type": "object"
+    },
+    "ImageRef": {
+      "additionalProperties": false,
+      "description": "An image by registry, repository and digest. Tags are never part of the identity.",
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "registry": {
+          "pattern": "^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))*(:[0-9]+)?$",
+          "title": "Registry",
+          "type": "string"
+        },
+        "repository": {
+          "pattern": "^[a-z0-9]+((\\.|_|__|-+)[a-z0-9]+)*(\\/[a-z0-9]+((\\.|_|__|-+)[a-z0-9]+)*)*$",
+          "title": "Repository",
+          "type": "string"
+        }
+      },
+      "required": [
+        "registry",
+        "repository",
+        "digest"
+      ],
+      "title": "ImageRef",
+      "type": "object"
+    },
+    "Inputs": {
+      "additionalProperties": false,
+      "properties": {
+        "fix_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Fix Sha256",
+          "type": "string"
+        },
+        "scope_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Scope Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fix_sha256",
+        "scope_sha256"
+      ],
+      "title": "Inputs",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "Method": {
+      "enum": [
+        "grype",
+        "sbom_version"
+      ],
+      "title": "Method",
+      "type": "string"
+    },
+    "MethodResult": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "discriminator": {
+            "mapping": {
+              "image": "#/$defs/ImageAsset",
+              "workload": "#/$defs/WorkloadAsset"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ImageAsset"
+            },
+            {
+              "$ref": "#/$defs/WorkloadAsset"
+            }
+          ],
+          "title": "Asset"
+        },
+        "detail": {
+          "minLength": 1,
+          "title": "Detail",
+          "type": "string"
+        },
+        "method": {
+          "$ref": "#/$defs/Method"
+        },
+        "raw_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Ref"
+        },
+        "status": {
+          "$ref": "#/$defs/MethodStatus"
+        }
+      },
+      "required": [
+        "asset",
+        "method",
+        "status",
+        "detail"
+      ],
+      "title": "MethodResult",
+      "type": "object"
+    },
+    "MethodStatus": {
+      "description": "What one evidence method says about the vulnerable component in one asset.",
+      "enum": [
+        "present",
+        "not_present",
+        "error"
+      ],
+      "title": "MethodStatus",
+      "type": "string"
+    },
+    "Summary": {
+      "additionalProperties": false,
+      "properties": {
+        "fixed": {
+          "title": "Fixed",
+          "type": "integer"
+        },
+        "still_affected": {
+          "title": "Still Affected",
+          "type": "integer"
+        },
+        "unknown": {
+          "title": "Unknown",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fixed",
+        "still_affected",
+        "unknown"
+      ],
+      "title": "Summary",
+      "type": "object"
+    },
+    "Verdict": {
+      "enum": [
+        "fixed",
+        "still_affected",
+        "unknown"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "WorkloadAsset": {
+      "additionalProperties": false,
+      "description": "A container in a running pod. `image` is None when its digest could not be resolved.",
+      "properties": {
+        "cluster": {
+          "minLength": 1,
+          "title": "Cluster",
+          "type": "string"
+        },
+        "container": {
+          "minLength": 1,
+          "title": "Container",
+          "type": "string"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "const": "workload",
+          "default": "workload",
+          "title": "Kind",
+          "type": "string"
+        },
+        "namespace": {
+          "minLength": 1,
+          "title": "Namespace",
+          "type": "string"
+        },
+        "pod": {
+          "minLength": 1,
+          "title": "Pod",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cluster",
+        "namespace",
+        "pod",
+        "container",
+        "image"
+      ],
+      "title": "WorkloadAsset",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/bundle/1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/AssetRecord"
+      },
+      "title": "Assets",
+      "type": "array"
+    },
+    "cve": {
+      "pattern": "^CVE-[0-9]{4}-[0-9]{4,19}$",
+      "title": "Cve",
+      "type": "string"
+    },
+    "finished": {
+      "minLength": 1,
+      "title": "Finished",
+      "type": "string"
+    },
+    "fixproof_version": {
+      "minLength": 1,
+      "title": "Fixproof Version",
+      "type": "string"
+    },
+    "inputs": {
+      "$ref": "#/$defs/Inputs"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "started": {
+      "minLength": 1,
+      "title": "Started",
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary"
+    },
+    "tools": {
+      "description": "Each distinct tool and data version used, e.g. Syft and its JSON schema, Grype and its DB schema, build time and source.",
+      "items": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "type": "object"
+      },
+      "title": "Tools",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "fixproof_version",
+    "started",
+    "finished",
+    "cve",
+    "inputs",
+    "tools",
+    "summary",
+    "assets"
+  ],
+  "title": "Bundle",
+  "type": "object"
+}

@@ -6,11 +6,18 @@ intended change with:
 """
 
 import os
+from pathlib import Path
 
 import pytest
+import yaml
 
+from fixproof.bundle import write_bundle
 from fixproof.canonical import to_json
+from fixproof.inputs import FixFile, ScopeFile
+from fixproof.verify import assess_images
 from fixproof.vex import build_document
+from scenario import FINISH, FIX_YAML, SCOPE_YAML, START, runner
+from tool_outputs import CVE
 from vex_cases import AUTHOR, EXAMPLES, GOLDEN, NOW, TOOL_VERSION, example_fix
 
 GOLDEN_DIR = EXAMPLES / "openvex"
@@ -36,3 +43,30 @@ def test_every_golden_file_has_a_case() -> None:
 
 def test_golden_files_are_never_regenerated_in_ci() -> None:
     assert not (UPDATE and os.environ.get("CI")), "FIXPROOF_UPDATE_GOLDEN must not be set in CI"
+
+
+@pytest.mark.parametrize("name", ["bundle", "manifest"])
+def test_golden_bundle(tmp_path: Path, name: str) -> None:
+    """The three-image scenario's bundle.json and manifest.json (tests/scenario.py)."""
+    fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
+    assessments = assess_images(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
+    vex = build_document(
+        fix, [a.verdict for a in assessments], author=AUTHOR, now=FINISH, tool_version=TOOL_VERSION
+    )
+    write_bundle(
+        tmp_path / "out",
+        cve=CVE,
+        fix_bytes=FIX_YAML.encode(),
+        scope_bytes=SCOPE_YAML.encode(),
+        assessments=assessments,
+        vex=vex,
+        started=START,
+        finished=FINISH,
+        tool_version=TOOL_VERSION,
+    )
+    produced = (tmp_path / "out" / f"{name}.json").read_bytes()
+    path = EXAMPLES / name / "three-images.json"
+    if UPDATE:
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(produced)
+    assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"

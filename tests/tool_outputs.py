@@ -58,3 +58,33 @@ def edited(document: dict[str, Any], edit: Callable[[dict[str, Any]], None]) -> 
 def requests_fix(**package: str) -> FixFile:
     fields = {"ecosystem": "pypi", "name": "requests", "fixed_version": "2.31.0", **package}
     return FixFile.model_validate({"schema_version": "1.0.0", "cve": CVE, "packages": [fields]})
+
+
+def for_image(document: dict[str, Any], image: ImageRef) -> dict[str, Any]:
+    """The same tool output, as if it came from scanning `image` (an index digest)."""
+    changed = copy.deepcopy(document)
+    reference = image.reference
+    if "artifacts" in changed:  # syft
+        changed["source"]["name"] = f"{image.registry}/{image.repository}"
+        changed["source"]["version"] = image.digest
+        metadata = changed["source"]["metadata"]
+    else:  # grype
+        metadata = changed["source"]["target"]
+    metadata["userInput"] = reference
+    metadata["repoDigests"] = [reference]
+    return changed
+
+
+def image_runner(
+    by_reference: Mapping[str, Mapping[str, dict[str, Any] | ToolRun]],
+) -> Callable[[str, Sequence[str], Mapping[str, str]], ToolRun]:
+    """A fake `run_tool` that answers per tool and per image (`registry:<reference>`)."""
+
+    def run(name: str, args: Sequence[str], env: Mapping[str, str]) -> ToolRun:
+        reference = args[0].removeprefix("registry:")
+        answer = by_reference[reference][name]
+        if isinstance(answer, ToolRun):
+            return answer
+        return ToolRun(0, json.dumps(answer).encode(), "")
+
+    return run

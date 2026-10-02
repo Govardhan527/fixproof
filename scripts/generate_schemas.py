@@ -16,13 +16,16 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from fixproof.bundle import BUNDLE_VERSION, MANIFEST_VERSION, Bundle, Manifest
 from fixproof.inputs import FIX_VERSION, SCOPE_VERSION, FixFile, ScopeFile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "src" / "fixproof" / "schemas"
 ID_BASE = "https://github.com/Govardhan527/fixproof/schemas"
 FORMATS: dict[str, tuple[type[BaseModel], str]] = {
+    "bundle": (Bundle, BUNDLE_VERSION),
     "fix": (FixFile, FIX_VERSION),
+    "manifest": (Manifest, MANIFEST_VERSION),
     "scope": (ScopeFile, SCOPE_VERSION),
 }
 

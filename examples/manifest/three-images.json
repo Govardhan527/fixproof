@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "path": "bundle.json",
+      "sha256": "e60f1f17e8bdd20bdaad42a04c86b2c37f60a618adffa3d3fecf66fb194c7ee0",
+      "size": 6861
+    },
+    {
+      "path": "openvex.json",
+      "sha256": "5f7db886f69bfe8e489c9215f8df9c374a4a402e261fc28b702768570cb8cee2",
+      "size": 3363
+    },
+    {
+      "path": "raw/001-grype.json",
+      "sha256": "c980488ecdda1208bdaea907f1b073fdc08621e2173c988611682db5c6f726da",
+      "size": 30353
+    },
+    {
+      "path": "raw/001-sbom_version.json",
+      "sha256": "f9edabd8fdc043d7e08104d677c4bc6e42e0d07d848bc979d4b20732dde425f8",
+      "size": 9965
+    },
+    {
+      "path": "raw/002-grype.json",
+      "sha256": "aa55dc74847a549b92cec73066ad7e6cfe9db6e10a838910647e09c6bf8c6761",
+      "size": 23202
+    },
+    {
+      "path": "raw/002-sbom_version.json",
+      "sha256": "10cc403234a78d7337d6e5f559939a1153975443dc4bb861f07190df832cb101",
+      "size": 9971
+    },
+    {
+      "path": "raw/003-sbom_version.json",
+      "sha256": "5b0c3dcd468bc97b258a65e737bb79d6685524009aaa6493a876d7195abf537d",
+      "size": 9974
+    }
+  ],
+  "schema_version": "1.0.0"
+}

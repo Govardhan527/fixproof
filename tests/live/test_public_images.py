@@ -115,14 +115,15 @@ def test_requests_fix_across_certbot_releases(tmp_path: Path) -> None:
     check_openvex(json.loads((out / "openvex.json").read_text()))
 
 
-def test_glibc_kev_cve_without_a_debian_comparator_is_never_called_fixed(tmp_path: Path) -> None:
+def test_glibc_kev_cve_on_debian_images(tmp_path: Path) -> None:
+    """Debian 12.0 still has libc6 2.36-9; Debian 12.15 has the fixed 2.36-9+deb12uN."""
     code, report, _ = verify(tmp_path, GLIBC_FIX, GLIBC_CVE, [DEBIAN_12_0, PYTHON_SLIM])
     found = verdicts(report)
     old_verdict, old_reason = found[DEBIAN_12_0]
     assert old_verdict == "still_affected", old_reason
-    assert old_reason.startswith("grype finds the vulnerable component; sbom_version failed")
+    assert old_reason.startswith("both methods find the vulnerable component")
+    assert "libc6 2.36-9 at" in old_reason
     new_verdict, new_reason = found[PYTHON_SLIM]
-    assert new_verdict == "unknown", new_reason
-    assert new_reason.startswith("sbom_version failed, so fixed cannot be proven")
-    assert "cannot compare deb versions yet" in new_reason
+    assert new_verdict == "fixed", new_reason
+    assert "libc6 2.36-9+deb12u" in new_reason
     assert code == 1

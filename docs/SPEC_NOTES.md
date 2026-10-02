@@ -450,3 +450,85 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `tag:yaml.org,2002:float`, pattern `[-+]?(?:[0-9][0-9_]*)\.[0-9_]*...`), so
   `yaml.safe_load("a: 1.10")` gives the float `1.1`. VERIFIED by running it. This is why
   `fix.yaml` versions must be quoted, and why the loader's error message says so.
+
+## 17. Syft and Grype output, the fixture advisory and base images (M2)
+
+- **Syft v1.54.0** (`syft version -o json`, binary checksum-verified per §12): `schemaVersion`
+  `16.1.11`. JSON schema `schema/json/schema-16.1.11.json` at tag v1.54.0, SHA-256
+  `33837c9da5b76e1331257a2916e0a6f8b936dc42c3ffa6704abf0b292b372188`, `$id`
+  `anchore.io/schema/syft/json/16.1.11/document`. VERIFIED:
+  - Document requires `artifacts`, `artifactRelationships`, `source`, `distro`, `descriptor`,
+    `schema`; `files` is optional.
+  - `Package` requires `id`, `name`, `version`, `type`, `foundBy`, `locations`, `licenses`,
+    `language`, `cpes`, `purl`; optional `metadataType`, `metadata`.
+  - `File` has `id`, `location`, `metadata`, `contents`, `digests`, `licenses`, `executable`,
+    `unknowns`. `contents` holds file contents when Syft is configured to capture them.
+  - Image source metadata (`syft/source/image_metadata.go` at v1.54.0, SHA-256
+    `24c180264668ac473a753312432c5d7acb6b04b1954db8b66953b53284db9ba1`): `userInput`, `imageID`,
+    `manifestDigest`, `mediaType`, `tags`, `imageSize`, `layers`, `manifest` (raw bytes),
+    `config` (raw image config, which includes the image's environment variables), `repoDigests`,
+    `architecture`, `os`, `labels`, `annotations`.
+  - Observed on 2026-10-02 (`syft dir:` over a `requests` 2.30.0 install): artifact `name`
+    `requests`, `version` `2.30.0`, `type` `python`, `purl` `pkg:pypi/requests@2.30.0`, found by
+    `python-installed-package-cataloger` from the `dist-info` files; `files` entries carried
+    `digests`, `id`, `location`, `metadata` and no `contents`.
+- **Grype v0.119.0** (`grype version -o json`): `supportedDbSchema` 6, embeds Syft v1.52.0.
+  Output models `grype/presenter/models/*.go` at tag v0.119.0 (SHA-256: `document.go`
+  `3bb196c265a964c2bd6f7cbb72aedb8be1b7b054e65df76b0a45662709edbab2`, `match.go`
+  `28f1af8ac0146329461510c8c7635c842a52f223de18eebe0033b7049a003e7d`, `vulnerability.go`
+  `d288f5bff6649183191dcb758cf4a475e159ae06c82f69b5e5a91a8d074995d5`,
+  `vulnerability_metadata.go`
+  `cf060d91fffb0039c7f39c5b85db4a44210799c8e811dd843d0086d1c69604d4`, `descriptor.go`
+  `3c069fc19886c8964a90645ca8298dadf6a63177d63684fb8911ca00a3e001d1`). VERIFIED:
+  - Document: `matches`, `ignoredMatches`, `alertsByPackage`, `source`, `distro`, `descriptor`.
+  - Match: `vulnerability`, `relatedVulnerabilities` (list of vulnerability metadata),
+    `matchDetails`, `artifact`.
+  - Vulnerability metadata: `id`, `dataSource`, `namespace`, `severity`, `urls`, `description`,
+    `cvss`, `knownExploited`, `epss`, `cwes`. Vulnerability adds `fix` (`versions`, `state`,
+    `available`) and `advisories`.
+  - Descriptor: `name`, `version`, `configuration`, `db`, `timestamp`.
+- **Grype DB** (`grype db check -o json`, 2026-10-02): candidate `schemaVersion` `v6.1.9`,
+  `built` `2026-10-02T06:31:53Z`, archive `vulnerability-db_v6.1.9_2026-10-02T00:35:12Z_1790922713.tar.zst`,
+  `checksum` `sha256:3c368df5c3624fe083ad646ca3be59525739dfe9caa4b6d14c7f252d155fbd98`.
+  `grype db status -o json` reports `schemaVersion`, `path`, `valid` and `error` when no DB
+  exists; once installed: `schemaVersion`, `from` (download URL carrying the checksum), `built`,
+  `path`, `valid`. Grype's scan output repeats this under `descriptor.db.status`. The DB takes
+  3.0 GB on disk. VERIFIED.
+- **Observed behaviour, Grype v0.119.0 with that DB (2026-10-02).** VERIFIED by running it:
+  - A PyPI match is reported with `vulnerability.id` = the GHSA id and the CVE only in
+    `relatedVulnerabilities`: `requests` 2.30.0 gives `GHSA-j8r2-6x86-q33q` (namespace
+    `github:language:python`, related `CVE-2023-32681`, `fix.versions` `["2.31.0"]`,
+    `fix.state` `fixed`, matcher `python-matcher`). `requests` 2.31.0 has no match for it.
+  - Exit code 0 with or without matches (no `--fail-on`); 1 when the DB is missing, and 1 when
+    it is older than `db.max-allowed-built-age`.
+  - Settings (`grype config`): `check-for-app-update` (default true), `db.auto-update` (true),
+    `db.validate-age` (true), `db.max-allowed-built-age` (`120h0m0s`),
+    `db.validate-by-hash-on-start` (true), `db.require-update-check` (false); environment form
+    `GRYPE_` + upper-case path with `_`.
+- **Observed behaviour, Syft v1.54.0 (2026-10-02).** VERIFIED by running it:
+  - Settings (`syft config`): `check-for-app-update` (default true);
+    `file.metadata.selection` (default `owned-by-package`; `none` captures no files);
+    `file.content.globs` (default empty, so no file contents). A scan of `registry:2` gave 234
+    `files` entries, none with `contents`.
+  - Exit code 1 when the image cannot be fetched.
+- **Multi-platform index digests** (both tools, `registry:docker.io/library/registry@<index
+  digest>`, 2026-10-02). VERIFIED: the tools resolve the index to the host platform (here
+  `amd64`/`linux`) and scan that one manifest. `source.metadata.manifestDigest` (Syft) and
+  `source.target.manifestDigest` (Grype) are the platform manifest's digest
+  (`sha256:46faa9a1...`); the requested index digest appears in `repoDigests` (as
+  `index.docker.io/library/registry@sha256:a3d8aaa6...`) and, for Syft, in `source.version`. So
+  a verdict covers the scanned platform only.
+- **Image config in tool output:** both tools' JSON carries the raw image config (Syft
+  `source.metadata.config`, Grype `source.target.config`) and raw manifest. VERIFIED.
+- **Fixture advisory:** CVE-2023-32681 = GHSA-j8r2-6x86-q33q, "Unintended leak of
+  Proxy-Authorization header in requests". GitHub Advisory Database (`gh api
+  /advisories?cve_id=CVE-2023-32681`, updated 2024-03-27): ecosystem pip, package `requests`,
+  vulnerable `>= 2.3.0, < 2.31.0`, first patched `2.31.0`. OSV (`api.osv.dev/v1/vulns/
+  GHSA-j8r2-6x86-q33q`, modified 2026-09-10): aliases CVE-2023-32681 and PYSEC-2023-74, PyPI
+  `requests`, introduced `2.3.0`, fixed `2.31.0`. The two agree. VERIFIED.
+- **Pinned images** (Docker Hub registry API, `HEAD /v2/<repo>/manifests/<tag>`, 2026-10-02):
+  `library/python:3.12-slim-bookworm` index
+  `sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3`;
+  `library/registry:2` index
+  `sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373`. Both are OCI image
+  indexes (multi-platform). VERIFIED.

@@ -1,0 +1,189 @@
+"""Kubernetes inventory (ADR-0010) against a fake cluster and the real client's models."""
+
+from typing import Any
+
+import pytest
+from kubernetes import client as k8s
+from kubernetes import config as k8s_config
+from kubernetes.client.exceptions import ApiException
+
+from fixproof.inputs import Cluster
+from fixproof.inventory import (
+    ContainerInfo,
+    InventoryError,
+    KubernetesSource,
+    PodInfo,
+    image_from_id,
+    inventory,
+)
+
+DIGEST = "sha256:" + "ab" * 32
+IMAGE_ID = f"localhost:5001/fixproof/requests-2.31.0@{DIGEST}"
+CLUSTER = Cluster(context="kind-fixproof", namespaces=("demo", "other"))
+
+
+class FakeSource:
+    def __init__(self, pods: dict[str, list[PodInfo]], replica_sets: dict[str, Any]) -> None:
+        self._pods, self._replica_sets, self.reads = pods, replica_sets, 0
+
+    def pods(self, namespace: str) -> list[PodInfo]:
+        return self._pods.get(namespace, [])
+
+    def replica_set_controller(self, namespace: str, name: str) -> tuple[str, str] | None:
+        self.reads += 1
+        controller: tuple[str, str] | None = self._replica_sets.get(name)
+        return controller
+
+
+def test_containers_become_workloads_with_their_owner() -> None:
+    source = FakeSource(
+        {
+            "demo": [
+                PodInfo("web-7d9-b", (ContainerInfo("app", IMAGE_ID),), ("ReplicaSet", "web-7d9")),
+                PodInfo("web-7d9-a", (ContainerInfo("app", IMAGE_ID),), ("ReplicaSet", "web-7d9")),
+                PodInfo(
+                    "job-x",
+                    (ContainerInfo("init", IMAGE_ID), ContainerInfo("run", IMAGE_ID)),
+                    ("Job", "job"),
+                ),
+                PodInfo("bare", (ContainerInfo("app", IMAGE_ID),)),
+            ]
+        },
+        {"web-7d9": ("Deployment", "web")},
+    )
+    workloads = inventory(CLUSTER, lambda context: source)
+    assert [(w.asset.pod, w.asset.container, w.asset.owner) for w in workloads] == [
+        ("bare", "app", None),
+        ("job-x", "init", "Job/job"),
+        ("job-x", "run", "Job/job"),
+        ("web-7d9-a", "app", "Deployment/web"),
+        ("web-7d9-b", "app", "Deployment/web"),
+    ]
+    assert source.reads == 1  # each ReplicaSet is read once
+    first = workloads[0].asset
+    assert (first.cluster, first.namespace, first.location) == (
+        "kind-fixproof",
+        "demo",
+        "kind-fixproof/demo/bare/app",
+    )
+    assert first.image is not None
+    assert first.image.reference == IMAGE_ID
+    assert all(w.problem is None for w in workloads)
+
+
+def test_an_orphan_replica_set_names_itself() -> None:
+    source = FakeSource(
+        {"demo": [PodInfo("rs-a", (ContainerInfo("app", IMAGE_ID),), ("ReplicaSet", "rs"))]}, {}
+    )
+    assert inventory(CLUSTER, lambda context: source)[0].asset.owner == "ReplicaSet/rs"
+
+
+@pytest.mark.parametrize(
+    ("image_id", "waiting", "problem"),
+    [
+        ("", "ImagePullBackOff", "the container has not started (ImagePullBackOff)"),
+        ("", None, "the container has not started"),
+        ("sha256:" + "cd" * 32, None, "has no registry digest"),
+        ("docker-pullable://nginx@" + DIGEST, None, "has no registry digest"),
+    ],
+)
+def test_unresolved_images_keep_the_reason(
+    image_id: str, waiting: str | None, problem: str
+) -> None:
+    image, reason = image_from_id(image_id, waiting)
+    assert image is None
+    assert reason is not None
+    assert problem in reason
+
+
+def k8s_pod(
+    name: str, statuses: list[Any], init: list[Any] | None = None, owner: Any = None
+) -> Any:
+    return k8s.V1Pod(
+        metadata=k8s.V1ObjectMeta(name=name, owner_references=[owner] if owner else None),
+        status=k8s.V1PodStatus(container_statuses=statuses, init_container_statuses=init),
+    )
+
+
+def status(name: str, image_id: str, waiting: str | None = None) -> Any:
+    state = (
+        k8s.V1ContainerState(waiting=k8s.V1ContainerStateWaiting(reason=waiting))
+        if waiting
+        else None
+    )
+    return k8s.V1ContainerStatus(
+        name=name, image="x", image_id=image_id, ready=False, restart_count=0, state=state
+    )
+
+
+def owner(kind: str, name: str, controller: bool = True) -> Any:
+    return k8s.V1OwnerReference(
+        api_version="apps/v1", kind=kind, name=name, uid="u", controller=controller
+    )
+
+
+class FakeCore:
+    def __init__(self, pods: list[Any], error: Exception | None = None) -> None:
+        self._pods, self._error = pods, error
+
+    def list_namespaced_pod(self, namespace: str) -> Any:
+        if self._error:
+            raise self._error
+        return k8s.V1PodList(items=self._pods)
+
+
+class FakeApps:
+    def read_namespaced_replica_set(self, name: str, namespace: str) -> Any:
+        return k8s.V1ReplicaSet(
+            metadata=k8s.V1ObjectMeta(name=name, owner_references=[owner("Deployment", "web")])
+        )
+
+
+def patch_client(monkeypatch: pytest.MonkeyPatch, core: FakeCore) -> None:
+    monkeypatch.setattr(k8s_config, "new_client_from_config", lambda context: object())
+    monkeypatch.setattr(k8s, "CoreV1Api", lambda api: core)
+    monkeypatch.setattr(k8s, "AppsV1Api", lambda api: FakeApps())
+
+
+def test_kubernetes_source_reads_statuses_and_owners(monkeypatch: pytest.MonkeyPatch) -> None:
+    pods = [
+        k8s_pod(
+            "web-1",
+            [status("app", IMAGE_ID), status("sidecar", "", waiting="ErrImagePull")],
+            init=[status("setup", IMAGE_ID)],
+            owner=owner("ReplicaSet", "web-7d9"),
+        ),
+        k8s_pod("bare", [status("app", IMAGE_ID)], owner=owner("Node", "n", controller=False)),
+        k8s.V1Pod(metadata=k8s.V1ObjectMeta(name="pending"), status=k8s.V1PodStatus()),
+    ]
+    patch_client(monkeypatch, FakeCore(pods))
+    workloads = inventory(Cluster(context="ctx", namespaces=("demo",)))
+    assert [
+        (w.asset.pod, w.asset.container, w.asset.owner, w.problem is None) for w in workloads
+    ] == [
+        ("bare", "app", None, True),
+        ("web-1", "setup", "Deployment/web", True),
+        ("web-1", "app", "Deployment/web", True),
+        ("web-1", "sidecar", "Deployment/web", False),
+    ]
+    assert workloads[-1].problem == (
+        "image digest not resolved: the container has not started (ErrImagePull)"
+    )
+
+
+def test_kubernetes_api_errors_are_inventory_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    patch_client(monkeypatch, FakeCore([], ApiException(status=403, reason="Forbidden")))
+    with pytest.raises(InventoryError, match="ctx: list pods in demo: 403 Forbidden"):
+        inventory(Cluster(context="ctx", namespaces=("demo",)))
+    patch_client(monkeypatch, FakeCore([], ConnectionRefusedError("refused")))
+    with pytest.raises(InventoryError, match="ctx: list pods in demo: refused"):
+        inventory(Cluster(context="ctx", namespaces=("demo",)))
+
+
+def test_a_missing_context_is_an_inventory_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def missing(context: str) -> Any:
+        raise k8s_config.ConfigException(f"Expected key {context} in contexts")
+
+    monkeypatch.setattr(k8s_config, "new_client_from_config", missing)
+    with pytest.raises(InventoryError, match="cannot load kubeconfig context 'nope'"):
+        KubernetesSource("nope")

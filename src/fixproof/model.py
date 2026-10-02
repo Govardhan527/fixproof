@@ -82,6 +82,13 @@ class WorkloadAsset(Contract):
     pod: Text
     container: Text
     image: ImageRef | None
+    owner: Text | None = Field(
+        default=None, description="The pod's controller, e.g. Deployment/api (ADR-0010)."
+    )
+
+    @property
+    def location(self) -> str:
+        return f"{self.cluster}/{self.namespace}/{self.pod}/{self.container}"
 
 
 Asset = Annotated[ImageAsset | WorkloadAsset, Field(discriminator="kind")]

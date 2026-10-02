@@ -26,7 +26,7 @@ from fixproof.methods import MethodOutcome
 from fixproof.model import Asset, AssetVerdict, Contract, CveId, MethodResult, Text, Verdict
 from fixproof.validation import check_openvex
 
-BUNDLE_VERSION: Literal["1.0.0"] = "1.0.0"
+BUNDLE_VERSION: Literal["1.1.0"] = "1.1.0"  # 1.1.0: workloads carry `owner` (ADR-0010)
 MANIFEST_VERSION: Literal["1.0.0"] = "1.0.0"
 Sha256 = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 
@@ -66,7 +66,7 @@ class AssetRecord(Contract):
 
 
 class Bundle(Contract):
-    schema_version: Literal["1.0.0"]
+    schema_version: Literal["1.1.0"]
     fixproof_version: Text
     started: Text
     finished: Text

@@ -22,6 +22,7 @@ ASCENDING = [
     ["1.0", "2.0~beta1", "2.0~rc1", "2.0"],
     ["2.0", "2.0^20250611", "2.0.1"],  # caret: post-release snapshots
     ["2.0", "2.0^150825", "2.0.1"],
+    ["2.0^git1", "2.0^git2", "2.0.1"],  # successive snapshots of one release
     ["0", "0.0"],  # more segments is newer
     ["1", "1.xyz", "1.0"],  # numeric segments are newer than alphabetic ones
     ["1c.f", "1.f"],  # BUGS: implicit segments compare one by one

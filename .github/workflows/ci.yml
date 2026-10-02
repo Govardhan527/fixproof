@@ -101,12 +101,16 @@ jobs:
           uv run --frozen pip-audit --strict --disable-pip --require-hashes \
             --requirement "$RUNNER_TEMP/requirements.txt"
 
-  # Docker is on the runner image; Syft, Grype and kind are installed here, pinned by checksum,
-  # in the milestone that first needs them (M2 for Syft and Grype, M4 for kind).
+  # ADR-0007 item 10: real Syft and Grype against the 8 fixture images. Images are pinned by
+  # digest (looked up 2026-10-02): registry:2 (index) and httpd:2.4-alpine (for htpasswd).
   integration:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     needs: [lint-type, test]
     runs-on: ubuntu-24.04
+    services:
+      registry:
+        image: registry@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+        ports: ["5000:5000"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -115,6 +119,47 @@ jobs:
         with:
           version: "0.12.9"
       - run: uv sync --locked
-      - run: make integration
+      - name: Install Syft 1.54.0 and Grype 0.119.0 (SHA-256 from each release's checksums file)
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/syft.tar.gz" \
+            https://github.com/anchore/syft/releases/download/v1.54.0/syft_1.54.0_linux_amd64.tar.gz
+          curl -sSfL -o "$RUNNER_TEMP/grype.tar.gz" \
+            https://github.com/anchore/grype/releases/download/v0.119.0/grype_0.119.0_linux_amd64.tar.gz
+          printf '%s  %s\n' \
+            54a87372498168b2d033e876fd41fa4e8035b872699e525a57046e1f2f09c860 "$RUNNER_TEMP/syft.tar.gz" \
+            3fa2dc4b924621ab65404cf08d0b8438d896d80ab949c9d5a4ca283c36004c9b "$RUNNER_TEMP/grype.tar.gz" \
+            | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/syft.tar.gz" -C "$RUNNER_TEMP/bin" syft
+          tar -xzf "$RUNNER_TEMP/grype.tar.gz" -C "$RUNNER_TEMP/bin" grype
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Download the Grype DB and record its status
+        env:
+          GRYPE_CHECK_FOR_APP_UPDATE: "false"
+        run: |
+          grype db update
+          grype db status -o json
+      - name: Start a registry that needs credentials (password made fresh for this run)
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          mkdir -p "$RUNNER_TEMP/auth"
+          docker run --rm --entrypoint htpasswd \
+            httpd@sha256:4e585da9d0125dec36d4500a9f5c5df7b2c0a01f67cb47865a91a4b05bdbec1b \
+            -Bbn fixproof "$password" > "$RUNNER_TEMP/auth/htpasswd"
+          docker run -d --name auth-registry -p 5001:5000 -v "$RUNNER_TEMP/auth:/auth:ro" \
+            -e REGISTRY_AUTH=htpasswd -e REGISTRY_AUTH_HTPASSWD_REALM=fixproof \
+            -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+            registry@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+          for _ in $(seq 30); do curl -s -o /dev/null http://localhost:5001/v2/ && break; sleep 1; done
+          echo "$password" | docker login localhost:5001 --username fixproof --password-stdin
+      - name: Build and push the fixture images
+        run: |
+          uv run --frozen python scripts/build_fixtures.py --registry localhost:5000 \
+            --auth-registry localhost:5001 --out "$RUNNER_TEMP/fixture-images.json"
+      - name: Run the integration tests (fixproof runs with no registry credentials)
+        env:
+          FIXPROOF_IT_IMAGES: ${{ runner.temp }}/fixture-images.json
+        run: make integration
 
   # The `release` job (tag v*: build, SBOM, PyPI trusted publishing) is added only after M6.

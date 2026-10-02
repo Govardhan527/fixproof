@@ -560,3 +560,19 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `library/registry:2` index
   `sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373`. Both are OCI image
   indexes (multi-platform). VERIFIED.
+- **Plain HTTP for local registries:** go-containerregistry v0.22.1 (the image library under
+  Syft's and Grype's registry access), `pkg/name/registry.go` (SHA-256
+  `88618463d047e23a991fcc6f3b5304ac0a56fce5a7c5b22660f137d6e89999ef`), `Registry.Scheme()`: `http`
+  for `localhost:<port>`, loopback, `*.local` and RFC 1918 addresses, `https` otherwise. VERIFIED
+  in the source; the version Syft and Grype embed is confirmed by the CI integration job.
+- **Syft registry auth settings** (`syft config`, v1.54.0): `registry.auth[]` entries with
+  `authority`, `username`, `password`, `token`, `tls-cert` (env `SYFT_REGISTRY_AUTH_*`). This is
+  why the stored output never keeps the tool's own `descriptor.configuration`. VERIFIED.
+- **Fixture inputs** (2026-10-02). VERIFIED:
+  - `requests` wheels, SHA-256 from PyPI's JSON API (`/pypi/requests/<version>/json`):
+    2.25.1 `c210084e36a42ae6b9219e00e48287def368a26d03a048ddad7bfee44f75871e`,
+    2.30.0 `10e94cc4f3121ee6da529d358cdaeaff2f1c409cd377dbc72b825852f2f7e294`,
+    2.31.0 `58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f`,
+    2.32.3 `70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6`.
+  - `library/httpd:2.4-alpine` index `sha256:4e585da9d0125dec36d4500a9f5c5df7b2c0a01f67cb47865a91a4b05bdbec1b`
+    (Docker Hub registry API), used only for its `htpasswd` in CI.

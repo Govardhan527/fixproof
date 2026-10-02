@@ -24,12 +24,10 @@ test:
 schemas:
 	$(UV_RUN) python scripts/validate_outputs.py
 
-# pytest exits 5 when it collects nothing. Until the first integration tests exist (M2: fixture
-# images, Syft and Grype) that is the expected state; say so loudly instead of passing silently.
+# Needs Docker, the fixture images and Syft and Grype on PATH (the CI `integration` job sets them
+# up). Without FIXPROOF_IT_IMAGES the tests skip locally and fail in CI.
 integration:
-	@$(UV_RUN) pytest -m integration --force-enable-socket; rc=$$?; \
-	if [ $$rc -eq 5 ]; then echo "make integration: NO integration tests exist yet (the first arrive in M2)"; exit 0; fi; \
-	exit $$rc
+	$(UV_RUN) pytest -m integration --force-enable-socket
 
 demo:
 	@echo "make demo: the SUCCESS TEST demo is built in M4 and M5 (see docs/PROGRESS.md); nothing ran" >&2

@@ -1,0 +1,868 @@
+{
+  "descriptor": {
+    "configuration": {
+      "db": {
+        "validate-age": true
+      },
+      "registry": {
+        "ca-cert": "",
+        "insecure-use-http": false
+      }
+    },
+    "db": {
+      "providers": {
+        "alma": {
+          "captured": "2026-10-02T00:35:55Z",
+          "input": "xxh64:22eafb844d288eaf"
+        },
+        "alpine": {
+          "captured": "2026-10-02T00:35:12Z",
+          "input": "xxh64:91d2f8b93c97373a"
+        },
+        "amazon": {
+          "captured": "2026-10-02T00:35:18Z",
+          "input": "xxh64:14a1b573ea75578f"
+        },
+        "arch": {
+          "captured": "2026-10-02T00:35:55Z",
+          "input": "xxh64:f19ce117c6b86951"
+        },
+        "bitnami": {
+          "captured": "2026-10-02T00:35:12Z",
+          "input": "xxh64:e7a48710bf7b7655"
+        },
+        "chainguard": {
+          "captured": "2026-10-02T00:35:27Z",
+          "input": "xxh64:d7fe44bf02c0d768"
+        },
+        "chainguard-libraries": {
+          "captured": "2026-10-02T00:35:38Z",
+          "input": "xxh64:896ce23a4bf66fb7"
+        },
+        "debian": {
+          "captured": "2026-10-02T00:35:46Z",
+          "input": "xxh64:820aaceace1b4861"
+        },
+        "echo": {
+          "captured": "2026-10-02T00:35:36Z",
+          "input": "xxh64:3701bbaa892ec1d1"
+        },
+        "eol": {
+          "captured": "2026-10-02T00:35:14Z",
+          "input": "xxh64:e9e4acf051fd2426"
+        },
+        "epss": {
+          "captured": "2026-10-02T00:35:36Z",
+          "input": "xxh64:f83ea8989dc36d2a"
+        },
+        "fedora": {
+          "captured": "2026-10-02T00:35:18Z",
+          "input": "xxh64:c4e9fc6eac73dbdd"
+        },
+        "github": {
+          "captured": "2026-10-02T00:36:18Z",
+          "input": "xxh64:fed1c193bf0f57c3"
+        },
+        "govulndb": {
+          "captured": "2026-10-02T00:35:17Z",
+          "input": "xxh64:0dcac41a316c7378"
+        },
+        "hummingbird": {
+          "captured": "2026-10-02T00:37:10Z",
+          "input": "xxh64:fc31a9fac77b42e5"
+        },
+        "kev": {
+          "captured": "2026-10-02T00:35:57Z",
+          "input": "xxh64:009f7446f0407a77"
+        },
+        "mariner": {
+          "captured": "2026-10-02T00:35:17Z",
+          "input": "xxh64:2651f3fb1e6cfa2f"
+        },
+        "minimos": {
+          "captured": "2026-10-02T00:35:40Z",
+          "input": "xxh64:71219ce63023e671"
+        },
+        "nvd": {
+          "captured": "2026-10-02T00:36:12Z",
+          "input": "xxh64:fbddac0048fd43d0"
+        },
+        "oracle": {
+          "captured": "2026-10-02T00:37:58Z",
+          "input": "xxh64:c29a74c8de84f5b2"
+        },
+        "photon": {
+          "captured": "2026-10-02T00:35:57Z",
+          "input": "xxh64:c04eefb7a976f9f9"
+        },
+        "rhel": {
+          "captured": "2026-10-02T00:36:38Z",
+          "input": "xxh64:5ae50e5a87e20c25"
+        },
+        "secureos": {
+          "captured": "2026-10-02T00:35:18Z",
+          "input": "xxh64:8bb3dd88b645222e"
+        },
+        "sles": {
+          "captured": "2026-10-02T00:37:09Z",
+          "input": "xxh64:65eac9cfcbc03762"
+        },
+        "ubuntu": {
+          "captured": "2026-10-02T00:35:55Z",
+          "input": "xxh64:2350d2f0075f7aca"
+        },
+        "wolfi": {
+          "captured": "2026-10-02T00:35:22Z",
+          "input": "xxh64:bf65a8ccd8fdac76"
+        }
+      },
+      "status": {
+        "built": "2026-10-02T06:31:53Z",
+        "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_2026-10-02T00:35:12Z_1790922713.tar.zst?checksum=sha256%3A3c368df5c3624fe083ad646ca3be59525739dfe9caa4b6d14c7f252d155fbd98",
+        "path": "/home/user/.cache/grype/db/6/vulnerability.db",
+        "schemaVersion": "v6.1.9",
+        "valid": true
+      }
+    },
+    "name": "grype",
+    "timestamp": "2026-10-02T14:30:39.484806005+05:30",
+    "version": "0.119.0"
+  },
+  "distro": {
+    "idLike": [],
+    "name": "alpine",
+    "version": "3.18.12"
+  },
+  "matches": [
+    {
+      "artifact": {
+        "cpes": [
+          "cpe:2.3:a:python:requests:2.30.0:*:*:*:*:*:*:*"
+        ],
+        "id": "3306257f2e0a5767",
+        "language": "python",
+        "licenses": [
+          "Apache 2.0"
+        ],
+        "locations": [
+          {
+            "accessPath": "/requests-2.30.0.dist-info/METADATA",
+            "annotations": {
+              "evidence": "primary"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/RECORD",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/RECORD"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/top_level.txt",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/top_level.txt"
+          }
+        ],
+        "name": "requests",
+        "purl": "pkg:pypi/requests@2.30.0",
+        "type": "python",
+        "upstreams": [],
+        "version": "2.30.0"
+      },
+      "matchDetails": [
+        {
+          "fix": {
+            "suggestedVersion": "2.31.0"
+          },
+          "found": {
+            "versionConstraint": ">=2.3.0,<2.31.0 (python)",
+            "vulnerabilityID": "GHSA-j8r2-6x86-q33q"
+          },
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:language:python",
+            "package": {
+              "name": "requests",
+              "version": "2.30.0"
+            }
+          },
+          "type": "exact-direct-match"
+        }
+      ],
+      "relatedVulnerabilities": [
+        {
+          "cvss": [
+            {
+              "metrics": {
+                "baseScore": 6.1,
+                "exploitabilityScore": 1.7,
+                "impactScore": 4
+              },
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N",
+              "vendorMetadata": {},
+              "version": "3.1"
+            },
+            {
+              "metrics": {
+                "baseScore": 6.1,
+                "exploitabilityScore": 1.7,
+                "impactScore": 4
+              },
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N",
+              "vendorMetadata": {},
+              "version": "3.1"
+            }
+          ],
+          "cwes": [
+            {
+              "cve": "CVE-2023-32681",
+              "cwe": "CWE-200",
+              "source": "security-advisories@github.com",
+              "type": "Secondary"
+            }
+          ],
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2023-32681",
+          "description": "Requests is a HTTP library. Since Requests 2.3.0, Requests has been leaking Proxy-Authorization headers to destination servers when redirected to an HTTPS endpoint. This is a product of how we use `rebuild_proxies` to reattach the `Proxy-Authorization` header to requests. For HTTP connections sent through the tunnel, the proxy will identify the header in the request itself and remove it prior to forwarding to the destination server. However when sent over HTTPS, the `Proxy-Authorization` header must be sent in the CONNECT request as the proxy has no visibility into the tunneled request. This results in Requests forwarding proxy credentials to the destination server unintentionally, allowing a malicious actor to potentially exfiltrate sensitive information. This issue has been patched in version 2.31.0.",
+          "epss": [
+            {
+              "cve": "CVE-2023-32681",
+              "date": "2026-10-01",
+              "epss": 0.02974,
+              "percentile": 0.86776
+            }
+          ],
+          "id": "CVE-2023-32681",
+          "namespace": "nvd:cpe",
+          "severity": "Medium",
+          "urls": [
+            "https://github.com/psf/requests/commit/74ea7cf7a6a27a4eeb2ae24e162bcc942a6706d5",
+            "https://github.com/psf/requests/releases/tag/v2.31.0",
+            "https://github.com/psf/requests/security/advisories/GHSA-j8r2-6x86-q33q",
+            "https://lists.debian.org/debian-lts-announce/2023/06/msg00018.html",
+            "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/AW7HNFGYP44RT3DUDQXG2QT3OEV2PJ7Y/",
+            "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/KOYASTZDGQG2BWLSNBPL3TQRL2G7QYNZ/",
+            "https://security.gentoo.org/glsa/202309-08"
+          ]
+        }
+      ],
+      "vulnerability": {
+        "advisories": [],
+        "cvss": [
+          {
+            "metrics": {
+              "baseScore": 6.1,
+              "exploitabilityScore": 1.7,
+              "impactScore": 4
+            },
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:N/A:N",
+            "vendorMetadata": {},
+            "version": "3.1"
+          }
+        ],
+        "cwes": [
+          {
+            "cve": "CVE-2023-32681",
+            "cwe": "CWE-200",
+            "source": "security-advisories@github.com",
+            "type": "Secondary"
+          }
+        ],
+        "dataSource": "https://github.com/advisories/GHSA-j8r2-6x86-q33q",
+        "description": "Unintended leak of Proxy-Authorization header in requests",
+        "epss": [
+          {
+            "cve": "CVE-2023-32681",
+            "date": "2026-10-01",
+            "epss": 0.02974,
+            "percentile": 0.86776
+          }
+        ],
+        "fix": {
+          "available": [
+            {
+              "date": "2023-05-23",
+              "kind": "first-observed",
+              "version": "2.31.0"
+            }
+          ],
+          "state": "fixed",
+          "versions": [
+            "2.31.0"
+          ]
+        },
+        "id": "GHSA-j8r2-6x86-q33q",
+        "namespace": "github:language:python",
+        "risk": 1.6505699999999999,
+        "severity": "Medium",
+        "urls": [
+          "https://github.com/psf/requests/security/advisories/GHSA-j8r2-6x86-q33q",
+          "https://github.com/psf/requests/commit/74ea7cf7a6a27a4eeb2ae24e162bcc942a6706d5",
+          "https://nvd.nist.gov/vuln/detail/CVE-2023-32681",
+          "https://github.com/psf/requests/releases/tag/v2.31.0",
+          "https://github.com/pypa/advisory-database/tree/main/vulns/requests/PYSEC-2023-74.yaml",
+          "https://lists.debian.org/debian-lts-announce/2023/06/msg00018.html",
+          "https://security.gentoo.org/glsa/202309-08",
+          "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/AW7HNFGYP44RT3DUDQXG2QT3OEV2PJ7Y",
+          "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/KOYASTZDGQG2BWLSNBPL3TQRL2G7QYNZ"
+        ]
+      }
+    },
+    {
+      "artifact": {
+        "cpes": [
+          "cpe:2.3:a:python:requests:2.30.0:*:*:*:*:*:*:*"
+        ],
+        "id": "3306257f2e0a5767",
+        "language": "python",
+        "licenses": [
+          "Apache 2.0"
+        ],
+        "locations": [
+          {
+            "accessPath": "/requests-2.30.0.dist-info/METADATA",
+            "annotations": {
+              "evidence": "primary"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/RECORD",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/RECORD"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/top_level.txt",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/top_level.txt"
+          }
+        ],
+        "name": "requests",
+        "purl": "pkg:pypi/requests@2.30.0",
+        "type": "python",
+        "upstreams": [],
+        "version": "2.30.0"
+      },
+      "matchDetails": [
+        {
+          "fix": {
+            "suggestedVersion": "2.32.4"
+          },
+          "found": {
+            "versionConstraint": "<2.32.4 (python)",
+            "vulnerabilityID": "GHSA-9hjg-9r4m-mvj7"
+          },
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:language:python",
+            "package": {
+              "name": "requests",
+              "version": "2.30.0"
+            }
+          },
+          "type": "exact-direct-match"
+        }
+      ],
+      "relatedVulnerabilities": [
+        {
+          "cvss": [
+            {
+              "metrics": {
+                "baseScore": 5.3,
+                "exploitabilityScore": 1.7,
+                "impactScore": 3.6
+              },
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N",
+              "vendorMetadata": {},
+              "version": "3.1"
+            }
+          ],
+          "cwes": [
+            {
+              "cve": "CVE-2024-47081",
+              "cwe": "CWE-522",
+              "source": "security-advisories@github.com",
+              "type": "Secondary"
+            }
+          ],
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2024-47081",
+          "description": "Requests is a HTTP library. Due to a URL parsing issue, Requests releases prior to 2.32.4 may leak .netrc credentials to third parties for specific maliciously-crafted URLs. Users should upgrade to version 2.32.4 to receive a fix. For older versions of Requests, use of the .netrc file can be disabled with `trust_env=False` on one's Requests Session.",
+          "epss": [
+            {
+              "cve": "CVE-2024-47081",
+              "date": "2026-10-01",
+              "epss": 0.0098,
+              "percentile": 0.60837
+            }
+          ],
+          "id": "CVE-2024-47081",
+          "namespace": "nvd:cpe",
+          "severity": "Medium",
+          "urls": [
+            "https://github.com/psf/requests/commit/96ba401c1296ab1dda74a2365ef36d88f7d144ef",
+            "https://github.com/psf/requests/pull/6965",
+            "https://github.com/psf/requests/security/advisories/GHSA-9hjg-9r4m-mvj7",
+            "https://requests.readthedocs.io/en/latest/api/#requests.Session.trust_env",
+            "https://seclists.org/fulldisclosure/2025/Jun/2",
+            "http://seclists.org/fulldisclosure/2025/Jun/2",
+            "http://www.openwall.com/lists/oss-security/2025/06/03/11",
+            "http://www.openwall.com/lists/oss-security/2025/06/03/9",
+            "http://www.openwall.com/lists/oss-security/2025/06/04/1",
+            "http://www.openwall.com/lists/oss-security/2025/06/04/6"
+          ]
+        }
+      ],
+      "vulnerability": {
+        "advisories": [],
+        "cvss": [
+          {
+            "metrics": {
+              "baseScore": 5.3,
+              "exploitabilityScore": 1.7,
+              "impactScore": 3.6
+            },
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N",
+            "vendorMetadata": {},
+            "version": "3.1"
+          }
+        ],
+        "cwes": [
+          {
+            "cve": "CVE-2024-47081",
+            "cwe": "CWE-522",
+            "source": "security-advisories@github.com",
+            "type": "Secondary"
+          }
+        ],
+        "dataSource": "https://github.com/advisories/GHSA-9hjg-9r4m-mvj7",
+        "description": "Requests vulnerable to .netrc credentials leak via malicious URLs",
+        "epss": [
+          {
+            "cve": "CVE-2024-47081",
+            "date": "2026-10-01",
+            "epss": 0.0098,
+            "percentile": 0.60837
+          }
+        ],
+        "fix": {
+          "available": [
+            {
+              "date": "2025-06-10",
+              "kind": "first-observed",
+              "version": "2.32.4"
+            }
+          ],
+          "state": "fixed",
+          "versions": [
+            "2.32.4"
+          ]
+        },
+        "id": "GHSA-9hjg-9r4m-mvj7",
+        "namespace": "github:language:python",
+        "risk": 0.5047,
+        "severity": "Medium",
+        "urls": [
+          "https://github.com/psf/requests/security/advisories/GHSA-9hjg-9r4m-mvj7",
+          "https://nvd.nist.gov/vuln/detail/CVE-2024-47081",
+          "https://github.com/psf/requests/pull/6965",
+          "https://github.com/psf/requests/commit/96ba401c1296ab1dda74a2365ef36d88f7d144ef",
+          "https://requests.readthedocs.io/en/latest/api/#requests.Session.trust_env",
+          "https://seclists.org/fulldisclosure/2025/Jun/2",
+          "http://seclists.org/fulldisclosure/2025/Jun/2",
+          "http://www.openwall.com/lists/oss-security/2025/06/03/11",
+          "http://www.openwall.com/lists/oss-security/2025/06/03/9",
+          "http://www.openwall.com/lists/oss-security/2025/06/04/1",
+          "http://www.openwall.com/lists/oss-security/2025/06/04/6"
+        ]
+      }
+    },
+    {
+      "artifact": {
+        "cpes": [
+          "cpe:2.3:a:python:requests:2.30.0:*:*:*:*:*:*:*"
+        ],
+        "id": "3306257f2e0a5767",
+        "language": "python",
+        "licenses": [
+          "Apache 2.0"
+        ],
+        "locations": [
+          {
+            "accessPath": "/requests-2.30.0.dist-info/METADATA",
+            "annotations": {
+              "evidence": "primary"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/RECORD",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/RECORD"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/top_level.txt",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/top_level.txt"
+          }
+        ],
+        "name": "requests",
+        "purl": "pkg:pypi/requests@2.30.0",
+        "type": "python",
+        "upstreams": [],
+        "version": "2.30.0"
+      },
+      "matchDetails": [
+        {
+          "fix": {
+            "suggestedVersion": "2.32.0"
+          },
+          "found": {
+            "versionConstraint": "<2.32.0 (python)",
+            "vulnerabilityID": "GHSA-9wx4-h78v-vm56"
+          },
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:language:python",
+            "package": {
+              "name": "requests",
+              "version": "2.30.0"
+            }
+          },
+          "type": "exact-direct-match"
+        }
+      ],
+      "relatedVulnerabilities": [
+        {
+          "cvss": [
+            {
+              "metrics": {
+                "baseScore": 5.6,
+                "exploitabilityScore": 0.4,
+                "impactScore": 5.2
+              },
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:H/A:N",
+              "vendorMetadata": {},
+              "version": "3.1"
+            }
+          ],
+          "cwes": [
+            {
+              "cve": "CVE-2024-35195",
+              "cwe": "CWE-670",
+              "source": "security-advisories@github.com",
+              "type": "Secondary"
+            }
+          ],
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2024-35195",
+          "description": "Requests is a HTTP library. Prior to 2.32.0, when making requests through a Requests `Session`, if the first request is made with `verify=False` to disable cert verification, all subsequent requests to the same host will continue to ignore cert verification regardless of changes to the value of `verify`. This behavior will continue for the lifecycle of the connection in the connection pool. This vulnerability is fixed in 2.32.0.",
+          "epss": [
+            {
+              "cve": "CVE-2024-35195",
+              "date": "2026-10-01",
+              "epss": 0.0034,
+              "percentile": 0.25076
+            }
+          ],
+          "id": "CVE-2024-35195",
+          "namespace": "nvd:cpe",
+          "severity": "Medium",
+          "urls": [
+            "https://github.com/psf/requests/commit/a58d7f2ffb4d00b46dca2d70a3932a0b37e22fac",
+            "https://github.com/psf/requests/pull/6655",
+            "https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56",
+            "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/IYLSNK5TL46Q6XPRVMHVWS63MVJQOK4Q/",
+            "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/N7WP6EYDSUOCOJYHDK5NX43PYZ4SNHGZ/"
+          ]
+        }
+      ],
+      "vulnerability": {
+        "advisories": [],
+        "cvss": [
+          {
+            "metrics": {
+              "baseScore": 5.6,
+              "exploitabilityScore": 0.4,
+              "impactScore": 5.2
+            },
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:H/A:N",
+            "vendorMetadata": {},
+            "version": "3.1"
+          }
+        ],
+        "cwes": [
+          {
+            "cve": "CVE-2024-35195",
+            "cwe": "CWE-670",
+            "source": "security-advisories@github.com",
+            "type": "Secondary"
+          }
+        ],
+        "dataSource": "https://github.com/advisories/GHSA-9wx4-h78v-vm56",
+        "description": "Requests `Session` object does not verify requests after making first request with verify=False",
+        "epss": [
+          {
+            "cve": "CVE-2024-35195",
+            "date": "2026-10-01",
+            "epss": 0.0034,
+            "percentile": 0.25076
+          }
+        ],
+        "fix": {
+          "available": [
+            {
+              "date": "2024-05-21",
+              "kind": "first-observed",
+              "version": "2.32.0"
+            }
+          ],
+          "state": "fixed",
+          "versions": [
+            "2.32.0"
+          ]
+        },
+        "id": "GHSA-9wx4-h78v-vm56",
+        "namespace": "github:language:python",
+        "risk": 0.1802,
+        "severity": "Medium",
+        "urls": [
+          "https://github.com/psf/requests/security/advisories/GHSA-9wx4-h78v-vm56",
+          "https://github.com/psf/requests/pull/6655",
+          "https://github.com/psf/requests/commit/a58d7f2ffb4d00b46dca2d70a3932a0b37e22fac",
+          "https://nvd.nist.gov/vuln/detail/CVE-2024-35195",
+          "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/IYLSNK5TL46Q6XPRVMHVWS63MVJQOK4Q",
+          "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/N7WP6EYDSUOCOJYHDK5NX43PYZ4SNHGZ"
+        ]
+      }
+    },
+    {
+      "artifact": {
+        "cpes": [
+          "cpe:2.3:a:python:requests:2.30.0:*:*:*:*:*:*:*"
+        ],
+        "id": "3306257f2e0a5767",
+        "language": "python",
+        "licenses": [
+          "Apache 2.0"
+        ],
+        "locations": [
+          {
+            "accessPath": "/requests-2.30.0.dist-info/METADATA",
+            "annotations": {
+              "evidence": "primary"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/RECORD",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/RECORD"
+          },
+          {
+            "accessPath": "/requests-2.30.0.dist-info/top_level.txt",
+            "annotations": {
+              "evidence": "supporting"
+            },
+            "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/top_level.txt"
+          }
+        ],
+        "name": "requests",
+        "purl": "pkg:pypi/requests@2.30.0",
+        "type": "python",
+        "upstreams": [],
+        "version": "2.30.0"
+      },
+      "matchDetails": [
+        {
+          "fix": {
+            "suggestedVersion": "2.33.0"
+          },
+          "found": {
+            "versionConstraint": "<2.33.0 (python)",
+            "vulnerabilityID": "GHSA-gc5v-m9x4-r6x2"
+          },
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:language:python",
+            "package": {
+              "name": "requests",
+              "version": "2.30.0"
+            }
+          },
+          "type": "exact-direct-match"
+        }
+      ],
+      "relatedVulnerabilities": [
+        {
+          "cvss": [
+            {
+              "metrics": {
+                "baseScore": 5.5,
+                "exploitabilityScore": 1.9,
+                "impactScore": 3.6
+              },
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+              "vendorMetadata": {},
+              "version": "3.1"
+            },
+            {
+              "metrics": {
+                "baseScore": 4.4,
+                "exploitabilityScore": 0.8,
+                "impactScore": 3.6
+              },
+              "source": "security-advisories@github.com",
+              "type": "Secondary",
+              "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:N/I:H/A:N",
+              "vendorMetadata": {},
+              "version": "3.1"
+            }
+          ],
+          "cwes": [
+            {
+              "cve": "CVE-2026-25645",
+              "cwe": "CWE-377",
+              "source": "security-advisories@github.com",
+              "type": "Secondary"
+            }
+          ],
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2026-25645",
+          "description": "Requests is a HTTP library. Prior to version 2.33.0, the `requests.utils.extract_zipped_paths()` utility function uses a predictable filename when extracting files from zip archives into the system temporary directory. If the target file already exists, it is reused without validation. A local attacker with write access to the temp directory could pre-create a malicious file that would be loaded in place of the legitimate one. Standard usage of the Requests library is not affected by this vulnerability. Only applications that call `extract_zipped_paths()` directly are impacted. Starting in version 2.33.0, the library extracts files to a non-deterministic location. If developers are unable to upgrade, they can set `TMPDIR` in their environment to a directory with restricted write access.",
+          "epss": [
+            {
+              "cve": "CVE-2026-25645",
+              "date": "2026-10-01",
+              "epss": 0.00185,
+              "percentile": 0.07301
+            }
+          ],
+          "id": "CVE-2026-25645",
+          "namespace": "nvd:cpe",
+          "severity": "Medium",
+          "urls": [
+            "https://github.com/psf/requests/commit/66d21cb07bd6255b1280291c4fafb71803cdb3b7",
+            "https://github.com/psf/requests/releases/tag/v2.33.0",
+            "https://github.com/psf/requests/security/advisories/GHSA-gc5v-m9x4-r6x2"
+          ]
+        }
+      ],
+      "vulnerability": {
+        "advisories": [],
+        "cvss": [
+          {
+            "metrics": {
+              "baseScore": 4.4,
+              "exploitabilityScore": 0.8,
+              "impactScore": 3.6
+            },
+            "type": "Secondary",
+            "vector": "CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:N/I:H/A:N",
+            "vendorMetadata": {},
+            "version": "3.1"
+          }
+        ],
+        "cwes": [
+          {
+            "cve": "CVE-2026-25645",
+            "cwe": "CWE-377",
+            "source": "security-advisories@github.com",
+            "type": "Secondary"
+          }
+        ],
+        "dataSource": "https://github.com/advisories/GHSA-gc5v-m9x4-r6x2",
+        "description": "Requests has Insecure Temp File Reuse in its extract_zipped_paths() utility function",
+        "epss": [
+          {
+            "cve": "CVE-2026-25645",
+            "date": "2026-10-01",
+            "epss": 0.00185,
+            "percentile": 0.07301
+          }
+        ],
+        "fix": {
+          "available": [
+            {
+              "date": "2026-03-26",
+              "kind": "first-observed",
+              "version": "2.33.0"
+            }
+          ],
+          "state": "fixed",
+          "versions": [
+            "2.33.0"
+          ]
+        },
+        "id": "GHSA-gc5v-m9x4-r6x2",
+        "namespace": "github:language:python",
+        "risk": 0.08695,
+        "severity": "Medium",
+        "urls": [
+          "https://github.com/psf/requests/security/advisories/GHSA-gc5v-m9x4-r6x2",
+          "https://github.com/psf/requests/commit/66d21cb07bd6255b1280291c4fafb71803cdb3b7",
+          "https://github.com/psf/requests/releases/tag/v2.33.0",
+          "https://nvd.nist.gov/vuln/detail/CVE-2026-25645"
+        ]
+      }
+    }
+  ],
+  "source": {
+    "target": {
+      "annotations": {
+        "note": "demo"
+      },
+      "architecture": "amd64",
+      "config": "eyJjb25maWciOiB7IkVudiI6IFsiTUFSS0VSPW11c3Qtbm90LWJlLXN0b3JlZCJdfX0=",
+      "imageID": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+      "imageSize": 25417726,
+      "labels": {
+        "maintainer": "demo"
+      },
+      "layers": [
+        {
+          "digest": "sha256:f44f286046d9443b2aeb895c0e1f4e688698247427bca4d15112c8e3432a803e",
+          "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+          "size": 7354986
+        }
+      ],
+      "manifest": "eyJzY2hlbWFWZXJzaW9uIjoyfQ==",
+      "manifestDigest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "os": "linux",
+      "repoDigests": [
+        "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+      ],
+      "tags": [],
+      "userInput": "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+    },
+    "type": "image"
+  }
+}

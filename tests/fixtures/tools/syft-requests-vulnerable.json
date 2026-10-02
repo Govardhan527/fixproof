@@ -1,0 +1,346 @@
+{
+  "artifactRelationships": [],
+  "artifacts": [
+    {
+      "cpes": [
+        {
+          "cpe": "cpe:2.3:a:python:requests:2.30.0:*:*:*:*:*:*:*",
+          "source": "nvd-cpe-dictionary"
+        }
+      ],
+      "foundBy": "python-installed-package-cataloger",
+      "id": "3306257f2e0a5767",
+      "language": "python",
+      "licenses": [
+        {
+          "locations": [
+            {
+              "accessPath": "/requests-2.30.0.dist-info/METADATA",
+              "path": "/requests-2.30.0.dist-info/METADATA"
+            }
+          ],
+          "spdxExpression": "",
+          "type": "declared",
+          "urls": [],
+          "value": "Apache 2.0"
+        }
+      ],
+      "locations": [
+        {
+          "accessPath": "/requests-2.30.0.dist-info/METADATA",
+          "annotations": {
+            "evidence": "primary"
+          },
+          "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA"
+        },
+        {
+          "accessPath": "/requests-2.30.0.dist-info/RECORD",
+          "annotations": {
+            "evidence": "supporting"
+          },
+          "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/RECORD"
+        },
+        {
+          "accessPath": "/requests-2.30.0.dist-info/top_level.txt",
+          "annotations": {
+            "evidence": "supporting"
+          },
+          "path": "/usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/top_level.txt"
+        }
+      ],
+      "metadata": {
+        "author": "Kenneth Reitz",
+        "authorEmail": "me@kennethreitz.org",
+        "files": [
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "5hhM4Q4mYTT9z6QB6PGpUAW81PGNFrYrdXMj4oM_6ak"
+            },
+            "path": "requests-2.30.0.dist-info/INSTALLER",
+            "size": "2"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "CeipvOyAZxBGUsFoaFqwkx54aPnIKEtm9a5u2uXxEws"
+            },
+            "path": "requests-2.30.0.dist-info/LICENSE",
+            "size": "10142"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "KfxooMrgkMilZD1AMe5I-x2468HST2x7aBmMWbRMdGc"
+            },
+            "path": "requests-2.30.0.dist-info/METADATA",
+            "size": "4612"
+          },
+          {
+            "path": "requests-2.30.0.dist-info/RECORD"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU"
+            },
+            "path": "requests-2.30.0.dist-info/REQUESTED",
+            "size": "0"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "pkctZYzUS4AYVn6dJ-7367OJZivF2e8RA9b_ZBjif18"
+            },
+            "path": "requests-2.30.0.dist-info/WHEEL",
+            "size": "92"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "fMSVmHfb5rbGOo6xv-O_tUX6j-WyixssE-SnwcDRxNQ"
+            },
+            "path": "requests-2.30.0.dist-info/top_level.txt",
+            "size": "9"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "LvmKhjIz8mHaKXthC2Mv5ykZ1d92voyf3oJpd-VuAig"
+            },
+            "path": "requests/__init__.py",
+            "size": "4963"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "Ivq0paLonoCKcQhMOyz3glqD-4Nt5LcIC7je9mXk-l8"
+            },
+            "path": "requests/__version__.py",
+            "size": "435"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "nMQymr4hs32TqVo5AbCrmcJEhvPUh7xXlluyqwslLiQ"
+            },
+            "path": "requests/_internal_utils.py",
+            "size": "1495"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "v_FmjU5KZ76k-YttShZYB5RprIzhhL8Y3zgW9p4eBQ8"
+            },
+            "path": "requests/adapters.py",
+            "size": "19553"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "q61xcXq4tmiImrvcSVLTbFyCiD2F-L_-hWKGbz4y8vg"
+            },
+            "path": "requests/api.py",
+            "size": "6449"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "h-HLlVx9j8rKV5hfSAycP2ApOSglTz77R0tz7qCbbEE"
+            },
+            "path": "requests/auth.py",
+            "size": "10187"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "Z9Sb410Anv6jUFTyss0jFFhU6xst8ctELqfy8Ev23gw"
+            },
+            "path": "requests/certs.py",
+            "size": "429"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "yxntVOSEHGMrn7FNr_32EEam1ZNAdPRdSE13_yaHzTk"
+            },
+            "path": "requests/compat.py",
+            "size": "1451"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "kD3kNEcCj-mxbtf5fJsSaT86eGoEYpD3X0CSgpzl7BM"
+            },
+            "path": "requests/cookies.py",
+            "size": "18560"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "DhveFBclVjTRxhRduVpO-GbMYMID2gmjdLfNEqNpI_U"
+            },
+            "path": "requests/exceptions.py",
+            "size": "3811"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "gPX5d_H7Xd88aDABejhqGgl9B1VFRTt5BmiYvL3PzIQ"
+            },
+            "path": "requests/help.py",
+            "size": "3875"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "CiuysiHA39V5UfcCBXFIx83IrDpuwfN9RcTUgv28ftQ"
+            },
+            "path": "requests/hooks.py",
+            "size": "733"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "-DlKi0or8gFAM6VzutobXvvBW_2wrJuOF5NfndTIddA"
+            },
+            "path": "requests/models.py",
+            "size": "35223"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "DXgv-FJIczZITmv0vEBAhWj4W-5CGCIN_ksvgR17Dvs"
+            },
+            "path": "requests/packages.py",
+            "size": "957"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "KUqJcRRLovNefUs7ScOXSUVCcfSayTFWtbiJ7gOSlTI"
+            },
+            "path": "requests/sessions.py",
+            "size": "30180"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "FvHmT5uH-_uimtRz5hH9VCbt7VV-Nei2J9upbej6j8g"
+            },
+            "path": "requests/status_codes.py",
+            "size": "4235"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "-IbmhVz06S-5aPSZuUthZ6-6D9XOjRuTXHOabY041XM"
+            },
+            "path": "requests/structures.py",
+            "size": "2912"
+          },
+          {
+            "digest": {
+              "algorithm": "sha256",
+              "value": "6sx2X3cIVA8BgWOg8odxFy-_lbWDFETU8HI4fU4Rmqw"
+            },
+            "path": "requests/utils.py",
+            "size": "33448"
+          }
+        ],
+        "name": "requests",
+        "platform": "UNKNOWN",
+        "providesExtra": [
+          "security",
+          "socks",
+          "use_chardet_on_py3"
+        ],
+        "requiresDist": [
+          "charset-normalizer (<4,>=2)",
+          "idna (<4,>=2.5)",
+          "urllib3 (<3,>=1.21.1)",
+          "certifi (>=2017.4.17)",
+          "PySocks (!=1.5.7,>=1.5.6) ; extra == 'socks'",
+          "chardet (<6,>=3.0.2) ; extra == 'use_chardet_on_py3'"
+        ],
+        "requiresPython": ">=3.7",
+        "sitePackagesRootPath": "/",
+        "topLevelPackages": [
+          "requests"
+        ],
+        "version": "2.30.0"
+      },
+      "metadataType": "python-package",
+      "name": "requests",
+      "purl": "pkg:pypi/requests@2.30.0",
+      "type": "python",
+      "version": "2.30.0"
+    }
+  ],
+  "descriptor": {
+    "configuration": {
+      "files": {
+        "content": {
+          "globs": []
+        }
+      }
+    },
+    "name": "syft",
+    "version": "1.54.0"
+  },
+  "distro": {
+    "bugReportURL": "https://gitlab.alpinelinux.org/alpine/aports/-/issues",
+    "homeURL": "https://alpinelinux.org/",
+    "id": "alpine",
+    "name": "Alpine Linux",
+    "prettyName": "Alpine Linux v3.18",
+    "versionID": "3.18.12"
+  },
+  "files": [
+    {
+      "contents": "bWFya2Vy",
+      "id": "f1",
+      "location": {
+        "path": "/etc/app.conf"
+      }
+    }
+  ],
+  "schema": {
+    "url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-16.1.11.json",
+    "version": "16.1.11"
+  },
+  "source": {
+    "id": "46faa9a1ae6813194b53921a370f2f4f8c5e1aae228a89bceafef5847a6a3278",
+    "metadata": {
+      "annotations": {
+        "note": "demo"
+      },
+      "architecture": "amd64",
+      "config": "eyJjb25maWciOiB7IkVudiI6IFsiTUFSS0VSPW11c3Qtbm90LWJlLXN0b3JlZCJdfX0=",
+      "imageID": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+      "imageSize": 25417726,
+      "labels": {
+        "maintainer": "demo"
+      },
+      "layers": [
+        {
+          "digest": "sha256:f44f286046d9443b2aeb895c0e1f4e688698247427bca4d15112c8e3432a803e",
+          "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+          "size": 7354986
+        }
+      ],
+      "manifest": "eyJzY2hlbWFWZXJzaW9uIjoyfQ==",
+      "manifestDigest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "os": "linux",
+      "repoDigests": [
+        "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+      ],
+      "tags": [],
+      "userInput": "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+    },
+    "name": "localhost:5001/fixproof/demo-app",
+    "type": "image",
+    "version": "sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+  }
+}

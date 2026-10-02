@@ -68,3 +68,12 @@ def test_real_artifact_versions() -> None:
     assert MAVEN.compare("2.17.0", "2.17.1") == -1
     assert MAVEN.compare("2.0-beta9", "2.0-rc1") == -1
     assert MAVEN.compare("2.0-rc2", "2.0") == -1
+
+
+@pytest.mark.parametrize(
+    ("version", "same_as"),
+    # The POM reference's "Trimming Examples" (SPEC_NOTES §11).
+    [("1.0.0", "1"), ("1.ga", "1"), ("1.final", "1"), ("1.0", "1"), ("1.", "1"), ("1-", "1")],
+)
+def test_pom_reference_trimming(version: str, same_as: str) -> None:
+    assert MAVEN.compare(version, same_as) == 0

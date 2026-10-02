@@ -106,8 +106,9 @@ Real public images, real Syft and Grype, the Grype DB as published that day.
 Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived test tables
 (PyPI is built in M2, ADR-0007 Q2; its table is completed here).
 - [ ] Done: each comparator passes its table, including epochs and pre-releases.
-- [ ] OQ-4 (dpkg and the GPL) answered; the UNVERIFIED items in SPEC_NOTES §8, §10 and §11
-      resolved.
+- [x] OQ-4 (dpkg and the GPL) answered (2026-10-02: (b), own comparator, `python-debian` only as
+      a dev-only oracle).
+- [ ] The UNVERIFIED items in SPEC_NOTES §8, §10 and §11 resolved.
 - [ ] Live data (ADR-0008 item 5): real Debian, Alpine and RPM-based public images with real
       OS-package CVEs in the live suite; CVE-2023-4911 on python:3.12-slim-bookworm becomes
       `fixed`.

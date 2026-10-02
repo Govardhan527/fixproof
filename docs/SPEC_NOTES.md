@@ -408,7 +408,7 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   GPL-2.0-or-later and the project is Apache-2.0. (a) Depend on it, accepting GPL terms for the
   distributed combination; (b) write the §6 algorithm in this project (it is short and fully
   specified) and use `python-debian` only as a dev-only test oracle, never shipped; (c) write it
-  with no oracle. Recommended: (b).
+  with no oracle. Recommended: (b). **Answered 2026-10-02: (b).**
 - **OQ-5 (blocks M4 fixtures): the "unreadable" workload.** What makes the sixth workload
   `unknown` in the success test? (a) An image in a registry fixproof has no credentials for;
   (b) an image Syft cannot catalogue (no package database), so the SBOM method fails; (c) a pod

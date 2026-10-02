@@ -36,6 +36,62 @@ PYTHON_SLIM = (  # python:3.12-slim-bookworm, Debian 12.15 on 2026-10-02
     "docker.io/library/python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3"
 )
 
+
+def _hub(repository: str, digest: str) -> str:
+    return f"docker.io/library/{repository}@sha256:{digest}"
+
+
+OPENSSL_ALPINE_CVE = "CVE-2023-5363"  # Alpine secdb v3.18: openssl 3.1.4-r0 (SPEC_NOTES §19)
+OPENSSL_RHEL_CVE = "CVE-2023-0286"  # Red Hat: openssl-1:3.0.1-47.el9_1, EUS 1:3.0.1-46.el9_0
+LOG4SHELL_CVE = "CVE-2021-44228"  # in CISA KEV; GHSA-jfh8-c2jp-5v3q: fixed 2.15.0
+ALPINE_3_18_0 = _hub("alpine", "02bb6f428431fbc2809c5d1b41eab5a68350194fb508869a33cb1af4444c9b11")
+ALPINE_3_22 = _hub("alpine", "5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8")
+ALMA_9_0 = _hub("almalinux", "a95a7766fd056b35f72f7b7f7301bcd46e40a6eecd9017e9c41cb4bf22ecb28b")
+ALMA_9 = _hub("almalinux", "3a3fa7f043b142bc8008c8b308d39b47d2c84008addcd52f9f9a7a82d2a90474")
+LOG4SHELL_APP = (  # its build pins spring-boot-starter-log4j2 2.6.1, which pins log4j 2.14.1
+    "ghcr.io/christophetd/log4shell-vulnerable-app"
+    "@sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929"
+)
+
+OPENSSL_ALPINE_FIX = f"""\
+schema_version: "1.0.0"
+cve: {OPENSSL_ALPINE_CVE}
+packages:
+  - ecosystem: apk
+    namespace: alpine
+    name: libcrypto3
+    fixed_version: "3.1.4-r0"
+  - ecosystem: apk
+    namespace: alpine
+    name: libssl3
+    fixed_version: "3.1.4-r0"
+"""
+OPENSSL_RHEL_FIX = f"""\
+schema_version: "1.0.0"
+cve: {OPENSSL_RHEL_CVE}
+packages:
+  - ecosystem: rpm
+    namespace: almalinux
+    name: openssl-libs
+    fixed_version: "1:3.0.1-47.el9_1"
+    fixed_vers: "vers:rpm/>=1:3.0.1-46.el9_0|<1:3.0.1-47"
+  - ecosystem: rpm
+    namespace: almalinux
+    name: openssl
+    fixed_version: "1:3.0.1-47.el9_1"
+    fixed_vers: "vers:rpm/>=1:3.0.1-46.el9_0|<1:3.0.1-47"
+"""
+LOG4SHELL_FIX = f"""\
+schema_version: "1.0.0"
+cve: {LOG4SHELL_CVE}
+packages:
+  - ecosystem: maven
+    namespace: org.apache.logging.log4j
+    name: log4j-core
+    fixed_version: "2.15.0"
+    fixed_vers: "vers:maven/>=2.3.1|<2.4|>=2.12.2|<2.13"
+"""
+
 REQUESTS_FIX = f"""\
 schema_version: "1.0.0"
 cve: {REQUESTS_CVE}
@@ -71,11 +127,11 @@ def _scanners() -> None:
 
 
 def verify(
-    tmp_path: Path, fix: str, cve: str, images: list[str]
+    tmp_path: Path, fix: str, cve: str, images: list[str], registries: str = "docker.io"
 ) -> tuple[int, dict[str, Any], Path]:
     (tmp_path / "fix.yaml").write_text(fix, encoding="utf-8")
     (tmp_path / "scope.yaml").write_text(
-        'schema_version: "1.0.0"\nregistries: [docker.io]\nimages:\n'
+        f'schema_version: "1.0.0"\nregistries: [{registries}]\nimages:\n'
         + "".join(f"  - {image}\n" for image in images),
         encoding="utf-8",
     )
@@ -126,4 +182,34 @@ def test_glibc_kev_cve_on_debian_images(tmp_path: Path) -> None:
     new_verdict, new_reason = found[PYTHON_SLIM]
     assert new_verdict == "fixed", new_reason
     assert "libc6 2.36-9+deb12u" in new_reason
+    assert code == 1
+
+
+def test_openssl_on_alpine(tmp_path: Path) -> None:
+    code, report, _ = verify(
+        tmp_path, OPENSSL_ALPINE_FIX, OPENSSL_ALPINE_CVE, [ALPINE_3_18_0, ALPINE_3_22]
+    )
+    found = verdicts(report)
+    assert found[ALPINE_3_18_0][0] == "still_affected", found[ALPINE_3_18_0][1]
+    assert "libcrypto3 3.1.0-r4 at" in found[ALPINE_3_18_0][1]
+    assert found[ALPINE_3_22][0] == "fixed", found[ALPINE_3_22][1]
+    assert code == 1
+
+
+def test_openssl_on_almalinux_with_an_rpm_epoch(tmp_path: Path) -> None:
+    code, report, _ = verify(tmp_path, OPENSSL_RHEL_FIX, OPENSSL_RHEL_CVE, [ALMA_9_0, ALMA_9])
+    found = verdicts(report)
+    assert found[ALMA_9_0][0] == "still_affected", found[ALMA_9_0][1]
+    assert "openssl-libs 1:3.0.1-43.el9_0 at" in found[ALMA_9_0][1]
+    assert found[ALMA_9][0] == "fixed", found[ALMA_9][1]
+    assert code == 1
+
+
+def test_log4shell_in_a_spring_boot_jar(tmp_path: Path) -> None:
+    code, report, _ = verify(
+        tmp_path, LOG4SHELL_FIX, LOG4SHELL_CVE, [LOG4SHELL_APP], registries="ghcr.io"
+    )
+    verdict, reason = verdicts(report)[LOG4SHELL_APP]
+    assert verdict == "still_affected", reason
+    assert "log4j-core 2.14.1" in reason
     assert code == 1

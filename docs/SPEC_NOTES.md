@@ -745,3 +745,27 @@ All retrieved 2026-10-02.
   disabled when no repository activity has occurred in 60 days"; "Notifications for scheduled
   workflows are sent to the user who last modified the cron syntax"; runs may be delayed at high
   load, especially "the start of every hour". The repository is public. VERIFIED.
+- **M3 live cases** (ADR-0009 item 8), retrieved 2026-10-02. VERIFIED:
+  - **CVE-2023-5363 on Alpine:** Alpine secdb `https://secdb.alpinelinux.org/v3.18/main.json`
+    (SHA-256 `f9cd21cb8d6057f18b0eadd416718dcdba34e80470bb6550a3f89470f98e1372`): `openssl`
+    secfix `3.1.4-r0: CVE-2023-5363`. Images: `alpine:3.18.0`
+    `sha256:02bb6f428431fbc2809c5d1b41eab5a68350194fb508869a33cb1af4444c9b11` (Grype with the
+    2026-10-02 DB: Alpine 3.18.0, `libcrypto3`/`libssl3` `3.1.0-r4`, CVE matched with fix
+    `3.1.4-r0`); `alpine:3.22` `sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8`.
+  - **CVE-2023-0286 on AlmaLinux:** Red Hat Security Data API
+    `https://access.redhat.com/hydra/rest/securitydata/cve/CVE-2023-0286.json` (SHA-256
+    `708bd2934e87db8281b006bd280359fe77f77dd3bd65af556527aa0e2a2ccf64`): RHEL 9
+    `openssl-1:3.0.1-47.el9_1` (RHSA-2023:0946), RHEL 9.0 EUS `openssl-1:3.0.1-46.el9_0`
+    (RHSA-2023:1199). Grype matches AlmaLinux 9 against this Red Hat data (namespace
+    `redhat:distro:redhat:9`). Images: `almalinux:9.0`
+    `sha256:a95a7766fd056b35f72f7b7f7301bcd46e40a6eecd9017e9c41cb4bf22ecb28b` (`openssl-libs`
+    `1:3.0.1-43.el9_0`); `almalinux:9` `sha256:3a3fa7f043b142bc8008c8b308d39b47d2c84008addcd52f9f9a7a82d2a90474`.
+    Syft reports RPM versions with the epoch (`1:3.0.1-43.el9_0`) and purls with namespace
+    `almalinux` and an `epoch` qualifier.
+  - **CVE-2021-44228 (Log4Shell, in CISA KEV since 2021-12-10):** GHSA-jfh8-c2jp-5v3q (GitHub
+    Advisory Database): `org.apache.logging.log4j:log4j-core` `>= 2.13.0, < 2.15.0` patched
+    `2.15.0`; `>= 2.4, < 2.12.2` patched `2.12.2`; `>= 2.0-beta9, < 2.3.1` patched `2.3.1`.
+    Image `ghcr.io/christophetd/log4shell-vulnerable-app`
+    `sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929` (single-platform):
+    its `build.gradle` uses `spring-boot-starter-log4j2:2.6.1`, and Spring Boot v2.6.1's
+    `spring-boot-dependencies/build.gradle` pins `library("Log4j2", "2.14.1")`.

@@ -278,7 +278,54 @@ class Apk:
         return -1 if a_kind > b_kind else 1
 
 
-_COMPARATORS: dict[str, Comparator] = {"apk": Apk(), "deb": Dpkg(), "pypi": Pypi(), "rpm": Rpm()}
+class Npm:
+    """npm versions: SemVer 2.0.0 precedence, strict syntax (SPEC_NOTES §10).
+
+    The pattern is semver.org's own; build metadata is ignored when ordering.
+    """
+
+    _SEMVER = re.compile(
+        r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+        r"(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+        r"(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$",
+        re.ASCII,
+    )
+
+    @classmethod
+    def parse(cls, version: str) -> tuple[tuple[int, int, int], list[str] | None]:
+        match = cls._SEMVER.match(version)
+        if match is None:
+            raise VersionError(f"{version!r} is not a SemVer 2.0.0 version")
+        major, minor, patch, prerelease, _ = match.groups()
+        return (int(major), int(minor), int(patch)), prerelease.split(".") if prerelease else None
+
+    @staticmethod
+    def _identifier(left: str, right: str) -> int:
+        if left.isdigit() and right.isdigit():
+            return _sign(int(left) - int(right))
+        if left.isdigit() or right.isdigit():  # numeric identifiers sort below alphanumeric ones
+            return -1 if left.isdigit() else 1
+        return (left > right) - (left < right)
+
+    def compare(self, left: str, right: str) -> int:
+        (a_core, a_pre), (b_core, b_pre) = self.parse(left), self.parse(right)
+        if a_core != b_core:
+            return -1 if a_core < b_core else 1
+        if a_pre is None or b_pre is None:  # a pre-release sorts below the release
+            return (a_pre is None) - (b_pre is None)
+        for a_id, b_id in zip(a_pre, b_pre, strict=False):
+            if order := self._identifier(a_id, b_id):
+                return order
+        return _sign(len(a_pre) - len(b_pre))
+
+
+_COMPARATORS: dict[str, Comparator] = {
+    "apk": Apk(),
+    "deb": Dpkg(),
+    "npm": Npm(),
+    "pypi": Pypi(),
+    "rpm": Rpm(),
+}
 _LOWER = ("<", "<=")
 _UPPER = (">", ">=")
 

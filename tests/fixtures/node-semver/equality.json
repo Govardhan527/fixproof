@@ -1,0 +1,17 @@
+{
+  "source": "https://github.com/npm/node-semver/blob/v7.8.5/test/fixtures/equality.js",
+  "source_sha256": "ffc7ef18180a0f89ace2df1c89893774b22620743271be7fafd72e0ecdb8dac4",
+  "licence": "ISC (see LICENSE)",
+  "selection": "entries without loose-mode options and without a leading v, = or space",
+  "meaning": "equal",
+  "pairs": [
+    [
+      "1.2.3-beta+build",
+      "1.2.3-beta+otherbuild"
+    ],
+    [
+      "1.2.3+build",
+      "1.2.3+otherbuild"
+    ]
+  ]
+}

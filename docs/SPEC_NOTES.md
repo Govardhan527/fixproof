@@ -373,6 +373,17 @@ the exact files read.
   not needed: `fix.yaml` states ranges in vers, and the vers `npm` type (vers-spec v1.2.0,
   `types/npm-definition.json`) maps node-semver ranges to vers constraints, with node-semver as
   the version reference. So fixproof needs only SemVer 2.0.0 precedence for npm. VERIFIED.
+- **SemVer syntax:** `semver.md` (the §10 copy) gives the suggested regular expression "with
+  named groups" for PCRE and Python: `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(...))?(?:\+(...))?$`
+  (major, minor, patch, pre-release identifiers, build metadata). fixproof uses it with
+  `re.ASCII`, because in Python `\d` would otherwise match non-ASCII digits. §11.4 example:
+  `1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 <
+  1.0.0-rc.1 < 1.0.0`. VERIFIED.
+- **node-semver fixtures** (v7.8.5, ISC): `test/fixtures/comparisons.js` (SHA-256
+  `bd632ee8a596cd04fae4752a290322a5e27e0c143356001bde4bc9e66b717509`) and `equality.js`
+  (SHA-256 `ffc7ef18180a0f89ace2df1c89893774b22620743271be7fafd72e0ecdb8dac4`). The 19 strict
+  comparison pairs and 2 strict equality pairs (no loose-mode option, no leading `v`, `=` or
+  space) are vendored as JSON in `tests/fixtures/node-semver/` with the licence. VERIFIED.
 
 ## 11. Maven version ordering (M3)
 

@@ -390,7 +390,9 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      leading-zero digit group after a `.` (such as `1.05`) or a `~hash`, where apk-tools v2
      (Alpine 3.20 to 3.22) and v3 (3.23 onward) can disagree, raise `VersionError`.
   5. **npm:** SemVer 2.0.0 precedence (§10), strict syntax; build metadata ignored.
-  6. **Maven:** the POM reference's version order specification (§11).
+  6. **Maven:** a port of Apache Maven 3.9.16's `ComparableVersion` (Apache-2.0), the comparator
+     behind the POM reference's version order specification (§11). Where the reference and the
+     code disagree (only on `_`), versions containing `_` raise `VersionError`.
   7. **Test tables:** each spec's own examples, plus rule-derived cases for epochs, pre-releases
      and the edge cases above. Licence-compatible upstream test vectors are vendored as data
      with their licence: Maven's `ComparableVersionTest` (Apache-2.0) and node-semver's

@@ -10,8 +10,9 @@ evaluated by that bound's comparator as Clause 5.3.3.1 defines it.
 """
 
 import re
+from collections.abc import Mapping
 from itertools import pairwise
-from typing import Protocol
+from typing import Any, ClassVar, Protocol
 from urllib.parse import unquote
 
 from packaging.version import InvalidVersion, Version
@@ -319,9 +320,144 @@ class Npm:
         return _sign(len(a_pre) - len(b_pre))
 
 
+# A Maven version item: ("int", n), ("str", qualifier) or ("list", [items]).
+MavenItem = tuple[str, Any]
+
+
+class Maven:
+    """Maven versions (SPEC_NOTES §11): a port of Apache Maven 3.9.16's `ComparableVersion`
+    (Apache-2.0), the comparator behind the POM reference's version order specification.
+
+    Integers are one type here; Maven's int, long and big-integer items order the same way.
+    """
+
+    _QUALIFIERS = ("alpha", "beta", "milestone", "rc", "snapshot", "", "sp")
+    _ALIASES: ClassVar[Mapping[str, str]] = {"ga": "", "final": "", "release": "", "cr": "rc"}
+    _ABBREVIATIONS: ClassVar[Mapping[str, str]] = {"a": "alpha", "b": "beta", "m": "milestone"}
+    _RELEASE = str(_QUALIFIERS.index(""))
+
+    @classmethod
+    def _qualifier(cls, value: str) -> str:
+        if value in cls._QUALIFIERS:
+            return str(cls._QUALIFIERS.index(value))
+        return f"{len(cls._QUALIFIERS)}-{value}"  # unknown qualifiers sort after all known ones
+
+    @classmethod
+    def _string(cls, value: str, followed_by_digit: bool) -> MavenItem:
+        if followed_by_digit and len(value) == 1:
+            value = cls._ABBREVIATIONS.get(value, value)
+        return ("str", cls._ALIASES.get(value, value))
+
+    @classmethod
+    def _item(cls, digits: bool, text: str) -> MavenItem:
+        return ("int", int(text)) if digits else cls._string(text, False)
+
+    @classmethod
+    def _is_null(cls, item: MavenItem) -> bool:
+        kind, value = item
+        if kind == "int":
+            return bool(value == 0)
+        if kind == "str":
+            return cls._qualifier(value) == cls._RELEASE
+        return not value
+
+    @classmethod
+    def _normalize(cls, items: list[MavenItem]) -> None:
+        for index in range(len(items) - 1, -1, -1):
+            if cls._is_null(items[index]):
+                del items[index]  # trailing nulls: 0, "", empty list
+            elif items[index][0] != "list":
+                break
+
+    @classmethod
+    def parse(cls, version: str) -> list[MavenItem]:
+        if not version or any(c.isspace() or not c.isprintable() for c in version):
+            raise VersionError(f"{version!r} is not a Maven version")
+        if "_" in version:  # SPEC_NOTES §11: the POM reference and Maven's code disagree on "_"
+            raise VersionError(
+                f"{version!r} has '_', which Maven's documentation and code order differently"
+            )
+        version = version.lower()
+        items: list[MavenItem] = []
+        current, stack, digits, start = items, [items], False, 0
+
+        def nest() -> None:
+            nonlocal current
+            child: list[MavenItem] = []
+            current.append(("list", child))
+            current = child
+            stack.append(child)
+
+        for index, char in enumerate(version):
+            if char in ".-":
+                current.append(
+                    ("int", 0) if index == start else cls._item(digits, version[start:index])
+                )
+                start = index + 1
+                if char == "-":
+                    nest()
+            elif char.isdecimal():
+                if not digits and index > start:  # letters then digits: 1.0.0.X1 < 1.0.0-X2
+                    if current:
+                        nest()
+                    current.append(cls._string(version[start:index], True))
+                    start = index
+                    nest()
+                digits = True
+            else:
+                if digits and index > start:
+                    current.append(cls._item(True, version[start:index]))
+                    start = index
+                    nest()
+                digits = False
+        if len(version) > start:
+            if not digits and current:  # treat .X as -X for any string qualifier X
+                nest()
+            current.append(cls._item(digits, version[start:]))
+        while stack:
+            cls._normalize(stack.pop())
+        return items
+
+    @classmethod
+    def _cmp(cls, item: MavenItem, other: MavenItem | None) -> int:
+        kind, value = item
+        if kind == "int":
+            if other is None:
+                return 0 if value == 0 else 1
+            return _sign(value - other[1]) if other[0] == "int" else 1
+        if kind == "str":
+            if other is None:
+                order = cls._qualifier(value)
+                return (order > cls._RELEASE) - (order < cls._RELEASE)
+            if other[0] == "str":
+                a, b = cls._qualifier(value), cls._qualifier(other[1])
+                return (a > b) - (a < b)
+            return -1  # a qualifier sorts below a number and below a list
+        if other is None:
+            return next((r for r in (cls._cmp(i, None) for i in value) if r), 0)
+        if other[0] != "list":
+            return -1 if other[0] == "int" else 1
+        return cls._compare_lists(value, other[1])
+
+    @classmethod
+    def _compare_lists(cls, left: list[MavenItem], right: list[MavenItem]) -> int:
+        for index in range(max(len(left), len(right))):
+            a = left[index] if index < len(left) else None
+            b = right[index] if index < len(right) else None
+            # A missing item on the left compares as the inverse of the right against nothing.
+            result = cls._cmp(a, b) if a is not None else (0 if b is None else -cls._cmp(b, None))
+            if result:
+                return result
+        return 0
+
+    def compare(self, left: str, right: str) -> int:
+        return self._compare_lists(self.parse(left), self.parse(right))
+
+
 _COMPARATORS: dict[str, Comparator] = {
     "apk": Apk(),
     "deb": Dpkg(),
+    "maven": Maven(),
     "npm": Npm(),
     "pypi": Pypi(),
     "rpm": Rpm(),

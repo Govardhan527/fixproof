@@ -412,6 +412,18 @@ the exact files read.
     (SHA-256 `6e180a9c3107261e5e2686c216d6b6bf4a0c8f456902010c504cfb81bcd631ae`, Apache-2.0),
     holds ordered lists (`VERSIONS_QUALIFIER`, `VERSIONS_NUMBER`) and equality and order pairs.
     VERIFIED (file read).
+  - **The comparator itself** (Apache-2.0, ported): `maven-artifact/src/main/java/org/apache/maven/
+    artifact/versioning/ComparableVersion.java` at `maven-3.9.16` (SHA-256
+    `133b7566c3da8f3d1a2feb358d4b10d85073a2c44174d3438e6aa57118b0e1ca`). fixproof's `Maven` class is
+    a port; it agrees with every vector in the test class (both ordered lists, 69 equality pairs
+    and 31 order pairs, including the expanded MNG-7644 loop), vendored in
+    `tests/fixtures/maven/` with Maven's NOTICE. VERIFIED 2026-10-02.
+  - **Conflict, recorded:** the POM reference splits tokens at `_` and gives `1_0 = 1`; Maven's
+    code at 3.9.16 and at `maven-4.0.0-rc-7` (`compat/maven-artifact/.../ComparableVersion.java`,
+    SHA-256 `8465abac8e72eac25e4957d481daa292f89c833f6e9bee7c7616cf17e83e4bcd`) splits only at `.`
+    and `-`, so `1_0` ranks above `1` there. All 19 other "End Result Examples" agree with the
+    code. fixproof refuses versions containing `_` (`VersionError`, so `unknown`) rather than
+    pick a side (ADR-0009 item 6).
 
 ## 12. Kubernetes, Syft, Grype and kind (M2, M4)
 

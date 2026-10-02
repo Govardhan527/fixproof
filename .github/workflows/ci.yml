@@ -1,0 +1,120 @@
+# Third-party actions are pinned to full commit SHAs (looked up 2026-10-02 with git ls-remote and
+# the GitHub API). Update the SHA and the trailing version comment together.
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commit-hygiene:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check every commit message in the range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request) python3 scripts/check_commits.py --base "$PR_BASE" --head "$PR_HEAD" ;;
+            push)         python3 scripts/check_commits.py --base "$PUSH_BEFORE" --head "$PUSH_AFTER" ;;
+            *)            python3 scripts/check_commits.py --head HEAD ;;
+          esac
+
+  lint-type:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - run: make lint type
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      # Unit and golden-file tests; pytest-socket blocks network access.
+      - run: make test
+
+  schemas:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - run: make schemas
+
+  security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks 8.30.1 (SHA-256 from the release's checksums.txt)
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tar.gz" \
+            | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+      - name: Scan the full git history for secrets
+        run: '"$RUNNER_TEMP/gitleaks" git --redact --verbose .'
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - name: Audit every locked dependency for known vulnerabilities
+        run: |
+          uv export --frozen --all-groups --no-emit-project --format requirements.txt \
+            --output-file "$RUNNER_TEMP/requirements.txt" > /dev/null
+          uv run --frozen pip-audit --strict --disable-pip --require-hashes \
+            --requirement "$RUNNER_TEMP/requirements.txt"
+
+  # Docker is on the runner image; Syft, Grype and kind are installed here, pinned by checksum,
+  # in the milestone that first needs them (M2 for Syft and Grype, M4 for kind).
+  integration:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [lint-type, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - run: make integration
+
+  # The `release` job (tag v*: build, SBOM, PyPI trusted publishing) is added only after M6.

@@ -105,13 +105,24 @@ Real public images, real Syft and Grype, the Grype DB as published that day.
 
 Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived test tables
 (PyPI is built in M2, ADR-0007 Q2; its table is completed here).
-- [ ] Done: each comparator passes its table, including epochs and pre-releases.
+- [x] Done: each comparator passes its table, including epochs and pre-releases (2026-10-02):
+      `tests/test_version_{dpkg,rpm,apk,npm,maven}.py` plus `test_versions.py` (PyPI), with
+      epochs (dpkg, rpm, PyPI) and pre-releases (`~`, `^`, `_alpha` to `_rc`, SemVer, Maven
+      qualifiers). Dev-time agreement with each upstream: python-debian on 6,000+ seeded pairs;
+      rpm's 91 active vectors; apk-tools' 709 applicable lines (60 grey-zone lines refused);
+      node-semver's strict fixtures; every vector in Maven's own test class (SPEC_NOTES §6 to §11).
 - [x] OQ-4 (dpkg and the GPL) answered (2026-10-02: (b), own comparator, `python-debian` only as
       a dev-only oracle).
-- [ ] The UNVERIFIED items in SPEC_NOTES §8, §10 and §11 resolved.
-- [ ] Live data (ADR-0008 item 5): real Debian, Alpine and RPM-based public images with real
-      OS-package CVEs in the live suite; CVE-2023-4911 on python:3.12-slim-bookworm becomes
-      `fixed`.
+- [x] The UNVERIFIED items in SPEC_NOTES §8, §10 and §11 resolved (2026-10-02).
+- [x] Live data (ADR-0008 item 5), passed here 2026-10-02: CVE-2023-4911 (KEV) on Debian 12.0
+      still_affected and python:3.12-slim-bookworm now `fixed` (libc6 2.36-9+deb12u14);
+      CVE-2023-5363 on alpine:3.18.0 still_affected (3.1.0-r4) and alpine:3.22 fixed (3.5.8-r0);
+      CVE-2023-0286 on almalinux:9.0 still_affected (1:3.0.1-43.el9_0) and almalinux:9 fixed
+      (1:3.5.5-6.el9_8); CVE-2021-44228 (KEV) in a Spring Boot jar still_affected (log4j-core
+      2.14.1; ADR-0008 Amendment 1).
+- [ ] The full live suite green on GitHub (dispatch `live.yml` after the push).
+- [ ] Spec-source review of the M3 diff done and its gaps closed; scope review done (its one
+      finding became ADR-0008 Amendment 1).
 
 ## M4 (weeks 6-7)
 
@@ -141,25 +152,14 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-02. **Current milestone:** M2 closed; M3 is next and has not started.
-- **M2 closed:** CI run 37006601557 on `f2f90b3` green on all six jobs; the integration job ran
-  real Syft 1.54.0 and Grype 0.119.0 against the 8 fixture images with the expected verdicts.
-  ADR-0007 and its Amendment 1 are Accepted. Scope and spec reviews done.
-- **State of `main`:** pushed. The live checks (ADR-0008; owner request) are done: green here
-  and on GitHub (live run 37009932265; CI run 37009910036). `live.yml` now runs every Monday at
-  06:17 UTC; GitHub emails failures to whoever last edited its cron line, and disables the
-  schedule after 60 days without repository activity (the repository is public).
-- **M3 scope:** comparators for dpkg, rpm, apk, npm and Maven with spec-derived test tables (PyPI
-  was built in M2). Until they exist, a package from those ecosystems makes the SBOM method
-  return `error`, so the verdict is `unknown`.
-- **Waiting on the owner before M3 starts:** OQ-4 (SPEC_NOTES §14): `python-debian` is
-  GPL-2.0-or-later; recommended (b), write the dpkg comparison here from Debian Policy §5.6.12
-  and use `python-debian` only as a dev-only test oracle.
-- **Next steps, in order (M3):**
-  1. Get the OQ-4 answer.
-  2. Resolve the UNVERIFIED items M3 depends on: apk's full comparison algorithm and v2 versus
-     v3 behaviour (SPEC_NOTES §8), node-semver's range grammar (§10), Maven's different-
-     separator rules and the "Version Order Testing" examples (§11).
-  3. Propose the M3 design as an ADR (comparator modules, test tables, any oracle dependency),
-     wait for approval, then build test first.
-- **Open questions still waiting on the owner:** OQ-3 (M5), OQ-4 (M3), OQ-5 (M4).
+- **Date:** 2026-10-02. **Current milestone:** M3, done-criterion met; closing waits on the live
+  suite on GitHub and the spec-source review.
+- **Done in M3:** OQ-4 answered (b); ADR-0009; comparators for dpkg (python-debian as a dev-only
+  oracle), rpm, apk (v2/v3 grey zone refused), npm (SemVer 2.0.0) and Maven (a port of Maven's
+  ComparableVersion; `_` refused), each with spec-derived tables; live cases for Debian, Alpine,
+  AlmaLinux and Log4Shell (ADR-0008 Amendment 1, owner approved).
+- **Tests:** `make check` green, coverage 100%. Live suite passed here.
+- **Next steps, in order:** watch the push's CI; dispatch `live.yml` and watch it; close the
+  spec-source review's gaps; close M3. Then M4: Kubernetes inventory on kind (OQ-5, the
+  "unreadable" workload, needs the owner's answer first).
+- **Open questions still waiting on the owner:** OQ-3 (M5), OQ-5 (M4).

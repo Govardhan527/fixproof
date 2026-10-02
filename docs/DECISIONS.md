@@ -367,6 +367,11 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** fixproof is exercised weekly on images it did not build, against current
   advisory data. Anonymous Docker Hub reads are rate-limited, so a failed fetch shows up as an
   `unknown` verdict and a failed run, never as a pass.
+- **Amendment 1** (2026-10-02, from the M3 scope review; owner approved 2026-10-02). Live cases
+  may also read public images from other registries, read anonymously and pinned by digest, and
+  may cover application packages as well as OS packages. First use: CVE-2021-44228 (Log4Shell)
+  on `ghcr.io/christophetd/log4shell-vulnerable-app`, whose `log4j-core` version is known from its
+  build (SPEC_NOTES §19). The scan is static: nothing in the image is run.
 
 ## ADR-0009: M3 version comparators
 

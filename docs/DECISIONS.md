@@ -412,8 +412,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0010: M4 design: Kubernetes inventory and a verdict per workload
 
-- **Date:** 2026-10-03. **Status:** Proposed (cluster scope, new output fields, a new runtime
-  dependency and the RBAC manifest are public interfaces).
+- **Date:** 2026-10-03. **Status:** Accepted (owner approved 2026-10-03).
 - **Context:** M4 is the Kubernetes inventory on kind, mapping pods to image digests and giving a
   verdict per workload; done when SUCCESS TEST step 1 passes (6 workloads: exactly 2 `fixed`,
   3 `still_affected` with image digests and pod names, 1 `unknown` with the reason). OQ-5 chose

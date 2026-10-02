@@ -132,7 +132,14 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
       pod names, 1 `unknown` with the reason).
 - [x] OQ-5 (the unreadable workload) answered 2026-10-03: (a), an image in a registry fixproof
       has no credentials for.
-- [ ] `imageID` format verified (SPEC_NOTES §12).
+- [x] `imageID` format verified (SPEC_NOTES §12, 2026-10-03, from the kubelet and containerd
+      source).
+- [x] M4 design accepted: ADR-0010 (owner approved 2026-10-03).
+- [ ] `kubernetes` dependency; `WorkloadAsset.owner`; bundle and verify-summary 1.1.0.
+- [ ] Inventory (`fixproof.inventory`) with unit tests on a fake Kubernetes API.
+- [ ] `verify` handles clusters: per-workload verdicts, each image scanned once, pod names in
+      the output.
+- [ ] kind setup script and the CI integration job for the 6 success-test workloads.
 - [ ] Read-only Role and RoleBinding YAML shipped.
 - [ ] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
       only fixture images.

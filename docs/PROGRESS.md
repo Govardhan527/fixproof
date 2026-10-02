@@ -85,6 +85,18 @@ range) on 8 fixture images, built in CI from pinned Dockerfiles.
       8 example files valid, no leaks, no known vulnerabilities). **M2 closed.**
 - [x] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
 
+## Live checks (owner request, 2026-10-02; ADR-0008)
+
+Real public images, real Syft and Grype, the Grype DB as published that day.
+- [x] Live suite (`tests/live/`, `make live`) passes against Docker Hub: certbot v2.6.0, v2.7.0
+      and v5.8.0 for CVE-2023-32681; debian:12.0-slim and python:3.12-slim-bookworm for
+      CVE-2023-4911 (KEV). First run 2026-10-02 on this machine (Syft 1.54.0, Grype 0.119.0, DB
+      v6.1.9 built 2026-10-02T06:31:53Z): 2 passed in 193 s. Verdicts: certbot v2.6.0
+      still_affected (requests 2.28.2, both methods); v2.7.0 fixed (2.31.0); v5.8.0 fixed
+      (2.34.2); debian 12.0 still_affected (Grype matched libc6 and libc-bin 2.36-9; no Debian
+      comparator yet); python:3.12-slim-bookworm unknown (no match, no comparator).
+- [ ] Weekly workflow `.github/workflows/live.yml` green on its first run (manual dispatch).
+
 ## M3 (week 5)
 
 Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived test tables
@@ -92,6 +104,9 @@ Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived te
 - [ ] Done: each comparator passes its table, including epochs and pre-releases.
 - [ ] OQ-4 (dpkg and the GPL) answered; the UNVERIFIED items in SPEC_NOTES §8, §10 and §11
       resolved.
+- [ ] Live data (ADR-0008 item 5): real Debian, Alpine and RPM-based public images with real
+      OS-package CVEs in the live suite; CVE-2023-4911 on python:3.12-slim-bookworm becomes
+      `fixed`.
 
 ## M4 (weeks 6-7)
 
@@ -100,6 +115,8 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
       pod names, 1 `unknown` with the reason).
 - [ ] OQ-5 (the unreadable workload) answered; `imageID` format verified (SPEC_NOTES §12).
 - [ ] Read-only Role and RoleBinding YAML shipped.
+- [ ] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
+      only fixture images.
 
 ## M5 (week 8)
 
@@ -108,6 +125,8 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
       `not_affected` without evidence; `fixproof gate` exits non-zero on a reintroduced closed
       CVE and zero otherwise).
 - [ ] OQ-3 (CycloneDX version) answered.
+- [ ] Live data (ADR-0008 item 5): KEV enrichment checked against the live CISA feed in the live
+      suite.
 
 ## M6 (weeks 9-10)
 

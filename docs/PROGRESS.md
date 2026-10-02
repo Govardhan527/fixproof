@@ -47,7 +47,13 @@ Data model, `fix.yaml` and `scope.yaml` schemas, OpenVEX writer with schema vali
       `tests/test_validation.py`); `format` checking settled (SPEC_NOTES §1, ADR-0006).
 - [x] ADR for the M1 data contracts: ADR-0005 (with Amendment 1) and ADR-0006, Accepted.
 - [x] Scope review of the M1 diff (2026-10-02): all in scope; its one finding became ADR-0005
-      Amendment 1. The spec-source review was still running at close (see Last session).
+      Amendment 1.
+- [x] Spec-source review of the M1 diff (2026-10-02): 18 gaps (16 missing citations, one
+      incomplete, vers containment unverified), all closed in SPEC_NOTES §1, §5, §15 and §16. It
+      also surfaced a conflict inside vers-spec v1.2.0 about `=`, now recorded in §5.
+- [x] CI green on GitHub (2026-10-02): run 36986334645 on `73d64da`, all six jobs passed
+      (14 commits checked, 206 tests, 5 example files valid, no leaks, no known
+      vulnerabilities).
 
 ## M2 (weeks 3-4)
 
@@ -98,8 +104,8 @@ Packaging, docs, demo, hardening only.
   valid. All test data is synthetic (CVE-2099-xxxx, demo package names).
 - **Decisions:** owner approved ADR-0002 to ADR-0006 and ADR-0005 Amendment 1; OQ-1, OQ-2 and
   OQ-6 answered with the recommended options.
-- **Spec-source review of the M1 diff:** still running when M1 closed; any SPEC_NOTES gaps it
-  reports are fixed before M2 code relies on them.
+- **M1 pushed:** CI run 36986334645 on `73d64da` green. The spec-source review's 18 gaps were
+  closed in SPEC_NOTES after the push.
 - **Open questions still waiting on the owner:** OQ-3 (blocks M5), OQ-4 (blocks M3), OQ-5
   (blocks M4), in `docs/SPEC_NOTES.md` §14.
 - **Next steps, in order (M2):**

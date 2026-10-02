@@ -48,6 +48,10 @@ the exact files read.
   - Spec "Data Inheritance": a complete statement needs products, status, vulnerability and a
     timestamp; timestamps and products may be inherited from the document, but "A document with
     incomplete statements is not valid."
+- **Vulnerability:** spec "Vulnerability Data Structure": `name` required ("the main identifier
+  used to name the vulnerability"); optional `@id`, `description`, `aliases`. The schema's
+  `vulnerability` requires `name` and allows no other keys. fixproof sets `name` to the CVE id.
+  VERIFIED.
 - **Product / component:** `@id` (IRI) and/or `identifiers` (at least one of `purl`, `cpe22`,
   `cpe23`), optional `hashes`, `subcomponents`. Spec: "the use of Package URLs (purls) is
   recommended". VERIFIED.
@@ -60,6 +64,10 @@ the exact files read.
   - `rfc3987` is GPL-3.0-or-later (PyPI metadata); `rfc3986-validator` 0.1.1, `rfc3987-syntax`
     1.1.0 (needs `lark`) and `rfc3339-validator` 0.1.4 (needs `six`) are MIT. They are the
     packages jsonschema's own `format-nongpl` extra names for these formats.
+- **Timestamps:** the schema's `format: date-time` is RFC 3339 `date-time`: JSON Schema 2020-12
+  Validation §7.3.1, https://json-schema.org/draft/2020-12/json-schema-validation ("Date and
+  time format names are derived from RFC 3339, section 5.6"). VERIFIED. UTC with `Z` and whole
+  seconds is fixproof's own canonical choice within RFC 3339 (ADR-0005 item 4).
 - **Document `@id`:** spec "Public IRI Namespaces": OpenVEX defines the shared namespace
   `https://openvex.dev/docs/[name]`; "Users can start issuing IRIs for their documents by
   appending a IRI valid string" to it. `public` and `example` are reserved names. VERIFIED.
@@ -149,6 +157,11 @@ the exact files read.
     | `maven` | required (groupId), case-sensitive | required (artifactId), case-sensitive | optional, case-sensitive | `classifier`, `type` |
     | `oci` | prohibited | required, case-insensitive | optional, case-insensitive | `arch`, `repository_url`, `tag` |
 
+  - **Case sensitivity default:** `schemas/purl-type-definition.schema-1.0.json` at v1.0.1 (SHA-256
+    `b8988773ac628fe97a33fccabaf19bb45262bb4bd56002fa3d0ab3be72dae983`): `case_sensitive`
+    "true if this PURL component is case sensitive. If false, the canonical form shall be
+    lowercased", default `true`. So a component the table leaves blank (deb, rpm and apk
+    versions) is case-sensitive and kept as given. VERIFIED.
   - **Building a canonical purl.** Source: the standard's text in the repository at v1.0.1,
     `docs/specification/standard/specification.md` (SHA-256
     `0d46c09534c787895e75acc719aeea03db09f3ab77fa39220790a6b9f0403fc0`) and
@@ -159,6 +172,9 @@ the exact files read.
       set is percent-encoded per RFC 3986 §2.1. The allowed set is `A-Z`, `a-z`, `0-9` and
       `. - _ ~`. The colon `:` is never encoded, "whether used as a Separator Character or
       otherwise".
+    - "Namespace": leading and trailing slashes "are not significant and should be stripped in
+      the canonical form"; a decoded segment "shall not be empty". How to build: "Strip the
+      **name** from leading and trailing '/'".
     - Namespace segments, name, version and qualifier values are percent-encoded strings; the
       type and qualifier keys are not. Keys are lowercase letters, digits, `.`, `-`, `_` and
       start with a letter; a pair with an empty value is discarded.
@@ -196,8 +212,23 @@ the exact files read.
     whitespace other than `%20` is an error.
   - §5.4: constraints are sorted by version, versions are unique, and after removing `!=` and
     equality constraints the comparators alternate between `>`/`>=` and `<`/`<=`.
-  - Rules beyond §5.4 (simplification, containment algorithm): UNVERIFIED, block M1 if
-    `fix.yaml` uses vers (OQ-6).
+  - Printable ASCII only: §5.3.3.2 ("A **version** contains only printable ASCII letters, digits
+    and punctuation") and `docs/specification/specification.md` (SHA-256
+    `dc1c60ab552780b00f825c51b1c4c15d5ba07612d0a1d3c4acc5b6faa387980f`, "A version range specifier
+    contains only printable ASCII letters, digits and punctuation"). VERIFIED.
+  - **Containment** (needed by M2 and M3, not M1, which checks syntax only):
+    `docs/specification/how-to-parse.md` (SHA-256
+    `0e479c29f46493386a98a7c734f5eee265aeb1dee846da7e5efdf86fbd07cfae`), "Checking if a version is
+    contained within a range". VERIFIED: a lone `*` is IN; a version equal to a constraint
+    version with comparator none, `<=` or `>=` is IN; equal to a `!=` version is NOT IN; then,
+    over the constraints other than none and `!=`, taken pairwise: below a leading `<`/`<=`
+    version is IN, above a trailing `>`/`>=` version is IN, strictly between a `>`/`>=` and the
+    next `<`/`<=` is IN, and between a `<`/`<=` and the next `>`/`>=` is NOT IN; anything else
+    is NOT IN. Versions compare with the type's own rules; mixing types is an error.
+  - **Internal conflict, recorded:** Clause 5.3.3.1 (normative text) says a constraint starting
+    with `=` is an error, while `specification.md` ("Normalized, canonical representation")
+    lists `=` as a comparator and adds `%` to the characters that must be encoded. fixproof
+    follows Clause 5 and accepts `%` only as the start of a valid escape.
 
 ## 6. Debian version comparison (dpkg, M3)
 
@@ -369,15 +400,19 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `digest ::= algorithm ":" encoded`; "When the _algorithm identifier_ is `sha256`, the _encoded_
   portion MUST match `/[a-f0-9]{64}/`." VERIFIED.
 - **Repository name:** OCI distribution-spec **v1.1.1** (2025-01-29, the latest), `spec.md`,
-  SHA-256 `360b29820869bfaac5f73ebfa30669c9172c069ef619f8c6689acc3bcef6f719`: `<name>` "MUST match"
+  SHA-256 `360b29820869bfaac5f73ebfa30669c9172c069ef619f8c6689acc3bcef6f719`, "Workflow
+  Categories" > "Pull" > "Pulling manifests": `<name>` "MUST match"
   `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`. VERIFIED.
 - **Full reference with registry host:** the OCI specs do not define it. The de facto grammar is
   `github.com/distribution/reference` **v0.6.0** (commit
   `7b3d8f9323cf25dd4e1a3868cd9be990bfe06308`), `reference.go`, SHA-256
   `39d358c9e2539646ea612a6c9eda1d671b3cd71287873a3cc5fd0ffb2be6c6f3`:
   `reference := name [ ":" tag ] [ "@" digest ]`, `name := [domain '/'] remote-name`,
-  `domain := host [':' port-number]`; host is a domain name, IPv4 or bracketed IPv6 address.
-  VERIFIED. Its implicit defaults (a missing domain means Docker Hub, `library/` for single-path
+  `domain := host [':' port-number]`; host is a domain name, IPv4 or bracketed IPv6 address;
+  `domain-component := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/`;
+  `port-number := /[0-9]+/`. VERIFIED. fixproof's registry pattern is
+  `domain-component ('.' domain-component)* [':' port-number]`, so an IPv4 address passes and a
+  bracketed IPv6 host does not. Its implicit defaults (a missing domain means Docker Hub, `library/` for single-path
   names) are not applied by fixproof in M1: `scope.yaml` requires the registry host explicitly.
 - **Which segment is the registry:** `normalize.go` at the same commit (SHA-256
   `7bad23a44f1bca325c5de6185092b9992c55b7db211fa4f5444b2d80853e7599`), `splitDockerDomain`: the
@@ -385,3 +420,33 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   not all lowercase; otherwise the name is on Docker Hub (`docker.io`, with `library/` added to
   single-segment names). VERIFIED. fixproof uses the same test to require an explicit registry
   in `scope.yaml` and rejects references that would fall back to Docker Hub.
+
+## 16. Dependencies, vendored files and other tool behaviour (M1)
+
+- **Runtime packages locked in M1** (`uv.lock`; licences from each release's PyPI metadata,
+  retrieved 2026-10-02). VERIFIED:
+
+  | package | locked | licence | why |
+  |---|---|---|---|
+  | pydantic | 2.13.5 | MIT | data contracts (ADR-0006) |
+  | pydantic-core, annotated-types, typing-inspection | 2.46.5, 0.8.0, 0.4.4 | MIT | pulled in by pydantic |
+  | typing-extensions | 4.16.0 | PSF-2.0 | pulled in by pydantic |
+  | pyyaml | 6.0.3 | MIT | `fix.yaml`, `scope.yaml` (ADR-0006) |
+  | jsonschema | 4.26.0 | MIT | VEX validation (ADR-0006) |
+  | jsonschema-specifications, referencing, rpds-py, attrs | 2025.9.1, 0.37.0, 2026.6.3, 26.1.0 | MIT | pulled in by jsonschema |
+  | rfc3339-validator, rfc3986-validator, rfc3987-syntax | 0.1.4, 0.1.1, 1.1.0 | MIT | `date-time`, `uri`, `iri` checks (§1) |
+  | six, lark | 1.17.0, 1.3.1 | MIT | pulled in by rfc3339-validator and rfc3987-syntax |
+
+  Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0. The per-file hashes are recorded by
+  `uv.lock` itself and are not repeated here.
+- **Vendored files:** the OpenVEX schema comes from https://github.com/openvex/spec, licence
+  CC0-1.0 (GitHub licence API, 2026-10-02). The purl test vectors come from
+  https://github.com/package-url/purl-spec, licence MIT; its `LICENSE` at v1.0.1 (SHA-256
+  `24fb7204fd3c9396c9d83533448cb988e8e86d6f598d1ab51c6d2e5d7e42bcb1`) is kept next to them in
+  `tests/fixtures/purl-spec/`. VERIFIED.
+- **Generated schemas** declare `$schema` `https://json-schema.org/draft/2020-12/schema`, the
+  `$id` of the published JSON Schema 2020-12 meta-schema (fetched 2026-10-02). VERIFIED.
+- **YAML numbers:** PyYAML 6.0.3 resolves YAML 1.1 implicit floats (`yaml/resolver.py`, tag
+  `tag:yaml.org,2002:float`, pattern `[-+]?(?:[0-9][0-9_]*)\.[0-9_]*...`), so
+  `yaml.safe_load("a: 1.10")` gives the float `1.1`. VERIFIED by running it. This is why
+  `fix.yaml` versions must be quoted, and why the loader's error message says so.

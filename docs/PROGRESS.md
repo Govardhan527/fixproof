@@ -59,13 +59,19 @@ Data model, `fix.yaml` and `scope.yaml` schemas, OpenVEX writer with schema vali
 
 Image-level verification with both methods (Grype match; Syft SBOM version against the fixed
 range) on 8 fixture images, built in CI from pinned Dockerfiles.
-- [ ] Done: the truth-table test covers every agree and disagree combination.
-- [ ] Syft and Grype JSON fields and the Grype DB version verified (SPEC_NOTES §12).
+- [ ] Done: the truth-table test covers every agree and disagree combination (ADR-0007 item 1).
+- [x] Syft and Grype JSON fields, exit codes, DB status and multi-platform behaviour verified
+      (SPEC_NOTES §17, 2026-10-02).
+- [x] M2 design accepted: ADR-0007 (owner approved 2026-10-02).
+- [ ] PyPI comparator and vers containment (moved forward from M3 by ADR-0007 Q2).
+- [ ] Methods `grype` and `sbom_version`, evidence bundle and manifest, `verify` CLI.
+- [ ] 8 fixture images and the CI integration job (ADR-0007 items 9 and 10).
 - [ ] Remove the "no integration tests yet" exit-5 allowance from `make integration`.
 
 ## M3 (week 5)
 
-Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived test tables.
+Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived test tables
+(PyPI is built in M2, ADR-0007 Q2; its table is completed here).
 - [ ] Done: each comparator passes its table, including epochs and pre-releases.
 - [ ] OQ-4 (dpkg and the GPL) answered; the UNVERIFIED items in SPEC_NOTES §8, §10 and §11
       resolved.

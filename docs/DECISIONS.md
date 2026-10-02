@@ -235,13 +235,13 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
 ## ADR-0007: M2 design: two methods per image, the verdict table and the evidence bundle
 
-- **Date:** 2026-10-02. **Status:** Proposed (dependencies, the `verify` CLI, the evidence bundle
-  format and the verdict rule are public interfaces; items marked (Q) need an owner answer).
+- **Date:** 2026-10-02. **Status:** Accepted (owner approved 2026-10-02, with Q1 and Q2 answered
+  as proposed: disagreement gives `unknown`; PyPI comparison moves into M2).
 - **Context:** M2 is image-level verification with both methods on 8 fixture images built in CI
   from pinned Dockerfiles; done when the truth-table test covers every agree and disagree
   combination. Facts: SPEC_NOTES §12 and §17 (Syft, Grype), §5 (vers containment), §9 (PEP 440).
 - **Decision:**
-  1. (Q1) **Verdict table.** The plan's rule ("both say not present -> fixed; any says present ->
+  1. (Q1, answered) **Verdict table.** The plan's rule ("both say not present -> fixed; any says present ->
      still_affected; disagreement or failure -> unknown") does not say which wins when one method
      says present and the other says not present. Proposed, for the 9 combinations of
      `present` (P), `not_present` (N) and `error` (E):
@@ -260,7 +260,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 
      `still_affected` needs positive evidence and no contradicting evidence; a contradiction is
      `unknown`, never `fixed` and never `still_affected`.
-  2. (Q2) **Version comparison in M2.** The SBOM method compares versions, but the comparators are
+  2. (Q2, answered) **Version comparison in M2.** The SBOM method compares versions, but the comparators are
      M3. Proposed: M2 adds the comparator interface and PyPI only (`packaging`, already in the
      planned stack, PEP 440 per SPEC_NOTES §9) and vers containment (§5); the fixtures use a real
      PyPI advisory (CVE-2023-32681, `requests` >= 2.3.0, < 2.31.0, SPEC_NOTES §17). dpkg, rpm,

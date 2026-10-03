@@ -154,16 +154,41 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 - [x] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
       only fixture images: namespace `fixproof-live` runs certbot v2.6.0 (`still_affected`) and
       v2.7.0 (`fixed`), both as expected in CI 37110967647.
-- [ ] Every ADR-0010 case tested on the real cluster, not only on fakes (owner, 2026-10-03:
+- [x] Every ADR-0010 case tested on the real cluster, not only on fakes (owner, 2026-10-03:
       no test may be missing): namespace `fixproof-edge` (init container, sidecar, two replicas
       sharing evidence, bare pod, ephemeral container skipped, pull failure, unscheduled pod,
       side-loaded image), images and clusters in one scope, two namespaces with one token, a
-      registry outside the allowlist, and a `kubectl auth can-i` matrix for the reader. Written;
-      waiting for a green run on a work branch.
+      registry outside the allowlist, a `kubectl auth can-i` matrix for the reader, pods by tag
+      and by Docker Hub short name, a private registry with credentials (none leak into the
+      output), and the CI demo run with fixproof installed by `uv tool install`. Branch run
+      37117704337 showed the node names a side-loaded image `docker.io/library/import-<date>`
+      (SPEC_NOTES corrected); branch run 37118476594: 34 passed.
 - [x] Scope and spec reviews (2026-10-03). Fixed: pods with no container status yet were dropped
       (ab0d024); the client could write refreshed tokens back to the kubeconfig and read
       `KUBECONFIG` only at import (41041e9); 21 undocumented Kubernetes facts verified and
       recorded in SPEC_NOTES §12; README, CI comment, Makefile and PARKED brought up to date.
+
+### Value test for M4: what a real user can and cannot rely on yet (2026-10-03)
+
+The owner's test: could a user run this today, on their own clusters and images, following only
+the README, and act on the answer?
+- Can, with CI evidence: install with `uv tool install` (no lockfile; the CI demo step does
+  exactly this), point fixproof at a namespace with the shipped read-only account, get a verdict
+  per pod with pod name, owner and digest, for images referenced by tag or by digest, from Docker
+  Hub or a private registry, with or without registry credentials, and keep evidence that holds
+  no credentials.
+- Cannot yet rely on:
+  - Managed clusters (EKS, GKE, AKS) are untested. The reader token works on any conformant API
+    server, but a user's own context with an exec credential plugin has not been tried.
+  - Cloud registry credential helpers (ECR, Artifact Registry, ACR) are untested; only a
+    user-and-password Docker config is.
+  - Speed on large clusters: each distinct image is scanned once, but one after another. Many
+    images mean a long run.
+  - Pods on arm64 nodes (PARKED: the node's platform is not checked).
+  - fixproof is not on PyPI (M6).
+  - Nodes running Docker Engine through cri-dockerd (minikube's default): every workload is
+    `unknown` today; ADR-0010 Amendment 2 proposes reading them.
+  Each needs an owner decision (a cloud account to test against, or M6 scope).
 
 ## M5 (week 8)
 
@@ -186,14 +211,13 @@ Packaging, docs, demo, hardening only.
 ## Last session (resume here)
 
 - **Date:** 2026-10-03. **Current milestone:** M4; done-criterion met; closing.
-- **`main` = c230151, green** (CI 37116173157). Local and unpushed: 4901dce (run ids) and the
-  edge-case commit after it.
-- **Owner asked (2026-10-03) that no test be missing.** Every ADR-0010 case now has a real-cluster
-  integration test (`tests/integration/test_cluster.py`, namespace `fixproof-edge`, the
-  allowlist, two namespaces, images plus clusters, a `can-i` matrix). Not run yet: needs a work
-  branch push and a dispatched run, then `main` (owner rule: `main` never red).
-- **Waiting on the owner:** (1) "push" for the work branch; (2) confirm ADR-0010 Amendment 1;
-  (3) close M4.
-- **Next steps, in order:** push the work branch, dispatch CI, fix until green (twice), move
-  `main`; record what the side-loaded and pull-failure pods showed in SPEC_NOTES §12; close M4
-  on the owner's word; then M5.
+- **`main` = c230151, green** (CI 37116173157). Work branch `m4-edge` carries the real-cluster
+  tests for every ADR-0010 case and the user-path tests (tags, short names, credentials,
+  `uv tool install`); branch run 37118476594 green (34 integration tests). A second branch run
+  goes before `main` moves (owner rule: `main` never red).
+- **Owner rules (2026-10-03):** `main` never red; no test missing; every step judged by whether a
+  real user can run it on their own systems and act on it (see "Value test for M4" above).
+- **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1; (2) decide ADR-0010 Amendment 2
+  (read cri-dockerd image IDs; a minikube CI job); (3) close M4.
+- **Next steps, in order:** second green branch run, then move `main` and delete the branch;
+  then the owner's decisions above; then M5 (gate, KEV, HTML, CycloneDX 1.6).

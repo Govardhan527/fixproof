@@ -59,6 +59,173 @@
       "title": "AssetLine",
       "type": "object"
     },
+    "Kev": {
+      "additionalProperties": false,
+      "description": "One CVE's KEV status in a run: `listed`, `not_listed`, or `unavailable` with the reason.",
+      "properties": {
+        "entry": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/KevEntry"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "feed": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/KevFeed"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "status": {
+          "enum": [
+            "listed",
+            "not_listed",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Kev",
+      "type": "object"
+    },
+    "KevEntry": {
+      "additionalProperties": false,
+      "description": "The KEV fields fixproof reports for a listed CVE.",
+      "properties": {
+        "cve": {
+          "pattern": "^CVE-[0-9]{4}-[0-9]{4,19}$",
+          "title": "Cve",
+          "type": "string"
+        },
+        "date_added": {
+          "minLength": 1,
+          "title": "Date Added",
+          "type": "string"
+        },
+        "due_date": {
+          "minLength": 1,
+          "title": "Due Date",
+          "type": "string"
+        },
+        "known_ransomware_campaign_use": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Known Ransomware Campaign Use"
+        },
+        "product": {
+          "minLength": 1,
+          "title": "Product",
+          "type": "string"
+        },
+        "required_action": {
+          "minLength": 1,
+          "title": "Required Action",
+          "type": "string"
+        },
+        "vendor_project": {
+          "minLength": 1,
+          "title": "Vendor Project",
+          "type": "string"
+        },
+        "vulnerability_name": {
+          "minLength": 1,
+          "title": "Vulnerability Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cve",
+        "vendor_project",
+        "product",
+        "vulnerability_name",
+        "date_added",
+        "due_date",
+        "required_action"
+      ],
+      "title": "KevEntry",
+      "type": "object"
+    },
+    "KevFeed": {
+      "additionalProperties": false,
+      "description": "The feed a run used.",
+      "properties": {
+        "catalog_version": {
+          "minLength": 1,
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "date_released": {
+          "minLength": 1,
+          "title": "Date Released",
+          "type": "string"
+        },
+        "retrieved": {
+          "minLength": 1,
+          "title": "Retrieved",
+          "type": "string"
+        },
+        "sha256": {
+          "minLength": 1,
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "url": {
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "catalog_version",
+        "date_released",
+        "retrieved",
+        "sha256",
+        "count"
+      ],
+      "title": "KevFeed",
+      "type": "object"
+    },
     "Summary": {
       "additionalProperties": false,
       "properties": {
@@ -93,7 +260,7 @@
       "type": "string"
     }
   },
-  "$id": "https://github.com/Govardhan527/fixproof/schemas/verify-summary/1.1.0",
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/verify-summary/1.2.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -109,13 +276,16 @@
       "title": "Cve",
       "type": "string"
     },
+    "kev": {
+      "$ref": "#/$defs/Kev"
+    },
     "out": {
       "minLength": 1,
       "title": "Out",
       "type": "string"
     },
     "schema_version": {
-      "const": "1.1.0",
+      "const": "1.2.0",
       "title": "Schema Version",
       "type": "string"
     },
@@ -128,6 +298,7 @@
     "cve",
     "out",
     "summary",
+    "kev",
     "assets"
   ],
   "title": "VerifySummary",

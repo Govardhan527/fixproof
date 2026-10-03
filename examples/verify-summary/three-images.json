@@ -23,8 +23,21 @@
     }
   ],
   "cve": "CVE-2023-32681",
+  "kev": {
+    "entry": null,
+    "feed": {
+      "catalog_version": "2026.10.02",
+      "count": 2,
+      "date_released": "2026-10-02T15:19:38.2945Z",
+      "retrieved": "2026-10-02T09:00:00Z",
+      "sha256": "309ae42a2274af04ee9f2aa0915eacac7a3636e6a763aa4b8db011275c5a19b6",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    "reason": null,
+    "status": "not_listed"
+  },
   "out": "evidence",
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "summary": {
     "fixed": 1,
     "still_affected": 1,

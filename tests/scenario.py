@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from fixproof import kev
 from fixproof.canonical import to_json
 from fixproof.model import ImageRef
 from fixproof.tools import ToolRun
@@ -21,6 +22,9 @@ from tool_outputs import CVE, IMAGE, for_image, image_runner, output
 START = datetime(2026, 10, 2, 9, 0, 0, tzinfo=UTC)
 FINISH = datetime(2026, 10, 2, 9, 1, 30, tzinfo=UTC)
 AUTHOR = "Example Vulnerability Management <vm@example.com>"
+# An excerpt of the real CISA KEV feed of 2026-10-02 (tests/fixtures/kev/excerpt.json)
+KEV_FEED = (Path(__file__).parent / "fixtures" / "kev" / "excerpt.json").read_bytes()
+KEV = kev.load(START, lambda url: KEV_FEED).status(CVE)  # CVE-2023-32681: not listed
 
 
 def image(repository: str) -> ImageRef:

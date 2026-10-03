@@ -4,6 +4,9 @@ from pathlib import Path
 
 import pytest
 
+from fixproof import cli
+from scenario import KEV_FEED
+
 GitRunner = Callable[..., str]
 
 
@@ -37,3 +40,9 @@ def commit(git_repo: tuple[Path, GitRunner]) -> Callable[[str], str]:
         return run("rev-parse", "HEAD")
 
     return make
+
+
+@pytest.fixture(autouse=True)
+def _kev_feed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unit tests never reach cisa.gov: the CLI reads the real-feed excerpt instead."""
+    monkeypatch.setattr(cli, "kev_fetcher", lambda url: KEV_FEED)

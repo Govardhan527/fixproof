@@ -17,7 +17,7 @@ from fixproof.inputs import FixFile, ScopeFile
 from fixproof.report import verify_summary
 from fixproof.verify import assess
 from fixproof.vex import build_document
-from scenario import FINISH, FIX_YAML, SCOPE_YAML, START, runner
+from scenario import FINISH, FIX_YAML, KEV, SCOPE_YAML, START, runner
 from tool_outputs import CVE
 from vex_cases import AUTHOR, EXAMPLES, GOLDEN, NOW, TOOL_VERSION, example_fix
 
@@ -63,6 +63,7 @@ def test_golden_bundle(tmp_path: Path, name: str) -> None:
         vex=vex,
         started=START,
         finished=FINISH,
+        kev=KEV,
         tool_version=TOOL_VERSION,
     )
     produced = (tmp_path / "out" / f"{name}.json").read_bytes()
@@ -78,7 +79,9 @@ def test_golden_verify_summary() -> None:
     fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
     assessments = assess(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
     produced = to_json(
-        verify_summary(CVE, "evidence", [a.verdict for a in assessments]).model_dump(mode="json")
+        verify_summary(CVE, "evidence", [a.verdict for a in assessments], KEV).model_dump(
+            mode="json"
+        )
     )
     path = EXAMPLES / "verify-summary" / "three-images.json"
     if UPDATE:

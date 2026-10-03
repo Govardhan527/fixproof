@@ -163,7 +163,20 @@
     "fix_sha256": "0c528e0a34ef9816b18a8ba46820e8daab9d19ee1eb02bd6b0d593e22c9e2876",
     "scope_sha256": "4b82977774c420ac0e1e8843dafee43060ce64918b8932de3ed0e72968d6038c"
   },
-  "schema_version": "1.1.0",
+  "kev": {
+    "entry": null,
+    "feed": {
+      "catalog_version": "2026.10.02",
+      "count": 2,
+      "date_released": "2026-10-02T15:19:38.2945Z",
+      "retrieved": "2026-10-02T09:00:00Z",
+      "sha256": "309ae42a2274af04ee9f2aa0915eacac7a3636e6a763aa4b8db011275c5a19b6",
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    },
+    "reason": null,
+    "status": "not_listed"
+  },
+  "schema_version": "1.2.0",
   "started": "2026-10-02T09:00:00Z",
   "summary": {
     "fixed": 1,

@@ -12,7 +12,7 @@ from fixproof.model import Verdict
 from fixproof.validation import build_validator, load_schema, schema_errors
 from fixproof.verify import assess
 from fixproof.vex import build_document
-from scenario import AUTHOR, FINISH, FIX_YAML, SCOPE_YAML, START, runner
+from scenario import AUTHOR, FINISH, FIX_YAML, KEV, SCOPE_YAML, START, runner
 from tool_outputs import CVE, MARKER
 
 FIX = FixFile.model_validate(yaml.safe_load(FIX_YAML))
@@ -31,6 +31,7 @@ def write(out: Path) -> None:
         vex=vex,
         started=START,
         finished=FINISH,
+        kev=KEV,
     )
 
 
@@ -128,5 +129,6 @@ def test_an_invalid_vex_writes_nothing(tmp_path: Path) -> None:
             vex={"not": "openvex"},
             started=START,
             finished=FINISH,
+            kev=KEV,
         )
     assert not (tmp_path / "out").exists()

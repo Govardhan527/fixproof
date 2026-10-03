@@ -25,11 +25,12 @@ from pydantic import Field, JsonValue
 from fixproof import __version__
 from fixproof.canonical import iso, to_json
 from fixproof.errors import FixproofError
+from fixproof.kev import Kev
 from fixproof.methods import MethodOutcome
 from fixproof.model import Asset, AssetVerdict, Contract, CveId, MethodResult, Text, Verdict
 from fixproof.validation import check_openvex
 
-BUNDLE_VERSION: Literal["1.1.0"] = "1.1.0"  # 1.1.0: workloads carry `owner` (ADR-0010)
+BUNDLE_VERSION: Literal["1.2.0"] = "1.2.0"  # 1.1.0: workload `owner` (ADR-0010); 1.2.0: `kev`
 MANIFEST_VERSION: Literal["1.0.0"] = "1.0.0"
 Sha256 = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 
@@ -69,7 +70,7 @@ class AssetRecord(Contract):
 
 
 class Bundle(Contract):
-    schema_version: Literal["1.1.0"]
+    schema_version: Literal["1.2.0"]
     fixproof_version: Text
     started: Text
     finished: Text
@@ -80,6 +81,7 @@ class Bundle(Contract):
         "Grype and its DB schema, build time and source."
     )
     summary: Summary
+    kev: Kev = Field(description="The CVE's CISA KEV status and the feed used (ADR-0012).")
     assets: tuple[AssetRecord, ...]
 
 
@@ -119,6 +121,7 @@ def write_bundle(
     vex: dict[str, Any],
     started: datetime,
     finished: datetime,
+    kev: Kev,
     tool_version: str = __version__,
 ) -> Bundle:
     """Write the whole bundle to `out` and return the bundle record."""
@@ -164,6 +167,7 @@ def write_bundle(
         ),
         tools=tuple(sorted(tools, key=lambda tool: to_json(tool))),
         summary=summarise([a.verdict for a in assessments]),
+        kev=kev,
         assets=tuple(records),
     )
     files["bundle.json"] = to_json(bundle.model_dump(mode="json"))

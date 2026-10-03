@@ -7,9 +7,19 @@ from pathlib import Path
 import pytest
 import typer
 
-from fixproof import cli
+from fixproof import cli, kev
 from fixproof.validation import build_validator, load_schema, schema_errors
-from scenario import AUTHOR, FINISH, FIX_YAML, FIXED, SCOPE_YAML, START, VULNERABLE, install_tools
+from scenario import (
+    AUTHOR,
+    FINISH,
+    FIX_YAML,
+    FIXED,
+    KEV_FEED,
+    SCOPE_YAML,
+    START,
+    VULNERABLE,
+    install_tools,
+)
 from tool_outputs import CVE
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
@@ -65,7 +75,9 @@ def test_verify_json_summary(
     report = json.loads(capsys.readouterr().out)
     validator = build_validator(load_schema("verify-summary.schema.json"))
     assert schema_errors(validator, report) == []
-    assert report["schema_version"] == "1.1.0"
+    assert report["schema_version"] == "1.2.0"
+    assert report["kev"]["status"] == "not_listed"  # CVE-2023-32681 (the real-feed excerpt)
+    assert report["kev"]["feed"]["catalog_version"] == "2026.10.02"
     assert report["summary"] == {"fixed": 1, "still_affected": 1, "unknown": 1}
     assert [a["verdict"] for a in report["assets"]] == ["still_affected", "fixed", "unknown"]
     assert report["assets"][0]["asset"] == VULNERABLE.reference
@@ -170,3 +182,43 @@ def test_interrupts_and_other_typer_errors_exit_3(
     monkeypatch.setattr(cli, "app", fail)
     assert run(monkeypatch) == cli.EXIT_USAGE
     assert capsys.readouterr().err == stderr
+
+
+def test_verify_names_the_kev_status_and_records_the_feed(
+    inputs: dict[str, Path], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert run(monkeypatch, *verify_args(inputs)) == cli.EXIT_AFFECTED
+    out = capsys.readouterr().out
+    assert (
+        f"KEV: {CVE} is not in the CISA KEV catalogue "
+        "(feed 2026.10.02, released 2026-10-02T15:19:38.2945Z)"
+    ) in out
+    bundle = json.loads((inputs["out"] / "bundle.json").read_text())
+    assert bundle["kev"]["feed"]["retrieved"] == "2026-10-02T09:00:00Z"  # the run's start
+
+
+def test_an_unreachable_kev_feed_changes_nothing_but_is_said(
+    inputs: dict[str, Path], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def offline(url: str) -> bytes:
+        raise kev.KevFetchError("cannot download the KEV feed: network is unreachable")
+
+    monkeypatch.setattr(cli, "kev_fetcher", offline)
+    assert run(monkeypatch, *verify_args(inputs)) == cli.EXIT_AFFECTED  # same verdicts, same code
+    out = capsys.readouterr().out
+    assert "KEV: unavailable (cannot download the KEV feed: network is unreachable)" in out
+    bundle = json.loads((inputs["out"] / "bundle.json").read_text())
+    assert bundle["kev"] == {
+        "status": "unavailable",
+        "reason": "cannot download the KEV feed: network is unreachable",
+        "feed": None,
+        "entry": None,
+    }
+
+
+def test_a_listed_cve_shows_its_kev_dates() -> None:
+    status = kev.load(START, lambda url: KEV_FEED).status("CVE-2021-44228")
+    assert cli.kev_line("CVE-2021-44228", status) == (
+        "KEV: CVE-2021-44228 is in the CISA KEV catalogue: added 2021-12-10, due 2021-12-24, "
+        "known ransomware use Known (feed 2026.10.02, released 2026-10-02T15:19:38.2945Z)"
+    )

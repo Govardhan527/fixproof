@@ -22,6 +22,7 @@ from scenario import (
     FINISH,
     FIX_YAML,
     FIXED,
+    KEV,
     START,
     VULNERABLE,
     answers,
@@ -122,6 +123,7 @@ def test_shared_evidence_is_written_once_and_vex_is_per_image(tmp_path: Path) ->
         vex=vex,
         started=START,
         finished=FINISH,
+        kev=KEV,
     )
     assert sorted(str(p.relative_to(out / "raw")) for p in (out / "raw").iterdir()) == [
         "001-grype.json",
@@ -146,7 +148,7 @@ def test_shared_evidence_is_written_once_and_vex_is_per_image(tmp_path: Path) ->
 
 def test_summary_names_the_workload_and_its_owner() -> None:
     assessments = assess(FIX, SCOPE, image_runner(answers()), lambda context: Cluster())
-    report = verify_summary(CVE, "out", [a.verdict for a in assessments])
+    report = verify_summary(CVE, "out", [a.verdict for a in assessments], KEV)
     validator = build_validator(load_schema("verify-summary.schema.json"))
     assert schema_errors(validator, report.model_dump(mode="json")) == []
     image, workload, pending = report.assets[0], report.assets[1], report.assets[5]

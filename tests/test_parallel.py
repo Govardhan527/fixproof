@@ -12,7 +12,7 @@ from fixproof.bundle import write_bundle
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.verify import DEFAULT_JOBS, assess
 from fixproof.vex import build_document
-from scenario import AUTHOR, FINISH, FIX_YAML, SCOPE_YAML, START, answers, install_tools
+from scenario import AUTHOR, FINISH, FIX_YAML, KEV, SCOPE_YAML, START, answers, install_tools
 from test_verify_clusters import SCOPE_YAML as CLUSTER_SCOPE_YAML
 from test_verify_clusters import Cluster
 from tool_outputs import CVE, image_runner
@@ -77,6 +77,7 @@ def bundle_bytes(out: Path, jobs: int, scope: ScopeFile, scope_yaml: str) -> dic
         vex=vex,
         started=START,
         finished=FINISH,
+        kev=KEV,
     )
     return {str(p.relative_to(out)): p.read_bytes() for p in sorted(out.rglob("*")) if p.is_file()}
 

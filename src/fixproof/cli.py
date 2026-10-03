@@ -13,7 +13,7 @@ from typing import Annotated
 
 import typer
 
-from fixproof import __version__
+from fixproof import __version__, kev
 from fixproof.bundle import check_output_dir, summarise, write_bundle
 from fixproof.errors import FixproofError
 from fixproof.inputs import load_fix, load_scope
@@ -35,6 +35,9 @@ app = typer.Typer(
 def now() -> datetime:
     """The clock. Tests replace it."""
     return datetime.now(UTC)
+
+
+kev_fetcher: kev.Fetcher = kev.fetch  # how the CISA KEV feed is read; tests replace it
 
 
 def _version(value: bool) -> None:
@@ -78,6 +81,7 @@ def verify(
         scope_file = load_scope(scope)
         check_output_dir(out)
         started = now()
+        kev_status = kev.load(started, kev_fetcher).status(cve)
         assessments = assess(fix_file, scope_file, jobs=jobs)
         finished = now()
         verdicts = [a.verdict for a in assessments]
@@ -91,6 +95,7 @@ def verify(
             vex=vex,
             started=started,
             finished=finished,
+            kev=kev_status,
         )
     except (FixproofError, ValueError) as exc:
         typer.echo(f"fixproof: {exc}", err=True)
@@ -98,11 +103,12 @@ def verify(
 
     summary = summarise(verdicts)
     if as_json:
-        report = verify_summary(cve, str(out), verdicts).model_dump(mode="json")
+        report = verify_summary(cve, str(out), verdicts, kev_status).model_dump(mode="json")
         typer.echo(json.dumps(report, indent=2, sort_keys=True))
     else:
         for item in verdicts:
             typer.echo(_human(item))
+        typer.echo(kev_line(cve, kev_status))
         typer.echo(
             f"{summary.fixed} fixed, {summary.still_affected} still_affected, "
             f"{summary.unknown} unknown; evidence in {out}"
@@ -121,6 +127,21 @@ def _human(item: AssetVerdict) -> str:
     else:
         head = image
     return f"{item.verdict.value:<15} {head}\n{pad}{item.reason}"
+
+
+def kev_line(cve: str, status: kev.Kev) -> str:
+    """One line on the CVE's CISA KEV status, or why it is not known."""
+    if status.status == "unavailable" or status.feed is None:
+        return f"KEV: unavailable ({status.reason})"
+    feed = f"feed {status.feed.catalog_version}, released {status.feed.date_released}"
+    if status.entry is None:
+        return f"KEV: {cve} is not in the CISA KEV catalogue ({feed})"
+    entry = status.entry
+    ransomware = entry.known_ransomware_campaign_use or "not stated"
+    return (
+        f"KEV: {cve} is in the CISA KEV catalogue: added {entry.date_added}, due "
+        f"{entry.due_date}, known ransomware use {ransomware} ({feed})"
+    )
 
 
 def main() -> None:

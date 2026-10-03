@@ -6,9 +6,10 @@ from typing import Literal
 from pydantic import Field
 
 from fixproof.bundle import Summary, summarise
+from fixproof.kev import Kev
 from fixproof.model import AssetVerdict, Contract, CveId, Text, Verdict, WorkloadAsset
 
-SUMMARY_VERSION: Literal["1.1.0"] = "1.1.0"  # 1.1.0: `workload` and `owner` (ADR-0010)
+SUMMARY_VERSION: Literal["1.2.0"] = "1.2.0"  # 1.1.0: `workload`, `owner`; 1.2.0: `kev`
 
 
 class AssetLine(Contract):
@@ -24,10 +25,11 @@ class AssetLine(Contract):
 
 
 class VerifySummary(Contract):
-    schema_version: Literal["1.1.0"]
+    schema_version: Literal["1.2.0"]
     cve: CveId
     out: Text
     summary: Summary
+    kev: Kev
     assets: tuple[AssetLine, ...]
 
 
@@ -43,11 +45,12 @@ def _line(item: AssetVerdict) -> AssetLine:
     )
 
 
-def verify_summary(cve: str, out: str, verdicts: Sequence[AssetVerdict]) -> VerifySummary:
+def verify_summary(cve: str, out: str, verdicts: Sequence[AssetVerdict], kev: Kev) -> VerifySummary:
     return VerifySummary(
         schema_version=SUMMARY_VERSION,
         cve=cve,
         out=out,
         summary=summarise(verdicts),
+        kev=kev,
         assets=tuple(_line(item) for item in verdicts),
     )

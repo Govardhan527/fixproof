@@ -167,6 +167,7 @@ def test_requests_fix_across_certbot_releases(tmp_path: Path) -> None:
     assert found[CERTBOT["v5.8.0"]][0] == "fixed", found[CERTBOT["v5.8.0"]][1]
     assert "requests 2.28.2" in found[CERTBOT["v2.6.0"]][1]
     assert "requests 2.31.0" in found[CERTBOT["v2.7.0"]][1]
+    assert report["kev"]["status"] == "not_listed"  # the live CISA feed
     assert code == 1
     check_openvex(json.loads((out / "openvex.json").read_text()))
 
@@ -182,6 +183,8 @@ def test_glibc_kev_cve_on_debian_images(tmp_path: Path) -> None:
     new_verdict, new_reason = found[PYTHON_SLIM]
     assert new_verdict == "fixed", new_reason
     assert "libc6 2.36-9+deb12u" in new_reason
+    assert report["kev"]["status"] == "listed"  # "Looney Tunables" is in CISA KEV
+    assert report["kev"]["entry"]["date_added"] == "2023-11-21"
     assert code == 1
 
 
@@ -212,4 +215,7 @@ def test_log4shell_in_a_spring_boot_jar(tmp_path: Path) -> None:
     verdict, reason = verdicts(report)[LOG4SHELL_APP]
     assert verdict == "still_affected", reason
     assert "log4j-core 2.14.1" in reason
+    kev = report["kev"]
+    assert kev["status"] == "listed"
+    assert kev["entry"]["known_ransomware_campaign_use"] == "Known"
     assert code == 1

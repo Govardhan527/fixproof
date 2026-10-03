@@ -12,7 +12,14 @@ from typing import Any
 
 import yaml
 
-from fixproof.validation import build_validator, check_openvex, load_schema, schema_errors
+from fixproof import htmlreport
+from fixproof.validation import (
+    build_validator,
+    check_cyclonedx,
+    check_openvex,
+    load_schema,
+    schema_errors,
+)
 
 CVE = "CVE-2023-32681"
 FIX = f"""\
@@ -84,6 +91,8 @@ def check_bundle(out: Path) -> dict[str, Any]:
         data = (out / entry["path"]).read_bytes()
         assert (hashlib.sha256(data).hexdigest(), len(data)) == (entry["sha256"], entry["size"])
     check_openvex(json.loads((out / "openvex.json").read_text()))
+    check_cyclonedx(json.loads((out / "cyclonedx.json").read_text()))
+    assert htmlreport.problems((out / "report.html").read_text(encoding="utf-8")) == []
     return bundle
 
 

@@ -81,6 +81,10 @@ def test_success_test_six_workloads(tmp_path: Path, setup: tuple[dict[str, str],
     assert "UNAUTHORIZED" in unknown
     assert done.returncode == 1
     check_bundle(tmp_path / "out")
+    # the live CISA KEV feed, read during the run (ADR-0012 item 4)
+    assert report["kev"]["status"] == "not_listed", report["kev"]
+    assert report["kev"]["feed"]["url"].startswith("https://www.cisa.gov/")
+    assert report["kev"]["feed"]["count"] > 1000
     assert_nowhere(done, tmp_path / "out", reader_token(kubeconfig))  # the cluster token
     vex = json.loads((tmp_path / "out" / "openvex.json").read_text())
     assert sorted(s["status"] for s in vex["statements"]) == [

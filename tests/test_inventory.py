@@ -84,7 +84,8 @@ def test_an_orphan_replica_set_names_itself() -> None:
         ("", "ImagePullBackOff", "the container has not started (ImagePullBackOff)"),
         ("", None, "the container has not started"),
         ("sha256:" + "cd" * 32, None, "has no registry digest"),
-        ("docker-pullable://nginx@" + DIGEST, None, "has no registry digest"),
+        ("docker://sha256:" + "cd" * 32, None, "has no registry digest"),  # cri-dockerd, no digest
+        ("docker-pullable://nginx", None, "has no registry digest"),  # no digest at all
     ],
 )
 def test_unresolved_images_keep_the_reason(
@@ -94,6 +95,38 @@ def test_unresolved_images_keep_the_reason(
     assert image is None
     assert reason is not None
     assert problem in reason
+
+
+@pytest.mark.parametrize(
+    ("image_id", "reference"),
+    [
+        # containerd: already in full
+        (IMAGE_ID, IMAGE_ID),
+        (f"docker.io/library/nginx@{DIGEST}", f"docker.io/library/nginx@{DIGEST}"),
+        # cri-dockerd: docker-pullable:// and Docker's familiar names (SPEC_NOTES §12, §15)
+        (f"docker-pullable://nginx@{DIGEST}", f"docker.io/library/nginx@{DIGEST}"),
+        (f"docker-pullable://certbot/certbot@{DIGEST}", f"docker.io/certbot/certbot@{DIGEST}"),
+        (f"docker-pullable://docker.io/nginx@{DIGEST}", f"docker.io/library/nginx@{DIGEST}"),
+        (
+            f"docker-pullable://index.docker.io/library/nginx@{DIGEST}",
+            f"docker.io/library/nginx@{DIGEST}",
+        ),
+        (f"docker-pullable://localhost/app@{DIGEST}", f"localhost/app@{DIGEST}"),
+        (
+            f"docker-pullable://localhost:5000/team/app@{DIGEST}",
+            f"localhost:5000/team/app@{DIGEST}",
+        ),
+        (
+            f"docker-pullable://registry.example.com/team/app@{DIGEST}",
+            f"registry.example.com/team/app@{DIGEST}",
+        ),
+    ],
+)
+def test_image_ids_from_containerd_and_cri_dockerd(image_id: str, reference: str) -> None:
+    image, problem = image_from_id(image_id, None)
+    assert problem is None
+    assert image is not None
+    assert image.reference == reference
 
 
 def k8s_pod(

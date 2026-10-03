@@ -13,7 +13,7 @@ from typing import Any, Protocol
 
 from fixproof.errors import FixproofError
 from fixproof.inputs import Cluster
-from fixproof.model import ImageRef, WorkloadAsset
+from fixproof.model import ImageRef, WorkloadAsset, expand_docker_name
 
 
 class InventoryError(FixproofError):
@@ -136,13 +136,26 @@ class KubernetesSource:
         return _controller(replica_set.metadata.owner_references)
 
 
+DOCKER_PULLABLE = "docker-pullable://"  # cri-dockerd, for an image with a repository digest
+
+
 def image_from_id(image_id: str, waiting_reason: str | None) -> tuple[ImageRef | None, str | None]:
-    """The image a container runs, or None and the reason it cannot be resolved."""
+    """The image a container runs, or None and the reason it cannot be resolved.
+
+    containerd reports `registry/repository@sha256:...`. cri-dockerd (Docker Engine nodes, such as
+    minikube's default) reports `docker-pullable://` and Docker's familiar name, which is expanded
+    to the full name, or `docker://sha256:...` for an image with no repository digest, which
+    cannot be resolved (SPEC_NOTES §12; ADR-0010 Amendment 2).
+    """
     if not image_id:
         state = f" ({waiting_reason})" if waiting_reason else ""
         return None, f"image digest not resolved: the container has not started{state}"
+    reference = image_id
+    if reference.startswith(DOCKER_PULLABLE):
+        name, at, digest = reference.removeprefix(DOCKER_PULLABLE).partition("@")
+        reference = f"{expand_docker_name(name)}{at}{digest}"
     try:
-        return ImageRef.parse(image_id), None
+        return ImageRef.parse(reference), None
     except ValueError:
         return None, f"image digest not resolved: imageID {image_id!r} has no registry digest"
 

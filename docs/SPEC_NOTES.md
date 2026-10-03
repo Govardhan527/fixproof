@@ -589,14 +589,28 @@ the exact files read.
   `toPullableImageID`; prefixes in `core/naming.go`): on a node running Docker Engine through
   cri-dockerd, `ImageRef` is `docker-pullable://` + the image's first `RepoDigests` entry, or
   `docker://` + the image ID when it has none. fixproof (ADR-0010 item 1) does not accept the
-  `docker-pullable://` form yet, so such a node's workloads are all `unknown`. VERIFIED; the
-  owner decides (ADR-0010 Amendment 2, proposed).
+  `docker-pullable://` form, and expands Docker's short names, from ADR-0010 Amendment 2
+  (accepted 2026-10-03). VERIFIED. The same function is in cri-dockerd v0.4.3 (tag commit
+  `d969e29f`), `core/convert.go` with the identical SHA-256, which is the version minikube
+  v1.39.0 ships.
   - Docker's `RepoDigests` hold familiar names (`nginx@sha256:…`). The normalisation rule
     (`github.com/distribution/reference` v0.6.0, tag commit `ff14fafe`, `normalize.go` SHA-256
     `7bad23a44f1bca325c5de6185092b9992c55b7db211fa4f5444b2d80853e7599`, `splitDockerDomain`):
     the first path element is the registry host if it is `localhost`, contains `.` or `:`, or is
     not all lower case; `index.docker.io` becomes `docker.io`; otherwise the host is `docker.io`,
     and a single-element name gets `library/`. VERIFIED.
+- **minikube v1.39.0** (released 2026-09-02; read 2026-10-03): `minikube-linux-amd64` SHA-256
+  `b738496da01be06bbaf80c688f57ce25acd3849fbb518155f3a88e03ef555aa4` (the release's `.sha256`
+  file); `pkg/minikube/constants/constants.go` (SHA-256
+  `cbf1ec6f8e7be7c3f1e18a4a857a4b9fc4c7646c18c9661c621454d9cfc7b0e5`):
+  `DefaultKubernetesVersion = "v1.37.0"`; `deploy/kicbase/Dockerfile` (SHA-256
+  `8d2803f8841dbad60431ea4c3a621079ab299edc1a5ddcdec704c83db6eff9d6`):
+  `ARG CRI_DOCKERD_VERSION="v0.4.3"`; `cruntime.ValidRuntimes()` is `docker`, `cri-o`,
+  `containerd` (`--container-runtime`); `minikube image load IMAGE` "Load an image into
+  minikube" (`cmd/minikube/cmd/image.go`, SHA-256
+  `7aabf6ca9aa585af128367a11f9dfddaea223146630d1e870877dce52a320f5d`); minikube writes its
+  context to the file `KUBECONFIG` names (`pkg/minikube/kubeconfig/kubeconfig.go`, `PathFromEnv`,
+  SHA-256 `872ebba555219d8e3b880a2b3d123e38695cc29de6e5b66f356ad3e1e48b5854`). VERIFIED.
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod

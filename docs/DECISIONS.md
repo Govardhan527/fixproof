@@ -464,7 +464,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   `fixproof` Namespace object the account lives in; and the demo script pins kubectl v1.37.1
   (checksum in SPEC_NOTES §12) next to kind, a setup tool like kind, not a runtime dependency.
   Item 8's transitive packages are listed with versions and licences in SPEC_NOTES §16.
-- **Amendment 2 (2026-10-03, proposed; waiting on the owner): read cri-dockerd image IDs.**
+- **Amendment 2 (2026-10-03, accepted: the owner, "I need minikube and docker nodes"): read
+  cri-dockerd image IDs.**
   - *Why:* a node that runs Docker Engine through cri-dockerd (minikube's default, some
     on-premises clusters) reports `imageID` as `docker-pullable://<RepoDigests[0]>`, with
     Docker's familiar names (`nginx@sha256:…`). Item 1 accepts only `registry/repository@sha256:…`,

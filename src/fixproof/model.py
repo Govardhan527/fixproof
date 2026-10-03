@@ -29,9 +29,26 @@ class Contract(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
-def _is_registry_segment(segment: str) -> bool:
+def is_registry_host(segment: str) -> bool:
     """distribution/reference's test for "this first segment is a host" (SPEC_NOTES §15)."""
     return segment == "localhost" or any(c in segment for c in ".:") or segment != segment.lower()
+
+
+def expand_docker_name(name: str) -> str:
+    """Docker's familiar name in full, e.g. `nginx` -> `docker.io/library/nginx`.
+
+    distribution/reference `splitDockerDomain` (SPEC_NOTES §12, §15): a first segment that is not
+    a host means Docker Hub, `index.docker.io` is Docker Hub, and a single-segment name on Docker
+    Hub gets `library/`. Used only for Docker Engine image IDs, never for `scope.yaml`.
+    """
+    first, slash, rest = name.partition("/")
+    if slash and is_registry_host(first):
+        domain, remote = ("docker.io" if first == "index.docker.io" else first), rest
+    else:
+        domain, remote = "docker.io", name
+    if domain == "docker.io" and "/" not in remote:
+        remote = f"library/{remote}"
+    return f"{domain}/{remote}"
 
 
 class ImageRef(Contract):
@@ -48,7 +65,7 @@ class ImageRef(Contract):
         if not at:
             raise ValueError(f"{reference!r} has no @sha256 digest; images are pinned by digest")
         registry, slash, repository = name.partition("/")
-        if not slash or not _is_registry_segment(registry):
+        if not slash or not is_registry_host(registry):
             raise ValueError(
                 f"{reference!r} has no registry host; write it in full, e.g. "
                 "registry.example.com/team/app@sha256:..."

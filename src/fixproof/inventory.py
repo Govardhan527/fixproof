@@ -6,6 +6,7 @@ repository digest (SPEC_NOTES §12). A container without one is kept, with the r
 reported as `unknown` rather than dropped.
 """
 
+import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -62,7 +63,14 @@ class KubernetesSource:
         from kubernetes import client, config
 
         try:
-            api = config.new_client_from_config(context=context)
+            api = config.new_client_from_config(
+                # The client reads KUBECONFIG once, at import; read it now instead.
+                config_file=os.environ.get("KUBECONFIG") or "~/.kube/config",
+                context=context,
+                # The client's default writes refreshed credentials back to the kubeconfig;
+                # fixproof never writes outside --out (SPEC_NOTES §12).
+                persist_config=False,
+            )
         except (config.ConfigException, OSError, TypeError) as exc:
             raise InventoryError(f"cannot load kubeconfig context {context!r}: {exc}") from exc
         self._context = context

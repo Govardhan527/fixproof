@@ -143,8 +143,15 @@ class FakeApps:
         )
 
 
-def patch_client(monkeypatch: pytest.MonkeyPatch, core: FakeCore) -> None:
-    monkeypatch.setattr(k8s_config, "new_client_from_config", lambda context: object())
+def patch_client(
+    monkeypatch: pytest.MonkeyPatch, core: FakeCore, loads: list[dict[str, Any]] | None = None
+) -> None:
+    def load(**kwargs: Any) -> object:
+        if loads is not None:
+            loads.append(kwargs)
+        return object()
+
+    monkeypatch.setattr(k8s_config, "new_client_from_config", load)
     monkeypatch.setattr(k8s, "CoreV1Api", lambda api: core)
     monkeypatch.setattr(k8s, "AppsV1Api", lambda api: FakeApps())
 
@@ -192,8 +199,27 @@ def test_kubernetes_api_errors_are_inventory_errors(monkeypatch: pytest.MonkeyPa
         inventory(Cluster(context="ctx", namespaces=("demo",)))
 
 
+def test_kubeconfig_is_read_from_the_environment_and_never_written(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    loads: list[dict[str, Any]] = []
+    patch_client(monkeypatch, FakeCore([]), loads)
+    monkeypatch.setenv("KUBECONFIG", "/etc/fixproof/reader.kubeconfig")
+    KubernetesSource("ctx")
+    monkeypatch.delenv("KUBECONFIG")
+    KubernetesSource("ctx")
+    assert loads == [
+        {
+            "config_file": "/etc/fixproof/reader.kubeconfig",
+            "context": "ctx",
+            "persist_config": False,
+        },
+        {"config_file": "~/.kube/config", "context": "ctx", "persist_config": False},
+    ]
+
+
 def test_a_missing_context_is_an_inventory_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    def missing(context: str) -> Any:
+    def missing(context: str, **kwargs: Any) -> Any:
         raise k8s_config.ConfigException(f"Expected key {context} in contexts")
 
     monkeypatch.setattr(k8s_config, "new_client_from_config", missing)

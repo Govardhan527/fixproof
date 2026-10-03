@@ -549,6 +549,7 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | `--out` | A **new or empty** directory. fixproof never overwrites evidence. |
 | `--author` | Who issues the VEX (OpenVEX `author`), e.g. your team and address |
 | `--json` | Print a machine-readable summary on stdout ([schema](src/fixproof/schemas/verify-summary.schema.json), [example](examples/verify-summary/three-images.json)) |
+| `--jobs` | How many images to scan at the same time (default 4; each scan peaks at about 300 MB). The results are the same for any value; `--jobs 1` scans one at a time. |
 
 ---
 
@@ -666,8 +667,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 - **Not tested yet on:** managed clusters (EKS, GKE, AKS) and their sign-in plugins; nodes running
   CRI-O; cloud registry credential helpers (ECR, Artifact Registry, ACR). The read-only account
   and token work on any conformant API server, but these have not been run.
-- **One image at a time.** Each distinct image is scanned once, but one after another, so a
-  cluster with many different images takes a while.
+
 
 ---
 

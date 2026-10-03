@@ -19,7 +19,7 @@ from fixproof.errors import FixproofError
 from fixproof.inputs import load_fix, load_scope
 from fixproof.model import AssetVerdict, Verdict, WorkloadAsset
 from fixproof.report import verify_summary
-from fixproof.verify import assess
+from fixproof.verify import DEFAULT_JOBS, assess
 from fixproof.vex import build_document
 
 EXIT_FIXED, EXIT_AFFECTED, EXIT_UNKNOWN, EXIT_USAGE = 0, 1, 2, 3
@@ -63,6 +63,9 @@ def verify(
     out: Annotated[Path, typer.Option(help="New or empty directory for the evidence bundle.")],
     author: Annotated[str, typer.Option(help="Who issues the VEX document (OpenVEX author).")],
     as_json: Annotated[bool, typer.Option("--json", help="Print the summary as JSON.")] = False,
+    jobs: Annotated[
+        int, typer.Option(min=1, help="How many images to scan at the same time.")
+    ] = DEFAULT_JOBS,
 ) -> None:
     """Check every image and workload in scope with Grype and the SBOM version check, then
     write the VEX and the evidence bundle. Needs syft and grype on PATH and a current Grype DB;
@@ -75,7 +78,7 @@ def verify(
         scope_file = load_scope(scope)
         check_output_dir(out)
         started = now()
-        assessments = assess(fix_file, scope_file)
+        assessments = assess(fix_file, scope_file, jobs=jobs)
         finished = now()
         verdicts = [a.verdict for a in assessments]
         vex = build_document(fix_file, verdicts, author=author, now=finished)

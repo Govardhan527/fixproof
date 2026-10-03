@@ -666,6 +666,24 @@ the exact files read.
     Deployments with `replicas`, `imagePullPolicy: Never` after `kind load` or `minikube image
     load`): the pods reached the states the tests expect. OBSERVED.
   - GitHub Actions pins are recorded in the `ci.yml` header (looked up 2026-10-02).
+- **CRI-O image IDs** (read 2026-10-03): minikube v1.39.0's node image installs CRI-O from the
+  `v1.35` stable branch (`deploy/kicbase/Dockerfile`, `ARG CRIO_VERSION="v1.35"`, SHA-256 above).
+  CRI-O v1.35.10, `internal/oci/container.go` (SHA-256
+  `8608aa4db75d3bc0f7e5d0698ad4fbd9e7543d3ca5870fcf8b09b0c39d6af015`), `NewContainer`: the
+  reported `ImageRef` is `someRepoDigest` when set, else the image ID; its comment warns the
+  repo@digest "may have NO RELATIONSHIP to the users' requested image name" and may never have
+  existed on a registry. `server/container_create.go` (SHA-256
+  `7b1e375d6dc988a2e973d6904ae5fd7b71f99f5edbbcd4d6f2510b0686afd56c`) sets it to
+  `RepoDigests[0]`; `internal/storage/image.go` (SHA-256
+  `cd64ab74fcecba3bda1cb0fb412516438ece607ecddaabb4b122b625208e8a0a`) builds `RepoDigests` with
+  `reference.Canonical.String()`, the full name. `server/container_status.go` (SHA-256
+  `7962de2a4a2272e4f240ac9c931a705b7aed17edef9a9640595bebc6d0a89bad`) returns that `ImageRef`.
+  VERIFIED; what a real node reports is checked by the minikube CI job (ADR-0011).
+- **Scanning in parallel** (measured locally 2026-10-03, 8 CPUs, 5 GB RAM, the 2026-10-02 DB):
+  one Grype scan of certbot v2.6.0 took 18.0 s at 264 MB peak, one Syft scan 12.9 s at 250 MB;
+  three Grype scans at once (certbot v2.6.0, v2.7.0, v5.8.0) on the same database all exited 0
+  with DB v6.1.9, at 251–315 MB each, 37 s in total against about 54 s one after another.
+  OBSERVED.
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod

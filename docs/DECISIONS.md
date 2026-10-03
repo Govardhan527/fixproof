@@ -478,3 +478,26 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
     CI job on minikube (pinned by version and checksum, Docker driver, Docker runtime) running
     two certbot releases by digest and one by short name and tag, expecting `still_affected`,
     `fixed`, `still_affected`. minikube would be a new CI tool, like kind.
+
+## ADR-0011: After M4: CRI-O nodes and scanning several images at once
+
+- **Date:** 2026-10-03. **Status:** Accepted (owner: "Support for CRI-O and scan several images";
+  `--jobs` with default 4 chosen 2026-10-03).
+- **Context:** the M4 value test listed both as gaps a real user would hit: nodes running CRI-O
+  were untested, and images were scanned one after another, so large clusters were slow
+  (PARKED, 2026-10-03).
+- **Decision:**
+  1. **CRI-O.** CRI-O v1.35 reports a container's `ImageRef` as the image's first repository
+     digest in full (`docker.io/library/python@sha256:…`), or the bare image ID when there is none
+     (SPEC_NOTES §12). fixproof reads the first like containerd's and reports the second as
+     `unknown`, so no parsing change is expected. Proof on a real node: the minikube CI job runs
+     for both `--container-runtime=docker` and `--container-runtime=cri-o`, with the same
+     workloads and checks, plus the raw image ID forms each runtime reports.
+  2. **`verify --jobs N`** (default 4, at least 1): up to N distinct images are scanned at the same
+     time, each with Syft and Grype one after the other as now. Inventory runs first; the
+     verdicts, the report and the evidence bundle are the same, in the same order, for any N.
+     Measured locally: one scan peaks at about 250–315 MB, and three Grype runs at once on the
+     same database all succeed (SPEC_NOTES §12). `--jobs 1` keeps the old behaviour. A public
+     CLI addition (MINOR); no output format changes.
+- **Consequence:** CRI-O, containerd and Docker Engine nodes are all proven on real nodes in CI;
+  a cluster with many images is scanned several images at a time.

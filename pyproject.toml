@@ -13,6 +13,7 @@ classifiers = [
 ]
 # Runtime dependencies are added in the milestone that first uses them (ADR-0002).
 dependencies = [
+    "cyclonedx-python-lib>=11.12.0,<12",
     "jsonschema>=4.26",
     "kubernetes>=36.0.3",
     "packaging>=26.3",

@@ -46,26 +46,35 @@ def action_statement(fix: FixFile) -> str:
     return "; ".join(steps) + "."
 
 
-def _statements(fix: FixFile, verdicts: Sequence[AssetVerdict]) -> list[dict[str, Any]]:
-    by_image: dict[str, tuple[Verdict, set[str]]] = {}
+def by_image(verdicts: Sequence[AssetVerdict]) -> dict[str, tuple[ImageRef, Verdict, set[str]]]:
+    """One verdict per image digest, keyed by its purl, with every reason given for it.
+
+    Workloads share their image's verdict; an asset with no resolved image has no product and
+    is left out (it stays in the report). Raises ValueError if one image has two verdicts.
+    """
+    found: dict[str, tuple[ImageRef, Verdict, set[str]]] = {}
     for item in verdicts:
         if item.asset.image is None:
-            continue  # no product to make a statement about; it stays in the report
+            continue
         product = image_purl(item.asset.image)
-        verdict, reasons = by_image.setdefault(product, (item.verdict, set()))
+        _, verdict, reasons = found.setdefault(product, (item.asset.image, item.verdict, set()))
         if verdict != item.verdict:
             raise ValueError(
                 f"{product} has two verdicts ({verdict}, {item.verdict}); "
                 "verdicts are per image and must agree"
             )
         reasons.add(item.reason)
+    return found
+
+
+def _statements(fix: FixFile, verdicts: Sequence[AssetVerdict]) -> list[dict[str, Any]]:
 
     subcomponents = [
         {"@id": purl, "identifiers": {"purl": purl}}
         for purl in sorted(package.purl for package in fix.packages)
     ]
     statements = []
-    for product, (verdict, reasons) in sorted(by_image.items()):
+    for product, (_, verdict, reasons) in sorted(by_image(verdicts).items()):
         statement: dict[str, Any] = {
             "vulnerability": {"name": fix.cve},
             "products": [

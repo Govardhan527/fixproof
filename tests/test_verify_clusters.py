@@ -9,6 +9,7 @@ import yaml
 
 from fixproof import cli
 from fixproof.bundle import write_bundle
+from fixproof.cyclonedx import build_bom
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.inventory import ContainerInfo, PodInfo
 from fixproof.model import ImageRef, Verdict, WorkloadAsset
@@ -121,6 +122,7 @@ def test_shared_evidence_is_written_once_and_vex_is_per_image(tmp_path: Path) ->
         scope_bytes=SCOPE_YAML.encode(),
         assessments=assessments,
         vex=vex,
+        cyclonedx=build_bom(FIX, [a.verdict for a in assessments], now=FINISH),
         started=START,
         finished=FINISH,
         kev=KEV,

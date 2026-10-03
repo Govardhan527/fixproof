@@ -22,7 +22,7 @@ from typing import Any
 import yaml
 from jsonschema.exceptions import SchemaError
 
-from fixproof.validation import build_validator, schema_errors
+from fixproof.validation import build_validator, cyclonedx_errors, schema_errors
 
 DEFAULT_SCHEMAS = Path("src/fixproof/schemas")
 SUFFIXES = (".json", ".yaml")
@@ -41,6 +41,10 @@ def problems_for(schema_path: Path, instance: Any) -> list[str]:
     return schema_errors(validator, instance)
 
 
+# Standards whose official schema needs companion schemas: validated through fixproof's own check
+OFFICIAL_CHECKS = {"cyclonedx": ("official CycloneDX 1.6.2 schema", cyclonedx_errors)}
+
+
 def validate(examples_dir: Path, schemas_dir: Path) -> tuple[int, list[str]]:
     """Return (number of example files checked, problems found)."""
     problems: list[str] = []
@@ -50,6 +54,12 @@ def validate(examples_dir: Path, schemas_dir: Path) -> tuple[int, list[str]]:
     for stray in sorted(p for p in examples_dir.iterdir() if p.suffix in SUFFIXES):
         problems.append(f"{stray}: example outputs must live in examples/<format>/")
     for format_dir in sorted(p for p in examples_dir.iterdir() if p.is_dir()):
+        if format_dir.name in OFFICIAL_CHECKS:
+            label, check = OFFICIAL_CHECKS[format_dir.name]
+            for example in sorted(p for p in format_dir.iterdir() if p.suffix in SUFFIXES):
+                checked += 1
+                problems.extend(f"{example} vs {label}: {e}" for e in check(load(example)))
+            continue
         own = schemas_dir / f"{format_dir.name}.schema.json"
         official = schemas_dir / "official" / f"{format_dir.name}.schema.json"
         present = [path for path in (own, official) if path.is_file()]

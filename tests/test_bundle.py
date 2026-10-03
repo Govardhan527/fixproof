@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from fixproof.bundle import OutputExistsError, write_bundle
+from fixproof.cyclonedx import build_bom
 from fixproof.errors import OutputValidationError
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.model import Verdict
@@ -29,6 +30,7 @@ def write(out: Path) -> None:
         scope_bytes=SCOPE_YAML.encode(),
         assessments=assessments,
         vex=vex,
+        cyclonedx=build_bom(FIX, [a.verdict for a in assessments], now=FINISH),
         started=START,
         finished=FINISH,
         kev=KEV,
@@ -46,6 +48,7 @@ def test_bundle_layout_and_manifest(tmp_path: Path) -> None:
     files = sorted(str(p.relative_to(out)) for p in out.rglob("*") if p.is_file())
     assert files == [
         "bundle.json",
+        "cyclonedx.json",
         "manifest.json",
         "openvex.json",
         "raw/001-grype.json",
@@ -127,6 +130,26 @@ def test_an_invalid_vex_writes_nothing(tmp_path: Path) -> None:
             scope_bytes=b"",
             assessments=[],
             vex={"not": "openvex"},
+            cyclonedx={},
+            started=START,
+            finished=FINISH,
+            kev=KEV,
+        )
+    assert not (tmp_path / "out").exists()
+
+
+def test_an_invalid_cyclonedx_document_writes_nothing(tmp_path: Path) -> None:
+    assessments = assess(FIX, SCOPE, runner())
+    vex = build_document(FIX, [a.verdict for a in assessments], author=AUTHOR, now=FINISH)
+    with pytest.raises(OutputValidationError, match="CycloneDX document"):
+        write_bundle(
+            tmp_path / "out",
+            cve=CVE,
+            fix_bytes=b"",
+            scope_bytes=b"",
+            assessments=assessments,
+            vex=vex,
+            cyclonedx={"bomFormat": "CycloneDX", "specVersion": "1.6", "version": 0},
             started=START,
             finished=FINISH,
             kev=KEV,

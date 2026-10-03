@@ -837,12 +837,21 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   and `urllib3` 2.8.0 (MIT), `python-dateutil` 2.9.0.post0 (dual Apache-2.0 / BSD-3-Clause), and
   `certifi` 2026.7.22 (MPL-2.0: a file-level copyleft, compatible with use as an unmodified
   dependency). pip-audit reported no known vulnerabilities in the locked tree.
+  Added in M5 (ADR-0012 item 5; installed metadata, 2026-10-03): `cyclonedx-python-lib` 11.12.0
+  (Apache-2.0), pulling in `license-expression` 30.4.4 (Apache-2.0), `boolean.py` 5.0
+  (BSD-2-Clause), `py-serializable` 2.1.0 (Apache-2.0), `defusedxml` 0.7.1 (PSFL),
+  `sortedcontainers` 2.4.0 (Apache-2.0) and `typing_extensions` 4.16.0 (PSF-2.0). All were
+  already locked as dev dependencies of `pip-audit`; they are now runtime dependencies. VERIFIED.
 
   Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0; `python-debian` 1.1.1, GPL-2.0-or-later
   (PyPI metadata, 2026-10-02), the dpkg oracle that is never shipped (OQ-4, ADR-0009 item 2). The per-file hashes are recorded by
   `uv.lock` itself and are not repeated here.
 - **Vendored files:** the OpenVEX schema comes from https://github.com/openvex/spec, licence
-  CC0-1.0 (GitHub licence API, 2026-10-02). The purl test vectors come from
+  CC0-1.0 (GitHub licence API, 2026-10-02). Added in M5: the CycloneDX 1.6.2 schemas
+  (`bom-1.6`, `spdx`, `jsf-0.82`) from https://github.com/CycloneDX/specification, licence
+  Apache-2.0 (GitHub licence API, 2026-10-03); the KEV schema from cisa.gov, which states no
+  licence on the file (a CISA publication). The KEV test excerpt is two entries of the public
+  feed of 2026-10-02. The purl test vectors come from
   https://github.com/package-url/purl-spec, licence MIT; its `LICENSE` at v1.0.1 (SHA-256
   `24fb7204fd3c9396c9d83533448cb988e8e86d6f598d1ab51c6d2e5d7e42bcb1`) is kept next to them in
   `tests/fixtures/purl-spec/`. VERIFIED.

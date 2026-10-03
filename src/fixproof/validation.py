@@ -13,10 +13,18 @@ from typing import Any
 
 from jsonschema.protocols import Validator
 from jsonschema.validators import validator_for
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT7
 
 from fixproof.errors import OutputValidationError
 
 OPENVEX_SCHEMA = "official/openvex.schema.json"
+CYCLONEDX_SCHEMA = "official/cyclonedx/bom-1.6.schema.json"  # 1.6.2 (SPEC_NOTES §4)
+# The two schemas bom-1.6 refers to, by the `$id` it uses for them (same tag)
+CYCLONEDX_COMPANIONS = {
+    "http://cyclonedx.org/schema/spdx.schema.json": "official/cyclonedx/spdx.schema.json",
+    "http://cyclonedx.org/schema/jsf-0.82.schema.json": "official/cyclonedx/jsf-0.82.schema.json",
+}
 
 
 def build_validator(schema: dict[str, Any]) -> Validator:
@@ -58,3 +66,26 @@ def check_openvex(document: Mapping[str, Any]) -> None:
     problems = openvex_errors(document)
     if problems:
         raise OutputValidationError("OpenVEX document", problems)
+
+
+@cache
+def _cyclonedx_validator() -> Validator:
+    schema = load_schema(CYCLONEDX_SCHEMA)
+    registry: Registry = Registry().with_resources(
+        (uri, Resource.from_contents(load_schema(path), default_specification=DRAFT7))
+        for uri, path in CYCLONEDX_COMPANIONS.items()
+    )
+    validator_cls = validator_for(schema)
+    return validator_cls(schema, registry=registry, format_checker=validator_cls.FORMAT_CHECKER)
+
+
+def cyclonedx_errors(document: Mapping[str, Any]) -> list[str]:
+    """Validate `document` against the official CycloneDX 1.6.2 schema, offline."""
+    return schema_errors(_cyclonedx_validator(), document)
+
+
+def check_cyclonedx(document: Mapping[str, Any]) -> None:
+    """Raise `OutputValidationError` unless `document` is valid CycloneDX 1.6."""
+    problems = cyclonedx_errors(document)
+    if problems:
+        raise OutputValidationError("CycloneDX document", problems)

@@ -15,6 +15,7 @@ import typer
 
 from fixproof import __version__, kev
 from fixproof.bundle import check_output_dir, summarise, write_bundle
+from fixproof.cyclonedx import build_bom
 from fixproof.errors import FixproofError
 from fixproof.inputs import load_fix, load_scope
 from fixproof.model import AssetVerdict, Verdict, WorkloadAsset
@@ -93,6 +94,7 @@ def verify(
             scope_bytes=scope.read_bytes(),
             assessments=assessments,
             vex=vex,
+            cyclonedx=build_bom(fix_file, verdicts, now=finished),
             started=started,
             finished=finished,
             kev=kev_status,

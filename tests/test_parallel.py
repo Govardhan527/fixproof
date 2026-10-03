@@ -9,6 +9,7 @@ import yaml
 
 from fixproof import cli
 from fixproof.bundle import write_bundle
+from fixproof.cyclonedx import build_bom
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.verify import DEFAULT_JOBS, assess
 from fixproof.vex import build_document
@@ -75,6 +76,7 @@ def bundle_bytes(out: Path, jobs: int, scope: ScopeFile, scope_yaml: str) -> dic
         scope_bytes=scope_yaml.encode(),
         assessments=assessments,
         vex=vex,
+        cyclonedx=build_bom(FIX, [a.verdict for a in assessments], now=FINISH),
         started=START,
         finished=FINISH,
         kev=KEV,

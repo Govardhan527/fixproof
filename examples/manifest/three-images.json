@@ -6,6 +6,11 @@
       "size": 7299
     },
     {
+      "path": "cyclonedx.json",
+      "sha256": "9b75a95cd0a58f8e34ac4aa59cfc0251e30b88397cc8016234131467f9d9181b",
+      "size": 4349
+    },
+    {
       "path": "openvex.json",
       "sha256": "5f7db886f69bfe8e489c9215f8df9c374a4a402e261fc28b702768570cb8cee2",
       "size": 3363

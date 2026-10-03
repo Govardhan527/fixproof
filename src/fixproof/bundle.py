@@ -1,6 +1,7 @@
 """The evidence bundle (ADR-0007 item 7): formats `bundle` 1.1.0 and `manifest` 1.0.0.
 
     <out>/openvex.json            the VEX document (ADR-0005)
+    <out>/cyclonedx.json          the same verdicts as CycloneDX 1.6 VEX (ADR-0012)
     <out>/bundle.json             run, inputs, tool versions, every asset's verdict and results
     <out>/raw/NNN-<method>.json   each method's tool output, sanitised (fixproof.sanitize)
     <out>/manifest.json           SHA-256 and size of every other file, sorted by path
@@ -28,7 +29,7 @@ from fixproof.errors import FixproofError
 from fixproof.kev import Kev
 from fixproof.methods import MethodOutcome
 from fixproof.model import Asset, AssetVerdict, Contract, CveId, MethodResult, Text, Verdict
-from fixproof.validation import check_openvex
+from fixproof.validation import check_cyclonedx, check_openvex
 
 BUNDLE_VERSION: Literal["1.2.0"] = "1.2.0"  # 1.1.0: workload `owner` (ADR-0010); 1.2.0: `kev`
 MANIFEST_VERSION: Literal["1.0.0"] = "1.0.0"
@@ -119,6 +120,7 @@ def write_bundle(
     scope_bytes: bytes,
     assessments: Sequence[Assessment],
     vex: dict[str, Any],
+    cyclonedx: dict[str, Any],
     started: datetime,
     finished: datetime,
     kev: Kev,
@@ -126,9 +128,10 @@ def write_bundle(
 ) -> Bundle:
     """Write the whole bundle to `out` and return the bundle record."""
     check_openvex(vex)
+    check_cyclonedx(cyclonedx)
     check_output_dir(out)
     (out / "raw").mkdir(parents=True, exist_ok=True)
-    files: dict[str, bytes] = {"openvex.json": to_json(vex)}
+    files: dict[str, bytes] = {"openvex.json": to_json(vex), "cyclonedx.json": to_json(cyclonedx)}
     records, tools = [], []
     raw_refs: dict[int, str] = {}  # id() of a shared outcome -> its raw file
     for index, assessment in enumerate(assessments, start=1):

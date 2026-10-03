@@ -1,0 +1,97 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "bom-ref": "pkg:oci/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627?repository_url=localhost:5001%2Ffixproof%2Fdemo-app",
+      "name": "demo-app",
+      "purl": "pkg:oci/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627?repository_url=localhost:5001%2Ffixproof%2Fdemo-app",
+      "type": "container",
+      "version": "sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+    },
+    {
+      "bom-ref": "pkg:oci/demo-broken@sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5?repository_url=localhost:5001%2Ffixproof%2Fdemo-broken",
+      "name": "demo-broken",
+      "purl": "pkg:oci/demo-broken@sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5?repository_url=localhost:5001%2Ffixproof%2Fdemo-broken",
+      "type": "container",
+      "version": "sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5"
+    },
+    {
+      "bom-ref": "pkg:oci/demo-fixed@sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7?repository_url=localhost:5001%2Ffixproof%2Fdemo-fixed",
+      "name": "demo-fixed",
+      "purl": "pkg:oci/demo-fixed@sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7?repository_url=localhost:5001%2Ffixproof%2Fdemo-fixed",
+      "type": "container",
+      "version": "sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:oci/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627?repository_url=localhost:5001%2Ffixproof%2Fdemo-app"
+    },
+    {
+      "ref": "pkg:oci/demo-broken@sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5?repository_url=localhost:5001%2Ffixproof%2Fdemo-broken"
+    },
+    {
+      "ref": "pkg:oci/demo-fixed@sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7?repository_url=localhost:5001%2Ffixproof%2Fdemo-fixed"
+    }
+  ],
+  "metadata": {
+    "timestamp": "2026-10-02T09:01:30+00:00",
+    "tools": {
+      "components": [
+        {
+          "name": "fixproof",
+          "type": "application",
+          "version": "0.0.0"
+        }
+      ]
+    }
+  },
+  "serialNumber": "urn:uuid:c3331adf-ccb2-5872-9f65-cf2a62855a39",
+  "specVersion": "1.6",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "affects": [
+        {
+          "ref": "pkg:oci/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627?repository_url=localhost:5001%2Ffixproof%2Fdemo-app"
+        }
+      ],
+      "analysis": {
+        "detail": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
+        "response": [
+          "update"
+        ],
+        "state": "exploitable"
+      },
+      "bom-ref": "CVE-2023-32681-1",
+      "id": "CVE-2023-32681"
+    },
+    {
+      "affects": [
+        {
+          "ref": "pkg:oci/demo-broken@sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5?repository_url=localhost:5001%2Ffixproof%2Fdemo-broken"
+        }
+      ],
+      "analysis": {
+        "detail": "grype failed, so fixed cannot be proven. grype: grype exited 1: ERROR failed to fetch image: unexpected status 500. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
+        "state": "in_triage"
+      },
+      "bom-ref": "CVE-2023-32681-2",
+      "id": "CVE-2023-32681"
+    },
+    {
+      "affects": [
+        {
+          "ref": "pkg:oci/demo-fixed@sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7?repository_url=localhost:5001%2Ffixproof%2Fdemo-fixed"
+        }
+      ],
+      "analysis": {
+        "detail": "both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 3 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
+        "state": "resolved"
+      },
+      "bom-ref": "CVE-2023-32681-3",
+      "id": "CVE-2023-32681"
+    }
+  ]
+}

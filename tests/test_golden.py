@@ -13,6 +13,7 @@ import yaml
 
 from fixproof.bundle import write_bundle
 from fixproof.canonical import to_json
+from fixproof.cyclonedx import build_bom
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.report import verify_summary
 from fixproof.verify import assess
@@ -61,6 +62,9 @@ def test_golden_bundle(tmp_path: Path, name: str) -> None:
         scope_bytes=SCOPE_YAML.encode(),
         assessments=assessments,
         vex=vex,
+        cyclonedx=build_bom(
+            fix, [a.verdict for a in assessments], now=FINISH, tool_version=TOOL_VERSION
+        ),
         started=START,
         finished=FINISH,
         kev=KEV,
@@ -84,6 +88,20 @@ def test_golden_verify_summary() -> None:
         )
     )
     path = EXAMPLES / "verify-summary" / "three-images.json"
+    if UPDATE:
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(produced)
+    assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"
+
+
+def test_golden_cyclonedx() -> None:
+    """The three-image scenario as CycloneDX 1.6 VEX (examples/cyclonedx/)."""
+    fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
+    assessments = assess(fix, ScopeFile.model_validate(yaml.safe_load(SCOPE_YAML)), runner())
+    produced = to_json(
+        build_bom(fix, [a.verdict for a in assessments], now=FINISH, tool_version=TOOL_VERSION)
+    )
+    path = EXAMPLES / "cyclonedx" / "three-images.json"
     if UPDATE:
         path.parent.mkdir(exist_ok=True)
         path.write_bytes(produced)

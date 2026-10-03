@@ -501,3 +501,55 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      CLI addition (MINOR); no output format changes.
 - **Consequence:** CRI-O, containerd and Docker Engine nodes are all proven on real nodes in CI;
   a cluster with many images is scanned several images at a time.
+
+## ADR-0012: M5 design: release gate, KEV enrichment, HTML summary, CycloneDX VEX
+
+- **Date:** 2026-10-03. **Status:** Accepted (owner answered the four questions below,
+  2026-10-03).
+- **Context:** M5 is "CI gate, KEV enrichment, HTML report, CycloneDX VEX", done when SUCCESS TEST
+  steps 2 and 3 pass. Facts: SPEC_NOTES §3 (KEV), §4 (CycloneDX 1.6.2 and the library), §12
+  (image source schemes of the pinned tools).
+- **Decision:**
+  1. **`fixproof gate --closed closed.yaml --image IMAGE`.** For every closed CVE it runs both
+     methods on the image and the verdict rule, as `verify` does. Exit codes (owner: "exit 2,
+     fail the build"): 0 every closed CVE proven gone; 1 at least one is back
+     (`still_affected`); 2 none back but at least one `unknown`, with the reason; 3 bad input or
+     usage. `--json` prints a `gate-result` (1.0.0, schema in `src/fixproof/schemas/`). Human
+     output names each CVE, its verdict, reason and KEV status.
+  2. **Gate images** (owner: "registry + local builds"): a registry reference pinned by digest
+     (allowlist check from a `registries` list in `closed.yaml`), or a just-built image with an
+     explicit scheme the pinned tools support: `docker:NAME[:TAG]` (local Docker daemon),
+     `docker-archive:PATH`, `oci-archive:PATH`. The result records the exact digest or image ID
+     the tools scanned. A tag without a scheme is refused, as in `scope.yaml`.
+  3. **`closed.yaml`** (format `closed`, 1.0.0): `schema_version`, optional `registries`, and
+     `closed`, a list of `{cve, packages}` where `packages` is exactly `fix.yaml`'s package list.
+     Each CVE once.
+  4. **KEV** (owner: "download on every run"): `verify` and `gate` fetch the CISA feed (HTTPS,
+     timeout 30 s, size limit 16 MB) once per run, validate it against the vendored KEV schema,
+     and record its URL, `catalogVersion`, `dateReleased`, retrieval time and SHA-256. For each
+     CVE they report whether it is in KEV with `dateAdded`, `dueDate`, `requiredAction` and
+     `knownRansomwareCampaignUse`. A failed download or an invalid feed never changes a verdict
+     or an exit code: it is recorded as `unavailable` with the reason. Unit tests use an injected
+     fetcher (no network); the live suite reads the real feed.
+  5. **CycloneDX VEX** (owner: "cyclonedx-lib + stdlib HTML"): `verify` also writes
+     `cyclonedx.json`, CycloneDX 1.6 via `cyclonedx-python-lib` 11.12.0 (Apache-2.0; adds
+     `license-expression`, `py-serializable`, `sortedcontainers`, `typing_extensions`). One
+     `container` component per image (its OCI purl) and one vulnerability entry per image, with
+     `analysis.state`: `fixed` -> `resolved`, `still_affected` -> `exploitable` (with response
+     `update`), `unknown` -> `in_triage`; `detail` is the reason. `not_affected` and
+     `false_positive` are never written. The serial number is derived from the content and the
+     timestamp is the run's clock, so output is deterministic. Validated against the official
+     1.6.2 schema with its two companion schemas, vendored, before it is written.
+  6. **HTML summary:** `verify` writes `report.html`: one self-contained page (inline CSS, no
+     JavaScript, no external requests) with the counts, the KEV status, and every asset or
+     workload with its verdict, reason and digest. Built with the standard library and
+     `html.escape` on every value. Golden-file tested.
+  7. **Formats:** `bundle` 1.2.0 and `verify-summary` 1.2.0 add `kev` (MINOR, ADR-0003); the
+     bundle gains `cyclonedx.json` and `report.html`, both in the manifest; new formats `closed`
+     and `gate-result` 1.0.0.
+  8. **Tests:** unit tests for each piece (no network); golden files for CycloneDX and HTML; the
+     CI `integration` job gates real fixture images from the local Docker daemon, a
+     `docker save` archive and the registry by digest (a reintroduced CVE exits 1, a fixed image
+     0, an unreadable one 2); the live suite checks KEV against the live CISA feed.
+- **Consequence:** SUCCESS TEST steps 2 and 3 can be checked end to end; every run records the
+  KEV feed it used or why it could not.

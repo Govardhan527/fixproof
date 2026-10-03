@@ -115,7 +115,16 @@ the exact files read.
   - `forensicTriage` is recent (BOD 26-04): present on all 1731 entries in the retrieved copy
     (72 `Yes`). Consumers must tolerate fields being added.
 - The run records the feed's `catalogVersion`, `dateReleased`, retrieval time and SHA-256 (the
-  plan's guardrail). The cache format is decided in M5.
+  plan's guardrail). ADR-0012: downloaded on every run, no cache.
+- **Read again 2026-10-03** (M5): `catalogVersion` `2026.10.02`, `dateReleased`
+  `2026-10-02T15:19:38.2945Z`, `count` 1733, 1,765,906 bytes, `content-type: application/json`,
+  feed SHA-256 `d2c8c6cb23291b46ff2b086197641a6b1fa35e6b746bba714cc280a1778f9e48`; the schema is
+  byte-identical to the M0 copy. The feed validates against the schema with `Draft7Validator`
+  and formats (the `$defs` JSON pointers resolve). In KEV: CVE-2023-4911 (added 2023-11-21, due
+  2023-12-12, ransomware `Unknown`), CVE-2021-44228 (added 2021-12-10, due 2021-12-24, ransomware
+  `Known`); not in KEV: CVE-2023-32681, CVE-2023-5363, CVE-2023-0286. Fields present on entries:
+  the required ones plus `cwes`, `forensicTriage`, `knownRansomwareCampaignUse`, `notes`.
+  VERIFIED.
 
 ## 4. CycloneDX 1.6 VEX (second output format, M5)
 
@@ -137,9 +146,26 @@ the exact files read.
 - `vulnerability.affects[]`: required `ref` (a `bom-ref` or BOM-Link); optional `versions[]`,
   each a `version` or a `range` (vers syntax, §5) with `status` (`affectedStatus`: `affected`,
   `unaffected`, `unknown`; default `affected`). VERIFIED.
-- The 1.6 schema references external schemas (SPDX licence ids, JSF signatures). Validating
-  offline needs them vendored too: UNVERIFIED which files, blocks M5. Which spec versions
-  `cyclonedx-python-lib` 11.12.0 writes: UNVERIFIED, blocks M5.
+- The 1.6 schema references two external schemas: `spdx.schema.json` and
+  `jsf-0.82.schema.json#/definitions/signature`, at the same tag (SHA-256
+  `c41917196639055e9f9670811bac23ef777732144f3ff5a2f39686f61580dbe6` and
+  `8bae002c25e723db7ee1f26afde680ae1a2b1a8f6b4b4b0fd65dc3becb090aae`; `$id`s
+  `http://cyclonedx.org/schema/spdx.schema.json` and `.../jsf-0.82.schema.json`). Registered
+  with `referencing`, they make offline validation work. VERIFIED 2026-10-03 (was UNVERIFIED).
+- `analysis.state` definitions (`meta:enum` in the 1.6.2 schema): `resolved` "The vulnerability
+  has been remediated."; `exploitable` "The vulnerability may be directly or indirectly
+  exploitable."; `in_triage` "The vulnerability is being investigated."; `not_affected` "The
+  component or service is not affected by the vulnerability. Justification should be specified
+  for all not_affected cases." VERIFIED.
+- `cyclonedx-python-lib` **11.12.0** (PyPI, uploaded 2026-08-13, Apache-2.0, Python >=3.9):
+  requires `license-expression`, `packageurl-python`, `py-serializable`, `sortedcontainers`,
+  `typing_extensions` (Python <3.13); extra `json-validation` adds `jsonschema` and
+  `referencing`. `SchemaVersion` covers 1.0 to 1.7; `JsonV1Dot6` writes `specVersion` `1.6`.
+  Its bundled `bom-1.6.SNAPSHOT.schema.json` (SHA-256 `83821ba4…`) is not the official file, so
+  fixproof validates against the vendored official one. A prototype (a `container` component
+  with an OCI purl, a vulnerability with `affects` and `analysis.state` `exploitable`, fixed
+  serial number and timestamp) validated against the official 1.6.2 schema with no errors, and
+  `state: fixed` was rejected. VERIFIED 2026-10-03 (was UNVERIFIED).
 
 ## 5. Package URL (purl) and version ranges (vers) (M1 to M3)
 
@@ -695,6 +721,11 @@ the exact files read.
   three Grype scans at once (certbot v2.6.0, v2.7.0, v5.8.0) on the same database all exited 0
   with DB v6.1.9, at 251–315 MB each, 37 s in total against about 54 s one after another.
   OBSERVED.
+- **Image source schemes of the pinned tools** (`syft --help` 1.54.0 and `grype --help` 0.119.0,
+  read 2026-10-03): `registry:` (pull from a registry, no runtime needed), `docker:` (the Docker
+  daemon), `podman:`, `docker-archive:` (a `docker save` tarball), `oci-archive:`, `oci-dir:`,
+  `singularity:`, `dir:`, `file:`, and for Grype `sbom:`. Without a scheme both try the Docker
+  daemon first. VERIFIED. fixproof always passes an explicit scheme (ADR-0012).
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod

@@ -218,6 +218,17 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
       `not_affected` without evidence; `fixproof gate` exits non-zero on a reintroduced closed
       CVE and zero otherwise).
 - [x] OQ-3 (CycloneDX version) answered 2026-10-03: stay on 1.6 (patch 1.6.2).
+- [x] Facts verified (SPEC_NOTES §3, §4, §12, 2026-10-03): the live KEV feed and its schema; the
+      CycloneDX 1.6.2 state definitions, its two companion schemas and offline validation of
+      `cyclonedx-python-lib` 11.12.0 output; the pinned tools' image source schemes.
+- [x] M5 design accepted: ADR-0012 (owner answered the four questions 2026-10-03).
+- [ ] KEV enrichment: fetched on every run, validated, recorded; `unavailable` never changes a
+      verdict; `bundle` and `verify-summary` 1.2.0.
+- [ ] CycloneDX 1.6 VEX (`cyclonedx.json`) validated against the official schema; golden file.
+- [ ] HTML summary (`report.html`), self-contained; golden file.
+- [ ] `closed.yaml` and `fixproof gate` (exit 0 / 1 / 2 / 3, `gate-result`), registry by digest
+      and local builds (`docker:`, `docker-archive:`, `oci-archive:`).
+- [ ] Integration: the gate on real fixture images in CI (reintroduced, fixed, unreadable).
 - [ ] Live data (ADR-0008 item 5): KEV enrichment checked against the live CISA feed in the live
       suite.
 
@@ -231,14 +242,13 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M4 closed; ADR-0011 additions (CRI-O nodes,
-  `--jobs`) built and green on work branch `crio-jobs` (run 37134011580); M5 next.
-- **`main` = 0727948, green** (CI 37130234076). Not on `main` yet: 7024f93 and the ADR-0011
-  commits. A second branch run goes first, then `main` on the owner's "push" (owner rule:
-  `main` never red).
+- **Date:** 2026-10-03. **Current milestone:** M5 (design accepted, ADR-0012; building).
+- **`main`:** 9826d7d (ADR-0011: CRI-O nodes, `verify --jobs`), CI 37135400013 running.
 - **Owner rules (2026-10-03):** `main` never red; no test missing; every step judged by whether a
   real user can run it on their own systems and act on it.
-- **Open for the owner:** a cloud test account for managed clusters and registry credential
-  helpers (PARKED).
-- **Next steps, in order:** second green branch run; `main` on "push"; then M5 (verify the facts,
-  propose ADR-0012, wait for approval, build with real-data tests from the start).
+- **M5 decisions (owner):** gate exits 2 on `unknown`; gate takes registry images by digest and
+  local builds (`docker:`, `docker-archive:`, `oci-archive:`); KEV downloaded on every run;
+  `cyclonedx-python-lib` 11.12.0 for CycloneDX, standard library for the HTML.
+- **Next steps, in order:** KEV module; CycloneDX writer; HTML report; `closed.yaml` and `gate`;
+  integration (gate on real images) and live (KEV) tests; work branch with two green runs; ask
+  for "push"; reviews; close M5.

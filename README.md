@@ -482,10 +482,30 @@ image from outside the allowlist. An image loaded straight into a kind node (`ki
 reported by the node as `docker.io/library/import-<date>@sha256:…`, a name no registry holds,
 so it comes out `unknown` too.
 
-**Container runtimes.** fixproof reads the image IDs that containerd reports (kind, and most
-managed clusters). A node that runs Docker Engine through cri-dockerd (minikube's default, some
-on-premises clusters) reports `docker-pullable://…` IDs, which fixproof does not read yet, so
-every workload there comes out `unknown`.
+**Container runtimes.** fixproof reads the image IDs of both common runtimes, and CI proves each
+on a real node: containerd (kind, most managed clusters) reports `registry/repository@sha256:…`;
+Docker Engine through cri-dockerd (minikube's default, some on-premises clusters) reports
+`docker-pullable://` and Docker's short name, which fixproof expands with Docker's own rule
+(`python` → `docker.io/library/python`, `certbot/certbot` → `docker.io/certbot/certbot`). From
+a minikube node with Docker Engine 29.7.2 (CI run
+[37123230999](https://github.com/Govardhan527/fixproof/actions/runs/37123230999); reasons
+abridged with `…`):
+
+```text
+still_affected  fixproof-docker/fixproof-docker/certbot-by-tag-7c758fd4f-59xwv/app  Deployment/certbot-by-tag
+                docker.io/certbot/certbot@sha256:92092d214a4eb75d049720d04f7acc50b40ea226d77736bce6a6bf43981b6e86
+                both methods find the vulnerable component. grype: … sbom_version: requests 2.28.2 at … is below the fix (2.31.0).
+unknown         fixproof-docker/fixproof-docker/local-only-88596bcf4-wvjpl/app  Deployment/local-only
+                image not resolved
+                image digest not resolved: imageID 'docker://sha256:2a3c286d…' has no registry digest
+fixed           fixproof-docker/fixproof-docker/python-official-5c45b87c69-5t8k2/app  Deployment/python-official
+                docker.io/library/python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+                both methods agree the vulnerable component is gone. grype: … sbom_version: no requests package among 113 packages.
+```
+
+The pod `certbot-by-tag` names its image `certbot/certbot:v2.6.0`; the node reports the digest it
+runs, which is what fixproof checks. An image loaded straight into the node, with no registry
+digest, is `unknown`.
 
 **Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
 reads, and nothing else. [`deploy/kubernetes/`](deploy/kubernetes/) ships a ServiceAccount and a

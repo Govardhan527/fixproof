@@ -163,6 +163,10 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
       output), and the CI demo run with fixproof installed by `uv tool install`. Branch run
       37117704337 showed the node names a side-loaded image `docker.io/library/import-<date>`
       (SPEC_NOTES corrected); branch run 37118476594: 34 passed.
+- [x] Docker Engine nodes (ADR-0010 Amendment 2, owner approved 2026-10-03): cri-dockerd image
+      IDs read and Docker's short names expanded (e9ee0dd); proven on a real minikube node with
+      Docker Engine 29.7.2 by the CI job `integration-docker-runtime` (8f33458), branch run
+      37123230999: 3 passed, and fixproof installed with `uv tool install` gave 2 / 2 / 1.
 - [x] Scope and spec reviews (2026-10-03). Fixed: pods with no container status yet were dropped
       (ab0d024); the client could write refreshed tokens back to the kubeconfig and read
       `KUBECONFIG` only at import (41041e9); 21 undocumented Kubernetes facts verified and
@@ -172,11 +176,12 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 
 The owner's test: could a user run this today, on their own clusters and images, following only
 the README, and act on the answer?
-- Can, with CI evidence: install with `uv tool install` (no lockfile; the CI demo step does
-  exactly this), point fixproof at a namespace with the shipped read-only account, get a verdict
-  per pod with pod name, owner and digest, for images referenced by tag or by digest, from Docker
-  Hub or a private registry, with or without registry credentials, and keep evidence that holds
-  no credentials.
+- Can, with CI evidence: install with `uv tool install` (no lockfile; the CI demo steps do
+  exactly this), point fixproof at a namespace with the shipped read-only account, on a
+  containerd node (kind) or a Docker Engine node (minikube), get a verdict per pod with pod name,
+  owner and digest, for images referenced by tag, short name or digest, from Docker Hub or a
+  private registry, with or without registry credentials, and keep evidence that holds no
+  credentials.
 - Cannot yet rely on:
   - Managed clusters (EKS, GKE, AKS) are untested. The reader token works on any conformant API
     server, but a user's own context with an exec credential plugin has not been tried.
@@ -186,8 +191,6 @@ the README, and act on the answer?
     images mean a long run.
   - Pods on arm64 nodes (PARKED: the node's platform is not checked).
   - fixproof is not on PyPI (M6).
-  - Nodes running Docker Engine through cri-dockerd (minikube's default): every workload is
-    `unknown` today; ADR-0010 Amendment 2 proposes reading them.
   Each needs an owner decision (a cloud account to test against, or M6 scope).
 
 ## M5 (week 8)
@@ -211,13 +214,13 @@ Packaging, docs, demo, hardening only.
 ## Last session (resume here)
 
 - **Date:** 2026-10-03. **Current milestone:** M4; done-criterion met; closing.
-- **`main` = c230151, green** (CI 37116173157). Work branch `m4-edge` carries the real-cluster
-  tests for every ADR-0010 case and the user-path tests (tags, short names, credentials,
-  `uv tool install`); branch run 37118476594 green (34 integration tests). A second branch run
-  goes before `main` moves (owner rule: `main` never red).
+- **`main` = 4f35449, green** (CI 37119579353). Work branch `m4-docker` adds Docker Engine node
+  support (ADR-0010 Amendment 2, owner approved) and its minikube CI job; branch run
+  37123230999 green (kind 34 passed, minikube 3 passed). A second branch run goes before `main`
+  moves (owner rule: `main` never red).
 - **Owner rules (2026-10-03):** `main` never red; no test missing; every step judged by whether a
-  real user can run it on their own systems and act on it (see "Value test for M4" above).
-- **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1; (2) decide ADR-0010 Amendment 2
-  (read cri-dockerd image IDs; a minikube CI job); (3) close M4.
-- **Next steps, in order:** second green branch run, then move `main` and delete the branch;
-  then the owner's decisions above; then M5 (gate, KEV, HTML, CycloneDX 1.6).
+  real user can run it on their own systems and act on it ("Value test for M4" above).
+- **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1; (2) close M4; (3) a cloud test
+  account for managed clusters and registry credential helpers, or leave them for later.
+- **Next steps, in order:** second green branch run, move `main`, delete the branch; then the
+  owner's decisions; then M5 (gate, KEV, HTML, CycloneDX 1.6).

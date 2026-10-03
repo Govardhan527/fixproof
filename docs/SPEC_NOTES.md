@@ -611,6 +611,12 @@ the exact files read.
   `7aabf6ca9aa585af128367a11f9dfddaea223146630d1e870877dce52a320f5d`); minikube writes its
   context to the file `KUBECONFIG` names (`pkg/minikube/kubeconfig/kubeconfig.go`, `PathFromEnv`,
   SHA-256 `872ebba555219d8e3b880a2b3d123e38695cc29de6e5b66f356ad3e1e48b5854`). VERIFIED.
+- **Observed on a Docker Engine node** (CI run 37123230999, 2026-10-03; minikube v1.39.0,
+  Kubernetes v1.37.0, `CONTAINER-RUNTIME docker://29.7.2`): every pod's `imageID` began
+  `docker-pullable://` or `docker://`; `certbot/certbot:v2.6.0` and `certbot/certbot@sha256:92092d…`
+  both resolved to `docker.io/certbot/certbot@sha256:92092d…`; `python@sha256:54c85f…` to
+  `docker.io/library/python@sha256:54c85f…`; the image loaded with `minikube image load` reported
+  `docker://sha256:2a3c286d…`. OBSERVED.
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod

@@ -131,6 +131,7 @@ wait_for_edge_cases() {  # each fixproof-edge workload in the state its test exp
     local edge=(kubectl --kubeconfig "$work/admin.kubeconfig" -n fixproof-edge)
     local debug_image
     "${edge[@]}" wait --for=condition=Available deployment/two-replicas deployment/side-loaded \
+        deployment/by-tag \
         --timeout=600s
     "${edge[@]}" wait --for=condition=Ready pod/bare-pod --timeout=600s
     "${edge[@]}" wait --for=condition=PodScheduled=false pod \

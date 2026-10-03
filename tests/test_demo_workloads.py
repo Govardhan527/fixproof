@@ -25,6 +25,9 @@ IMAGES = {
 } | {"auth/requests-2.31.0": f"localhost:5002/fixproof/requests-2.31.0{DIGEST}"}
 
 
+TAGGED = {"certbot/certbot:v2.6.0", "localhost:5001/fixproof/requests-2.30.0:it"}
+
+
 def pods(documents: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
     """(the object, its pod spec) for every Deployment and bare Pod."""
     return [
@@ -38,7 +41,7 @@ def test_six_success_test_workloads_two_live_ones_and_the_edge_cases() -> None:
     assert expected == {"fixed": 2, "still_affected": 3, "unknown": 1}
     documents = demo_workloads.manifests(IMAGES, "auth-registry")
     by_namespace = Counter(d["metadata"]["namespace"] for d in documents)
-    assert by_namespace == {"fixproof-demo": 6, "fixproof-live": 2, "fixproof-edge": 5}
+    assert by_namespace == {"fixproof-demo": 6, "fixproof-live": 3, "fixproof-edge": 6}
     for _, spec in pods(documents):
         assert spec["automountServiceAccountToken"] is False
         assert spec["securityContext"]["runAsNonRoot"] is True
@@ -46,6 +49,8 @@ def test_six_success_test_workloads_two_live_ones_and_the_edge_cases() -> None:
             assert item["securityContext"]["allowPrivilegeEscalation"] is False
             if item["image"] == demo_workloads.SIDE_LOADED:
                 assert item["imagePullPolicy"] == "Never"
+            elif item["image"] in TAGGED:
+                assert "@" not in item["image"]
             else:
                 ImageRef.parse(item["image"])  # pinned by digest
         private = spec["containers"][0]["image"].startswith("localhost:5002/")
@@ -83,5 +88,5 @@ def test_main_prints_the_manifests(tmp_path: Path, capsys: pytest.CaptureFixture
     assert code == 0
     documents = list(yaml.safe_load_all(capsys.readouterr().out))
     names = [d["metadata"]["name"] for d in documents]
-    assert names[:8] == [*demo_workloads.DEMO, *demo_workloads.LIVE]
-    assert len(names) == 13
+    assert names[:9] == [*demo_workloads.DEMO, *demo_workloads.LIVE]
+    assert len(names) == 15

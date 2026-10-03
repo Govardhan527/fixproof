@@ -7,6 +7,7 @@ the read-only `fixproof-reader` token, set up exactly as deploy/kubernetes/ and 
 without the variables; in CI they fail instead.
 """
 
+import base64
 import hashlib
 import json
 import os
@@ -57,6 +58,7 @@ def verify(
     registries: list[str],
     *flags: str,
     images: tuple[str, ...] = (),
+    docker_config: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     scope = f'schema_version: "1.0.0"\nregistries: [{", ".join(registries)}]\n'
     if images:
@@ -64,8 +66,9 @@ def verify(
     scope += f"clusters:\n  - context: {CONTEXT}\n    namespaces: [{', '.join(namespaces)}]\n"
     (tmp_path / "fix.yaml").write_text(FIX, encoding="utf-8")
     (tmp_path / "scope.yaml").write_text(scope, encoding="utf-8")
-    no_credentials = tmp_path / "docker-config"
-    no_credentials.mkdir()
+    if docker_config is None:  # no registry credentials at all
+        docker_config = tmp_path / "docker-config"
+        docker_config.mkdir()
     return subprocess.run(
         [
             sys.executable, "-c", "from fixproof.cli import main; main()",
@@ -75,7 +78,7 @@ def verify(
         ],
         capture_output=True,
         text=True,
-        env={**os.environ, "DOCKER_CONFIG": str(no_credentials), "KUBECONFIG": kubeconfig},
+        env={**os.environ, "DOCKER_CONFIG": str(docker_config), "KUBECONFIG": kubeconfig},
         check=False,
         timeout=3600,
     )  # fmt: skip
@@ -154,7 +157,10 @@ def test_real_certbot_workloads(tmp_path: Path, setup: tuple[dict[str, str], str
     found = by_owner(report_of(done))
     for name, (image, verdict) in demo_workloads.LIVE.items():
         assert found[name]["verdict"] == verdict, (name, found[name]["reason"])
-        assert found[name]["asset"] == image
+        if "@" in image:
+            assert found[name]["asset"] == image
+    # by short name and tag in the pod spec; the node reports the full name and the digest
+    assert found["certbot-by-tag"]["asset"] == demo_workloads.LIVE["certbot-2-6-0"][0]
     assert done.returncode == 1
 
 
@@ -166,9 +172,9 @@ def test_two_namespaces_in_one_run_with_one_token(
     namespaces = ["fixproof-demo", "fixproof-live"]
     done = verify(tmp_path, kubeconfig, namespaces, [OPEN, AUTH, "docker.io"], "--json")
     report = report_of(done)
-    assert report["summary"] == {"fixed": 3, "still_affected": 4, "unknown": 1}
+    assert report["summary"] == {"fixed": 3, "still_affected": 5, "unknown": 1}
     seen = [item["workload"].split("/")[1] for item in report["assets"]]
-    assert seen == ["fixproof-demo"] * 6 + ["fixproof-live"] * 2  # in scope order
+    assert seen == ["fixproof-demo"] * 6 + ["fixproof-live"] * 3  # in scope order
     assert done.returncode == 1
 
 
@@ -195,6 +201,32 @@ def test_a_registry_outside_the_allowlist_is_never_read(
         if record["asset"]["image"]["registry"] == OPEN:
             assert record["results"] == []  # no method ran
     assert not any((tmp_path / "out" / "raw").iterdir())  # nothing was read successfully
+
+
+def test_with_registry_credentials_the_private_workload_gets_a_real_verdict(
+    tmp_path: Path, setup: tuple[dict[str, str], str]
+) -> None:
+    """A user who gives fixproof read access to a private registry, through the standard Docker
+    config, gets a real verdict for it, and the credential appears nowhere in what fixproof
+    prints or writes (ADR-0007: credentials are never logged or stored)."""
+    images, kubeconfig = setup
+    credentials = Path(kubeconfig).parent / "docker"  # demo_cluster.sh's `docker login`
+    auth = json.loads((credentials / "config.json").read_text())["auths"][AUTH]["auth"]
+    password = base64.b64decode(auth).decode().split(":", 1)[1]
+    done = verify(
+        tmp_path, kubeconfig, ["fixproof-demo"], [OPEN, AUTH], "--json", docker_config=credentials
+    )
+    report = report_of(done)
+    assert report["summary"] == {"fixed": 3, "still_affected": 3, "unknown": 0}
+    private = by_owner(report)["partner-gateway"]
+    assert private["verdict"] == "fixed", private["reason"]
+    assert private["asset"] == images["auth/requests-2.31.0"]
+    assert done.returncode == 1
+    check_bundle(tmp_path / "out")
+    written = [p.read_text() for p in (tmp_path / "out").rglob("*") if p.is_file()]
+    for text in [done.stdout, done.stderr, *written]:
+        assert password not in text
+        assert auth not in text
 
 
 def edge_key(workload: str) -> tuple[str, str]:

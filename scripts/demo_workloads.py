@@ -7,11 +7,12 @@ Namespace `fixproof-demo` runs the six SUCCESS TEST workloads from the fixture i
 credentials that fixproof is not given. Namespace `fixproof-live` runs two real certbot releases
 from Docker Hub (ADR-0008 item 5). Namespace `fixproof-edge` holds the cases ADR-0010 must get
 right on a real node: init containers, sidecars, two replicas sharing evidence, a bare pod, an
-image that cannot be pulled, a pod that cannot be scheduled, and an image side-loaded with
-`kind load` (no registry digest). scripts/demo_cluster.sh creates the namespaces, side-loads
-that image and adds an ephemeral container to the bare pod, which fixproof must skip. Every
-container only sleeps and runs unprivileged; every image except the side-loaded one is pinned
-by digest.
+image that cannot be pulled, a pod that cannot be scheduled, an image side-loaded with
+`kind load` (no registry digest), and an image referenced by tag. scripts/demo_cluster.sh
+creates the namespaces, side-loads that image and adds an ephemeral container to the bare pod,
+which fixproof must skip. Every container only sleeps and runs unprivileged. Images are pinned
+by digest, except the side-loaded one and the two referenced by tag, as real Deployments often
+are.
 """
 
 import argparse
@@ -43,6 +44,9 @@ LIVE: dict[str, tuple[str, str]] = {  # the digests of tests/live/test_public_im
         _CERTBOT + "68e0f51ce9037d3b022d446772277beb1e9c0fe801e75fbf87db105ab165ad54",
         "fixed",  # certbot v2.7.0 pins requests 2.31.0
     ),
+    # As most real Deployments are written: a Docker Hub short name and a tag, not a digest.
+    # Tag v2.6.0 pointed at the digest above on 2026-10-03 (SPEC_NOTES §19).
+    "certbot-by-tag": ("certbot/certbot:v2.6.0", "still_affected"),
 }
 SIDE_LOADED = "fixproof-side-loaded:it"  # built and loaded with `kind load` by demo_cluster.sh
 DEBUG_FIXTURE = "requests-2.25.1"  # the ephemeral container demo_cluster.sh adds to bare-pod
@@ -54,6 +58,7 @@ EDGE: dict[tuple[str, str], tuple[str, str]] = {
     ("two-replicas-", "setup"): ("fixed", "requests 2.32.3"),
     ("two-replicas-", "app"): ("still_affected", "requests 2.30.0"),
     ("two-replicas-", "sidecar"): ("fixed", "both methods agree"),
+    ("by-tag-", "app"): ("still_affected", "requests 2.30.0"),
     ("unschedulable-", "app"): ("unknown", "no status yet, pod Pending"),
 }
 
@@ -166,6 +171,11 @@ def manifests(images: dict[str, str], pull_secret: str) -> list[dict[str, Any]]:
                 [container("app", images["requests-2.31.0"])],
                 node_selector={"fixproof.example/no-such-node": "true"},
             ),
+        ),
+        deployment(  # by tag, as most Deployments are written; build_fixtures.py pushes `:it`
+            "by-tag",
+            EDGE_NAMESPACE,
+            pod_spec([container("app", f"{registry}/fixproof/requests-2.30.0:it")]),
         ),
         deployment(
             "side-loaded",

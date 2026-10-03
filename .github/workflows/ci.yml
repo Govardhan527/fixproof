@@ -165,12 +165,17 @@ jobs:
           done
           "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true
 
-  # ADR-0010 Amendment 2: the same checks on a node running Docker Engine through cri-dockerd
-  # (minikube with --container-runtime=docker), pinned by scripts/demo_minikube.sh.
-  integration-docker-runtime:
+  # The same checks on minikube nodes with the other two runtimes: Docker Engine through
+  # cri-dockerd (ADR-0010 Amendment 2) and CRI-O (ADR-0011), pinned by scripts/demo_minikube.sh.
+  integration-minikube:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     needs: [lint-type, test]
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [docker, cri-o]
+    name: integration-minikube (${{ matrix.runtime }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -189,26 +194,29 @@ jobs:
         run: |
           grype db update
           grype db status -o json
-      - name: Start a minikube node with the Docker runtime and deploy the workloads
-        run: scripts/demo_minikube.sh up "$RUNNER_TEMP/minikube"
-      - name: Run the Docker-runtime integration tests (read-only token, no registry credentials)
+      - name: Start a minikube node with the ${{ matrix.runtime }} runtime and deploy the workloads
+        run: scripts/demo_minikube.sh up "$RUNNER_TEMP/minikube" "${{ matrix.runtime }}"
+      - name: Run the minikube integration tests (read-only token, no registry credentials)
         env:
-          FIXPROOF_IT_DOCKER_KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
-        run: make integration-docker
+          FIXPROOF_IT_MINIKUBE_KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
+          FIXPROOF_IT_MINIKUBE_RUNTIME: ${{ matrix.runtime }}
+        run: make integration-minikube
       - name: Install fixproof with the README's command and run it as a user would
         env:
           KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
           DOCKER_CONFIG: ${{ runner.temp }}/no-credentials
+          RUNTIME: ${{ matrix.runtime }}
         run: |
           mkdir -p "$DOCKER_CONFIG"
           uv tool install --python 3.12 "git+https://github.com/${{ github.repository }}@${{ github.sha }}"
           export PATH="$(uv tool dir --bin):$PATH"
           fixproof --version
+          context="fixproof-${RUNTIME//-/}"  # demo_workloads.MINIKUBE_NAMESPACES
           printf '%s\n' 'schema_version: "1.0.0"' 'cve: CVE-2023-32681' 'packages:' \
             '  - ecosystem: pypi' '    name: requests' '    fixed_version: "2.31.0"' \
             > "$RUNNER_TEMP/fix.yaml"
           printf '%s\n' 'schema_version: "1.0.0"' 'registries: [docker.io]' 'clusters:' \
-            '  - context: fixproof-docker' '    namespaces: [fixproof-docker]' \
+            "  - context: $context" "    namespaces: [$context]" \
             > "$RUNNER_TEMP/scope.yaml"
           code=0
           fixproof verify --cve CVE-2023-32681 --fix "$RUNNER_TEMP/fix.yaml" \
@@ -220,9 +228,11 @@ jobs:
           grep -q '^2 fixed, 2 still_affected, 1 unknown; evidence in' "$RUNNER_TEMP/demo.out"
       - name: Show the node's pods
         if: failure()
+        env:
+          RUNTIME: ${{ matrix.runtime }}
         run: |
           kubectl=("$RUNNER_TEMP/minikube/bin/kubectl" --kubeconfig "$RUNNER_TEMP/minikube/admin.kubeconfig")
-          "${kubectl[@]}" describe pods -n fixproof-docker || true
+          "${kubectl[@]}" describe pods -n "fixproof-${RUNTIME//-/}" || true
           "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true
 
   # The `release` job (tag v*: build, SBOM, PyPI trusted publishing) is added only after M6.

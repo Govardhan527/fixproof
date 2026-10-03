@@ -1,5 +1,5 @@
 """What the cluster integration suites share: running fixproof as a user would, and checking
-its evidence (tests/integration/test_cluster.py, test_docker_runtime.py)."""
+its evidence (tests/integration/test_cluster.py, test_minikube.py)."""
 
 import hashlib
 import json

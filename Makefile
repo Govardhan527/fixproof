@@ -3,7 +3,7 @@
 
 UV_RUN := uv run --frozen
 
-.PHONY: setup check lint type test schemas integration integration-docker live demo release-dry
+.PHONY: setup check lint type test schemas integration integration-minikube live demo release-dry
 
 setup:
 	uv sync --locked
@@ -30,13 +30,13 @@ schemas:
 # and fail in CI.
 integration:
 	$(UV_RUN) pytest -m integration --force-enable-socket \
-		--ignore=tests/integration/test_docker_runtime.py
+		--ignore=tests/integration/test_minikube.py
 
-# Needs the minikube node from `scripts/demo_minikube.sh up WORKDIR` (Docker Engine through
-# cri-dockerd) and Syft and Grype on PATH, with FIXPROOF_IT_DOCKER_KUBECONFIG pointing at
-# WORKDIR/reader.kubeconfig.
-integration-docker:
-	$(UV_RUN) pytest -m integration --force-enable-socket tests/integration/test_docker_runtime.py
+# Needs a minikube node from `scripts/demo_minikube.sh up WORKDIR RUNTIME` (docker or cri-o) and
+# Syft and Grype on PATH, with FIXPROOF_IT_MINIKUBE_KUBECONFIG pointing at
+# WORKDIR/reader.kubeconfig and FIXPROOF_IT_MINIKUBE_RUNTIME set to RUNTIME.
+integration-minikube:
+	$(UV_RUN) pytest -m integration --force-enable-socket tests/integration/test_minikube.py
 
 # Real public images from Docker Hub, read anonymously; needs Syft, Grype and a current Grype DB
 # (ADR-0008). Runs weekly in CI (.github/workflows/live.yml).

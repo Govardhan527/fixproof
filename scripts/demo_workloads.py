@@ -68,15 +68,16 @@ EDGE: dict[tuple[str, str], tuple[str, str]] = {
 }
 
 
-DOCKER_NAMESPACE = "fixproof-docker"  # on the minikube node (scripts/demo_minikube.sh)
-DOCKER_LOCAL = "fixproof-docker-local:it"  # built and loaded with `minikube image load`
+# The minikube node (scripts/demo_minikube.sh): one namespace per container runtime
+MINIKUBE_NAMESPACES = {"docker": "fixproof-docker", "cri-o": "fixproof-crio"}
+MINIKUBE_LOCAL = "localhost/fixproof-local:it"  # built and loaded with `minikube image load`
 _CERTBOT_2_6_0 = LIVE["certbot-2-6-0"][0].split("@")[1]
 _CERTBOT_2_7_0 = LIVE["certbot-2-7-0"][0].split("@")[1]
 _PYTHON_SLIM = "sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3"
-# Namespace fixproof-docker, on a node running Docker Engine through cri-dockerd (ADR-0010
-# Amendment 2), written with Docker's short names as users write them. Deployment -> (image in
-# the pod spec, expected verdict, the full reference fixproof must report, or None)
-DOCKER: dict[str, tuple[str, str, str | None]] = {
+# The minikube node's workloads, written with Docker's short names as users write them, for each
+# runtime (Docker Engine through cri-dockerd, ADR-0010 Amendment 2; CRI-O, ADR-0011). Deployment
+# -> (image in the pod spec, expected verdict, the full reference fixproof must report, or None)
+MINIKUBE: dict[str, tuple[str, str, str | None]] = {
     "certbot-2-6-0": (
         f"certbot/certbot@{_CERTBOT_2_6_0}",
         "still_affected",
@@ -99,7 +100,7 @@ DOCKER: dict[str, tuple[str, str, str | None]] = {
         "fixed",
         f"docker.io/library/python@{_PYTHON_SLIM}",
     ),
-    "local-only": (DOCKER_LOCAL, "unknown", None),  # no repository digest: docker://sha256:...
+    "local-only": (MINIKUBE_LOCAL, "unknown", None),  # loaded into the node, never pulled
 }
 
 
@@ -235,15 +236,15 @@ def manifests(images: dict[str, str], pull_secret: str) -> list[dict[str, Any]]:
     return documents + edge
 
 
-def docker_manifests() -> list[dict[str, Any]]:
-    """The minikube node's workloads (namespace fixproof-docker)."""
+def minikube_manifests(namespace: str) -> list[dict[str, Any]]:
+    """The minikube node's workloads, in `namespace`."""
     return [
         deployment(
             name,
-            DOCKER_NAMESPACE,
-            pod_spec([container("app", image, pull="Never" if image == DOCKER_LOCAL else None)]),
+            namespace,
+            pod_spec([container("app", image, pull="Never" if image == MINIKUBE_LOCAL else None)]),
         )
-        for name, (image, _, _) in DOCKER.items()
+        for name, (image, _, _) in MINIKUBE.items()
     ]
 
 
@@ -251,15 +252,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Print the demo clusters' workloads.")
     parser.add_argument("--images", type=Path, help="build_fixtures.py output (kind cluster)")
     parser.add_argument("--pull-secret", help="secret for the auth registry (kind cluster)")
-    parser.add_argument("--docker", action="store_true", help="the minikube node's workloads")
+    parser.add_argument("--minikube", metavar="NAMESPACE", help="the minikube node's workloads")
     args = parser.parse_args(argv)
-    if args.docker:
-        documents = docker_manifests()
+    if args.minikube:
+        documents = minikube_manifests(args.minikube)
     elif args.images and args.pull_secret:
         images = json.loads(args.images.read_text(encoding="utf-8"))
         documents = manifests(images, args.pull_secret)
     else:
-        parser.error("give --docker, or --images and --pull-secret")
+        parser.error("give --minikube NAMESPACE, or --images and --pull-secret")
     sys.stdout.write(yaml.safe_dump_all(documents, sort_keys=False))
     return 0
 

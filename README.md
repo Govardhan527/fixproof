@@ -693,8 +693,8 @@ $ make setup          # uv sync and the commit-msg hook
 $ make check          # lint, types, unit tests (100% line coverage today), schema validation
 $ make integration    # fixture images and the kind demo cluster (needs Docker and
                       # scripts/demo_cluster.sh up; CI runs it)
-$ make integration-docker  # a minikube node with Docker Engine (needs Docker and
-                           # scripts/demo_minikube.sh up; CI runs it)
+$ make integration-minikube  # a minikube node with Docker Engine or CRI-O (needs Docker
+                             # and scripts/demo_minikube.sh up; CI runs both)
 $ make live           # real public images (needs Syft, Grype and a current DB)
 ```
 

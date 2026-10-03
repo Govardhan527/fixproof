@@ -452,7 +452,8 @@ the exact files read.
     - Kubernetes v1.37.1 kubelet: `pkg/kubelet/kubelet_pods.go` sets `ImageID: cs.ImageRef` ("is
       historically intentional and should not change"); `kuberuntime_container.go` (SHA-256
       `80c123a39a9e9f47c669e802cd6b5f0fd16965e0de2e1c25df5c5f9dcbdd8e3b`) has
-      `imageID := status.ImageRef`. So `imageID` is the CRI `ImageRef`.
+      `imageID := status.ImageRef`. So `imageID` is the CRI `ImageRef`. The demo node image runs
+      v1.37.0, whose `kuberuntime_container.go` has the same line (read 2026-10-03).
     - containerd v2.3.4 (the version kind v0.33.0's base image builds: `images/base/Dockerfile`
       `ARG CONTAINERD_VERSION="v2.3.4"`), `internal/cri/server/container_status.go` (SHA-256
       `f24834f19abe806be933ea50eb57065526f068e824a2456e1ee445dfda46d653`): `ImageRef` starts as
@@ -473,15 +474,16 @@ the exact files read.
     and inspected 2026-10-03).
   - **kind local registry** (https://kind.sigs.k8s.io/docs/user/local-registry/, 2026-10-03):
     run a `registry` container, create the cluster with containerd's
-    `config_path = "/etc/containerd/certs.d"`, write
+    `config_path = "/etc/containerd/certs.d"` (not needed from kind v0.27.0; see the v0.33.0
+    example below), write
     `/etc/containerd/certs.d/localhost:<port>/hosts.toml` with `[host."http://<registry-name>:5000"]`
     on each node ("localhost in the container is not localhost on the host"), and connect the
     registry to the `kind` network. VERIFIED.
 - **RBAC:** https://kubernetes.io/docs/reference/access-authn-authz/rbac/: a `Role`
   (`rbac.authorization.k8s.io/v1`) lists `rules` of `apiGroups`, `resources` and `verbs`; `""`
   is the core group (pods). ReplicaSet is in group `apps`, version `v1`
-  (`k8s.io/api/apps/v1/register.go` at v1.37.1). VERIFIED. The exact Role and RoleBinding ship
-  in M4.
+  (`k8s.io/api/apps/v1/register.go` at v1.37.1). VERIFIED. The Role and RoleBinding shipped in M4
+  (`deploy/kubernetes/`; see below).
 - **Syft v1.54.0**: tag object `aee4c00c0b0dbdee3d524acdd02f8f20d0c4c2bf`;
   `syft_1.54.0_linux_amd64.tar.gz` SHA-256
   `54a87372498168b2d033e876fd41fa4e8035b872699e525a57046e1f2f09c860` (release checksums file).
@@ -514,6 +516,52 @@ the exact files read.
   - Hence two files: `fixproof-reader.yaml` (the namespace and the account, applied once) and
     `fixproof-reader-role.yaml` (Role and RoleBinding with no namespace, applied with `-n` to
     each namespace in scope). See ADR-0010 Amendment 1.
+- **More Kubernetes facts the M4 code and files rely on** (read 2026-10-03):
+  - Request verbs (`docs/reference/access-authn-authz/authorization.md`, "Determine the request
+    verb"): HTTP `GET` is **get** for an individual resource and **list** for a collection. So
+    `list_namespaced_pod` needs `list` on `pods` and `read_namespaced_replica_set` needs `get` on
+    `replicasets`; the Role grants both verbs on both, as ADR-0010 item 7 accepted. VERIFIED.
+  - RoleBinding `roleRef` (`apiGroup: rbac.authorization.k8s.io`, `kind: Role`, `name`) and
+    `apiVersion: v1` for Namespace and ServiceAccount: RBAC docs (Role and RoleBinding examples).
+    VERIFIED.
+  - `automountServiceAccountToken: false` on a ServiceAccount opts out of mounting its token at
+    `/var/run/secrets/kubernetes.io/serviceaccount/token`; on a Pod spec it takes precedence
+    (`docs/tasks/configure-pod-container/configure-service-account.md`). VERIFIED.
+  - `kubectl create token NAME --duration`: "Requested lifetime of the issued token ... The
+    server may return a token with a longer or shorter lifetime" (kubectl reference,
+    `kubectl_create_token`). VERIFIED.
+  - Owner references: `OwnerReference.Controller`, "If true, this reference points to the
+    managing controller" (`staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/types.go` at v1.37.0,
+    SHA-256 `a544ea7354cf745449e42db03a512f505aea91dc4adcdc79d6e656406066ebc6`); "Only one
+    reference can have Controller set to true" (`.../api/validation/objectmeta.go` at v1.37.0,
+    SHA-256 `9930a19ca9cdabe68625370624de7a2bc5e9ebea6727b670f5ef8c5a4ee7be80`). A Deployment
+    owns its ReplicaSets and a ReplicaSet its pods (`owners-dependents.md`). VERIFIED.
+  - Containers and their state (`staging/src/k8s.io/api/core/v1/types.go` at v1.37.0, SHA-256
+    `64b70c914fe25eba63bfb325401a551bbd0871e37eb7fd9b9878283a53e6e062`): `PodSpec.InitContainers`
+    and `PodSpec.Containers` name every container, so an unscheduled pod (no statuses yet) is
+    still listed; `ContainerStateWaiting.Reason` holds a short reason why the container is not yet
+    running; `PodPhase` `Pending`. The kubelet's pull-failure reasons are `ImagePullBackOff`
+    and `ErrImagePull` (`pkg/kubelet/images/types.go` at v1.37.0). fixproof echoes whatever reason
+    the status holds. VERIFIED.
+  - Python client 36.0.3 (installed source): `kubernetes.client.exceptions.ApiException` carries
+    `status` and `reason` (`exceptions.py`, SHA-256
+    `8dff3268325530772431b6f0167e19a398b0d32ce0f41e737ec24b788886a578`);
+    `kubernetes.config.ConfigException` for a missing or invalid kubeconfig or context. In
+    `config/kube_config.py` (SHA-256
+    `d3d764a18c70338bc9364db6664d9960ece21e76d4dd1b5dfe2e138034dc025c`):
+    `KUBE_CONFIG_DEFAULT_LOCATION = os.environ.get('KUBECONFIG', '~/.kube/config')` is read once
+    at import, and paths are split on `:`; `new_client_from_config` defaults to
+    `persist_config=True`, which writes refreshed GCP or OIDC tokens back to the kubeconfig; and
+    embedded certificate and key data is written to `tempfile.mkstemp` files that are deleted at
+    exit (`atexit`). fixproof passes the path from `KUBECONFIG` at each run and
+    `persist_config=False`. VERIFIED.
+- **Observed on the demo cluster** (CI run 37110967647, 2026-10-03; kind v0.33.0, node
+  v1.37.0, containerd from the node image): all eight pods Running; pods pulled through
+  `hosts.toml` from both registries, the password-protected one with a `docker-registry`
+  `imagePullSecrets` secret keyed by `localhost:5002`; `imageID` for the certbot pods was exactly
+  `docker.io/certbot/certbot@sha256:<the digest in the pod spec>`; the `fixproof-reader` token
+  could list pods in `fixproof-demo` and got `403 Forbidden` for `kube-system`; `kubectl auth
+  can-i --list` showed `pods` and `replicasets.apps` with `get` and `list` only. OBSERVED.
 
 ## 13. Figures in the project plan (not used by code)
 

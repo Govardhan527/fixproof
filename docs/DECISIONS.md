@@ -460,3 +460,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   file is applied to each namespace in scope with `kubectl apply -n`. One file cannot do both,
   because kubectl refuses `-n` for an object that names another namespace (SPEC_NOTES §12). The
   permissions are exactly as accepted: get and list on pods and replicasets, nothing else.
+  Two further details for the same confirmation: `fixproof-reader.yaml` also creates the
+  `fixproof` Namespace object the account lives in; and the demo script pins kubectl v1.37.1
+  (checksum in SPEC_NOTES §12) next to kind, a setup tool like kind, not a runtime dependency.
+  Item 8's transitive packages are listed with versions and licences in SPEC_NOTES §16.

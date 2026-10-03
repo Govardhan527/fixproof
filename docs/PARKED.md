@@ -15,7 +15,8 @@ waits.
 - **2026-10-02, M2 scope review: `unknown` for assets the methods never ran on.** M4 needs a
   verdict for a pod whose image digest is unresolved or whose registry is outside the allowlist
   (the methods cannot run, so the verdict is `unknown` with the reason). M2 has no such caller,
-  so the helper was removed; it returns with the M4 inventory.
+  so the helper was removed; it returns with the M4 inventory. **Resolved in M4** (a0b408a): `verify` gives such a
+  workload `unknown` with the reason.
 - **2026-10-03, M4 build: the platform a pod actually runs.** For a multi-platform image the
   kubelet reports the index digest, and Syft and Grype scan the platform of the machine running
   fixproof (recorded in the bundle's `scanned`). A pod on an arm64 node running an amd64-scanned

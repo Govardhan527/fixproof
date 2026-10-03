@@ -128,8 +128,10 @@ Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived te
 ## M4 (weeks 6-7)
 
 Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
-- [ ] Done: SUCCESS TEST step 1 passes (2 `fixed`, 3 `still_affected` with image digests and
-      pod names, 1 `unknown` with the reason).
+- [x] Done: SUCCESS TEST step 1 passes (2 `fixed`, 3 `still_affected` with image digests and
+      pod names, 1 `unknown` with the reason). Evidence: CI run 37110967647 (2026-10-03),
+      `integration` job, 6 passed: `tests/integration/test_cluster.py` against the kind cluster
+      with the reader token and no registry credentials.
 - [x] OQ-5 (the unreadable workload) answered 2026-10-03: (a), an image in a registry fixproof
       has no credentials for.
 - [x] `imageID` format verified (SPEC_NOTES §12, 2026-10-03, from the kubelet and containerd
@@ -140,14 +142,20 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 - [x] Inventory (`fixproof.inventory`) with unit tests on a fake Kubernetes API (bd2a951).
 - [x] `verify` handles clusters: per-workload verdicts, each image scanned once, pod names in
       the output (a0b408a; unit tests on a fake cluster).
-- [ ] kind setup script and the CI integration job for the 6 success-test workloads: written
-      (`scripts/demo_cluster.sh`, `tests/integration/test_cluster.py`, 78cffd9); not yet run,
-      because the integration job runs on GitHub only (no Docker here).
-- [x] Read-only Role and RoleBinding YAML shipped (`deploy/kubernetes/`, 78cffd9), with a unit
-      test that every inventory API call is granted; split in two files (ADR-0010 Amendment 1).
-- [ ] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
-      only fixture images. Written: namespace `fixproof-live` runs certbot v2.6.0 and v2.7.0;
-      not yet run.
+- [x] kind setup script and the CI integration job for the 6 success-test workloads
+      (`scripts/demo_cluster.sh`, `tests/integration/test_cluster.py`, 78cffd9); green on the
+      first run, CI 37110967647.
+- [ ] Read-only Role and RoleBinding YAML shipped (`deploy/kubernetes/`, 78cffd9), with a unit
+      test that every inventory API call is granted; applied in CI 37110967647 (`can-i` showed get
+      and list on pods and replicasets only; `403` for kube-system). Waiting on the owner to
+      confirm ADR-0010 Amendment 1 (two files, the Namespace object, the kubectl pin).
+- [x] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
+      only fixture images: namespace `fixproof-live` runs certbot v2.6.0 (`still_affected`) and
+      v2.7.0 (`fixed`), both as expected in CI 37110967647.
+- [x] Scope and spec reviews (2026-10-03). Fixed: pods with no container status yet were dropped
+      (ab0d024); the client could write refreshed tokens back to the kubeconfig and read
+      `KUBECONFIG` only at import (41041e9); 21 undocumented Kubernetes facts verified and
+      recorded in SPEC_NOTES §12; README, CI comment, Makefile and PARKED brought up to date.
 
 ## M5 (week 8)
 
@@ -169,13 +177,16 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M4 (built; CI run pending).
-- **M4 so far:** ADR-0010 accepted. Committed locally, not pushed: 2b4a81c, 3588bf1, 367d534,
-  bd2a951, a0b408a, 78cffd9 and the docs commit after them. `make check` green, 100% coverage.
-  Inventory, per-workload verdicts, verify-summary and bundle 1.1.0, the reader account and
-  Role, the kind demo cluster script and its CI integration test are written.
-- **Not yet run:** the kind cluster. The `integration` job runs on `main` or on dispatch only,
-  and there is no Docker here, so the first real run needs a push (the owner's call).
-- **Next steps, in order:** push when the owner says so; watch the `integration` job; fix the
-  kind setup until SUCCESS TEST step 1 passes on GitHub (2 / 3 / 1 with digests, pod names and
-  the reason); then the M4 scope and spec reviews, README updates, and close M4.
+- **Date:** 2026-10-03. **Current milestone:** M4, done-criterion met; ready to close.
+- **Pushed** 2b4a81c..d7ff7cd to `main` on the owner's "push"; CI 37110967647 green on all six
+  jobs, and the `integration` job ran the kind cluster: SUCCESS TEST step 1 passes (2 / 3 / 1
+  with digests, pod names and the reason), the certbot workloads match, the reader gets 403
+  outside its namespaces.
+- **Committed locally after that push, not pushed:** ab0d024 (unscheduled pods reported as
+  unknown), 41041e9 (never write to the kubeconfig), and the docs commit after them (review
+  fixes, SPEC_NOTES facts, README, a CI step that prints a real human-readable cluster run).
+- **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1 (RBAC as two files, the `fixproof`
+  Namespace object, the kubectl pin); (2) say "push" for the commits above; (3) close M4.
+- **Next steps, in order:** after the push, watch CI to green and record the run; copy the real
+  cluster run from the new CI step into the README's live demo; on the owner's word, tick the
+  RBAC item and close M4. Then M5 (gate, KEV, HTML, CycloneDX 1.6).

@@ -37,7 +37,7 @@ live:
 	$(UV_RUN) pytest -m live --force-enable-socket -v
 
 demo:
-	@echo "make demo: the SUCCESS TEST demo is built in M4 and M5 (see docs/PROGRESS.md); nothing ran" >&2
+	@echo "make demo: the SUCCESS TEST demo lands in M6 (step 3 needs the M5 gate; see docs/PROGRESS.md); nothing ran" >&2
 	@exit 1
 
 release-dry:

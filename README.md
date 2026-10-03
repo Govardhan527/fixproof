@@ -16,8 +16,9 @@ It writes the answer as an [OpenVEX](https://github.com/openvex/spec) document p
 bundle (every tool output, hashed), and exits with a code your CI can act on.
 
 > **Status: early development.** Image verification works today and is exercised weekly against
-> real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workload verification
-> is built and unit-tested; its first run on a real kind cluster is still to come. The release
+> real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
+> on a kind cluster in CI, where SUCCESS TEST step 1 passes (2 fixed, 3 still affected, 1
+> unknown with the reason, plus two real certbot releases). The release
 > gate command, CISA KEV enrichment, the HTML report and CycloneDX VEX are planned; see
 > [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
 
@@ -43,18 +44,24 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 
 ### The whole flow
 
-You give fixproof three things: the CVE id, the claimed fix, and the images to check. For every
-image it runs two independent checks, combines them with a strict rule, and writes the results.
+You give fixproof three things: the CVE id, the claimed fix, and what to check: images pinned by
+digest, Kubernetes namespaces, or both. For a namespace it first lists the pods and finds the
+digest each container runs. For every image it runs two independent checks, combines them with a
+strict rule, and writes the results; each workload takes the verdict of the image it runs.
 
 ```mermaid
 flowchart TD
     subgraph IN["1 · You provide"]
         CVE["CVE id<br/>e.g. CVE-2023-32681"]
         FIX["fix.yaml<br/>package + fixed version"]
-        SCOPE["scope.yaml<br/>allowed registries +<br/>images pinned by digest"]
+        SCOPE["scope.yaml<br/>allowed registries +<br/>images pinned by digest<br/>and/or cluster namespaces"]
     end
 
-    subgraph RUN["2 · fixproof verify, for each image"]
+    subgraph K8S["Kubernetes (read-only: get, list)"]
+        PODS["pods in each namespace<br/>→ container imageID digests<br/>→ owner (Deployment/…)"]
+    end
+
+    subgraph RUN["2 · fixproof verify, once per distinct image"]
         G["Check 1 · Grype<br/>Is the CVE matched<br/>in this image?"]
         S["Check 2 · Syft SBOM<br/>Is any copy of the package<br/>below the fixed version?"]
         V{"Verdict rule"}
@@ -64,8 +71,12 @@ flowchart TD
         VEX["openvex.json<br/>one statement per image"]
         BUNDLE["bundle.json + raw/ +<br/>manifest.json (SHA-256)"]
         CODE["exit code<br/>0 all fixed · 1 still affected<br/>2 unknown · 3 bad input"]
+        WL["per workload:<br/>cluster/namespace/pod/container,<br/>owner, digest, verdict"]
     end
 
+    SCOPE -- clusters --> PODS
+    PODS -- "digests in the allowlist" --> G
+    PODS -- "digests in the allowlist" --> S
     IN --> G
     IN --> S
     G --> V
@@ -73,6 +84,7 @@ flowchart TD
     V -- "fixed · still_affected · unknown" --> VEX
     V --> BUNDLE
     V --> CODE
+    V --> WL
 ```
 
 ### One image, step by step
@@ -405,7 +417,8 @@ to catch mistakes while you type.
 fixproof lists the pods in each namespace and takes every container's image from its status
 (`imageID`): the digest the node actually pulled, not the tag in the pod spec. Init containers
 count; ephemeral debug containers do not. Each image is scanned once however many pods run it,
-and every workload gets that image's verdict, shown with its pod name and owner:
+and every workload gets that image's verdict, shown with its pod name and owner. Example output
+(illustrative; names and digests invented):
 
 ```text
 still_affected  prod-eu-1/payments/api-7d9f8-x2kq4/app  Deployment/api
@@ -473,7 +486,7 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | `0` | Every image and workload is `fixed` | Close with the evidence attached |
 | `1` | At least one is `still_affected` | Keep the ticket open; fix the listed images |
 | `2` | None still affected, but at least one `unknown` | Investigate the reason (credentials, stale DB, disagreement) |
-| `3` | Bad input or usage (invalid file, wrong CVE, existing `--out`, …) | Fix the command or the input files |
+| `3` | Bad input or usage (invalid file, wrong CVE, existing `--out`, …), or a cluster fixproof cannot read (kubeconfig context missing, API unreachable, or `403` for a namespace) | Fix the command, the input files or the access |
 
 ### The evidence bundle
 
@@ -549,8 +562,14 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 - **What is stored** is package metadata. Removed before writing: the raw image config (which
   holds the image's environment variables), the raw manifest, labels, annotations, Syft's file
   listings and contents, each tool's own configuration, and the local DB path.
+- **Kubernetes access** comes from the kubeconfig you give fixproof (`KUBECONFIG`, or
+  `~/.kube/config`), for the contexts named in `scope.yaml`. fixproof never writes to the
+  kubeconfig (the client's write-back of refreshed tokens is turned off) and never stores or logs
+  the token. The Kubernetes client writes the kubeconfig's embedded certificates to private
+  temporary files and deletes them when fixproof exits.
 - **No telemetry.** The tools' update checks are turned off for every run.
-- **Read-only.** fixproof only reads registries in your allowlist and writes only to `--out`.
+- **Read-only.** fixproof only reads registries in your allowlist and the namespaces in scope,
+  and writes only to `--out` (apart from the client's temporary certificate files).
 
 ---
 
@@ -580,7 +599,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M1 | Data model, `fix.yaml`/`scope.yaml`, OpenVEX writer with schema validation | done |
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
-| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | built; first kind run pending |
+| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | built; SUCCESS TEST step 1 passes in CI; closing |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | planned |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 
@@ -592,7 +611,8 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 $ git clone https://github.com/Govardhan527/fixproof && cd fixproof
 $ make setup          # uv sync and the commit-msg hook
 $ make check          # lint, types, unit tests (100% line coverage today), schema validation
-$ make integration    # real Syft/Grype on the fixture images (needs Docker; CI runs it)
+$ make integration    # fixture images and the kind demo cluster (needs Docker and
+                      # scripts/demo_cluster.sh up; CI runs it)
 $ make live           # real public images (needs Syft, Grype and a current DB)
 ```
 
@@ -601,7 +621,7 @@ Three test tiers, each saying plainly what it uses:
 | Tier | Runs | Data |
 |---|---|---|
 | Unit (`make check`) | every commit, no network | synthetic inputs and trimmed real tool output |
-| Integration | every push to `main` | 8 fixture images built in CI, real Syft and Grype, a fresh DB |
+| Integration | every push to `main` | 8 fixture images built in CI and a kind cluster running the 6 SUCCESS TEST workloads and 2 real certbot releases; real Syft and Grype, a fresh DB |
 | Live | weekly and on demand | real public images, real tools, the DB as published that day |
 
 Design decisions are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md); every fact taken from a

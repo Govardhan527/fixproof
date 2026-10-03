@@ -27,3 +27,7 @@ waits.
   has no image digest (all pending), there is no product for an OpenVEX statement, the schema
   needs at least one, and `verify` exits 3. Exit 2 with no VEX file would be more accurate;
   it waits because it changes the bundle layout (ADR-0007 item 7).
+- **2026-10-03, M4 CI run 37112442952: show the pod spec's image next to `imageID`.** When a
+  node holds one digest under two registries, `imageID` may name the other registry than the
+  pod spec. The verdict is unaffected (same digest), but showing the spec's image too would
+  explain the difference. It is a new output field, so it waits for an owner decision.

@@ -562,6 +562,15 @@ the exact files read.
   `docker.io/certbot/certbot@sha256:<the digest in the pod spec>`; the `fixproof-reader` token
   could list pods in `fixproof-demo` and got `403 Forbidden` for `kube-system`; `kubectl auth
   can-i --list` showed `pods` and `replicasets.apps` with `get` and `list` only. OBSERVED.
+- **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
+  (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
+  registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod
+  `partner-gateway` as `localhost:5002/…@sha256:83a8…`, and both pods reported `imageID`
+  `localhost:5001/…@sha256:83a8…`. In run 37110967647 the order fell the other way. This is the
+  containerd rule above (`repoDigests[0]` of the image as stored on the node), seen in practice.
+  The digest, and so the content fixproof checks, is the pod's; only the registry name can differ,
+  and fixproof reads only through a registry in the allowlist. The demo's password-protected image
+  is therefore built with its own digest (`scripts/build_fixtures.py`). OBSERVED.
 
 ## 13. Figures in the project plan (not used by code)
 

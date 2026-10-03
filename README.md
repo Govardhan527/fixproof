@@ -17,8 +17,8 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 
 > **Status: early development.** Image verification works today and is exercised weekly against
 > real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
-> on a kind cluster in CI, where SUCCESS TEST step 1 passes (2 fixed, 3 still affected, 1
-> unknown with the reason, plus two real certbot releases). The release
+> on a kind cluster in CI against the six SUCCESS TEST workloads and two real certbot releases;
+> that milestone is closing. The release
 > gate command, CISA KEV enrichment, the HTML report and CycloneDX VEX are planned; see
 > [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
 
@@ -429,6 +429,10 @@ unknown         prod-eu-1/payments/worker-5c6b7-p9zt1/app  Deployment/worker
                 image digest not resolved: the container has not started (ImagePullBackOff)
 ```
 
+The digest is always the one the pod runs. The registry shown is the node's name for that digest:
+if the node holds the same digest under two registries, it may name either one, and fixproof
+reads the content through that name only if it is in `registries`.
+
 A workload is `unknown`, with the reason, when its container has not started, when its image
 has no registry digest (for example one side-loaded into the node), or when its registry is not
 in `registries`: fixproof never reads an image from outside the allowlist.
@@ -599,7 +603,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M1 | Data model, `fix.yaml`/`scope.yaml`, OpenVEX writer with schema validation | done |
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
-| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | built; SUCCESS TEST step 1 passes in CI; closing |
+| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | built; closing after a stable green CI run |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | planned |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 

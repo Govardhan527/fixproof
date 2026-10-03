@@ -121,7 +121,7 @@ deploy() {
     "${admin[@]}" get pods -A -o wide
 }
 
-side_load() {  # an image with no registry digest: built here, copied into the node by kind
+side_load() {  # built here and copied into the node; the node names it docker.io/library/import-<date>
     docker build --quiet --label fixproof.fixture.loaded=kind --tag "$SIDE_LOADED" \
         "$repo/tests/fixtures/images/requests-2.31.0" > /dev/null
     kind load docker-image "$SIDE_LOADED" --name "$CLUSTER"

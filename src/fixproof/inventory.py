@@ -143,9 +143,9 @@ def image_from_id(image_id: str, waiting_reason: str | None) -> tuple[ImageRef |
     """The image a container runs, or None and the reason it cannot be resolved.
 
     containerd reports `registry/repository@sha256:...`. cri-dockerd (Docker Engine nodes, such as
-    minikube's default) reports `docker-pullable://` and Docker's familiar name, which is expanded
-    to the full name, or `docker://sha256:...` for an image with no repository digest, which
-    cannot be resolved (SPEC_NOTES §12; ADR-0010 Amendment 2).
+    minikube with `--container-runtime=docker`) reports `docker-pullable://` and Docker's familiar
+    name, which is expanded to the full name, or `docker://sha256:...` for an image with no
+    repository digest, which cannot be resolved (SPEC_NOTES §12; ADR-0010 Amendment 2).
     """
     if not image_id:
         state = f" ({waiting_reason})" if waiting_reason else ""

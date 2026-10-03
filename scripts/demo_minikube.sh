@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # A minikube node that runs Docker Engine through cri-dockerd (ADR-0010 Amendment 2): the kind
-# demo covers containerd, this covers the other common runtime, and minikube's default. It runs
+# demo covers containerd (also minikube's own default), this covers Docker Engine. It runs
 # the fixproof-docker workloads (scripts/demo_workloads.py --docker), images from Docker Hub
 # written with Docker's short names and one image loaded with no registry digest, and writes a
 # kubeconfig for fixproof's read-only account. The CI `integration-docker-runtime` job runs it.

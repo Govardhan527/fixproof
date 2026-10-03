@@ -111,6 +111,8 @@ def test_unresolved_images_keep_the_reason(
             f"docker-pullable://index.docker.io/library/nginx@{DIGEST}",
             f"docker.io/library/nginx@{DIGEST}",
         ),
+        (f"docker-pullable://index.docker.io/nginx@{DIGEST}", f"docker.io/library/nginx@{DIGEST}"),
+        (f"docker-pullable://Registry/app@{DIGEST}", f"Registry/app@{DIGEST}"),  # not lower case
         (f"docker-pullable://localhost/app@{DIGEST}", f"localhost/app@{DIGEST}"),
         (
             f"docker-pullable://localhost:5000/team/app@{DIGEST}",

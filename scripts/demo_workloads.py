@@ -6,7 +6,8 @@ Namespace `fixproof-demo` runs the six SUCCESS TEST workloads from the fixture i
 (scripts/build_fixtures.py): two fixed, three still affected, and one whose registry needs
 credentials that fixproof is not given. Namespace `fixproof-live` runs two real certbot releases
 from Docker Hub (ADR-0008 item 5). Namespace `fixproof-edge` holds the cases ADR-0010 must get
-right on a real node: init containers, sidecars, two replicas sharing evidence, a bare pod, an
+right on a real node: an init container, a native sidecar (an init container with
+`restartPolicy: Always`), two containers per pod, two replicas sharing evidence, a bare pod, an
 image that cannot be pulled, a pod that cannot be scheduled, an image side-loaded with
 `kind load` (the node names it `docker.io/library/import-<date>`, an image that exists in no
 registry), and an image referenced by tag. scripts/demo_cluster.sh
@@ -46,7 +47,7 @@ LIVE: dict[str, tuple[str, str]] = {  # the digests of tests/live/test_public_im
         "fixed",  # certbot v2.7.0 pins requests 2.31.0
     ),
     # As most real Deployments are written: a Docker Hub short name and a tag, not a digest.
-    # Tag v2.6.0 pointed at the digest above on 2026-10-03 (SPEC_NOTES §19).
+    # Tag v2.6.0 pointed at the digest above on 2026-10-03 (SPEC_NOTES §19, §12).
     "certbot-by-tag": ("certbot/certbot:v2.6.0", "still_affected"),
 }
 SIDE_LOADED = "fixproof-side-loaded:it"  # built and loaded with `kind load` by demo_cluster.sh
@@ -60,7 +61,8 @@ EDGE: dict[tuple[str, str], tuple[str, str]] = {
     ("side-loaded-", "app"): ("unknown", "registry not in scope: docker.io"),
     ("two-replicas-", "setup"): ("fixed", "requests 2.32.3"),
     ("two-replicas-", "app"): ("still_affected", "requests 2.30.0"),
-    ("two-replicas-", "sidecar"): ("fixed", "both methods agree"),
+    ("two-replicas-", "proxy"): ("still_affected", "requests 2.25.1"),  # a native sidecar
+    ("two-replicas-", "worker"): ("fixed", "both methods agree"),
     ("by-tag-", "app"): ("still_affected", "requests 2.30.0"),
     ("unschedulable-", "app"): ("unknown", "no status yet, pod Pending"),
 }
@@ -102,7 +104,11 @@ DOCKER: dict[str, tuple[str, str, str | None]] = {
 
 
 def container(
-    name: str, image: str, command: Sequence[str] = ("sleep", "86400"), pull: str | None = None
+    name: str,
+    image: str,
+    command: Sequence[str] = ("sleep", "86400"),
+    pull: str | None = None,
+    restart: str | None = None,
 ) -> dict[str, Any]:
     spec: dict[str, Any] = {
         "name": name,
@@ -120,6 +126,8 @@ def container(
     }
     if pull:
         spec["imagePullPolicy"] = pull
+    if restart:  # "Always" on an init container makes it a native sidecar (SPEC_NOTES §12)
+        spec["restartPolicy"] = restart
     return spec
 
 
@@ -195,9 +203,12 @@ def manifests(images: dict[str, str], pull_secret: str) -> list[dict[str, Any]]:
             pod_spec(
                 [
                     container("app", images["requests-2.30.0"]),
-                    container("sidecar", images["no-requests"]),
+                    container("worker", images["no-requests"]),
                 ],
-                init=[container("setup", images["requests-2.32.3"], command=("true",))],
+                init=[
+                    container("setup", images["requests-2.32.3"], command=("true",)),
+                    container("proxy", images["requests-2.25.1"], restart="Always"),
+                ],
             ),
             replicas=2,
         ),

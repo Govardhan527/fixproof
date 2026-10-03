@@ -67,8 +67,9 @@ def test_the_edge_namespace_covers_each_case_the_inventory_handles() -> None:
     assert edge["bare-pod"][0]["kind"] == "Pod"  # no owner
     two, spec = edge["two-replicas"]
     assert two["spec"]["replicas"] == 2
-    assert [c["name"] for c in spec["initContainers"]] == ["setup"]
-    assert [c["name"] for c in spec["containers"]] == ["app", "sidecar"]
+    assert [c["name"] for c in spec["initContainers"]] == ["setup", "proxy"]
+    assert spec["initContainers"][1]["restartPolicy"] == "Always"  # a native sidecar
+    assert [c["name"] for c in spec["containers"]] == ["app", "worker"]
     assert edge["pull-backoff"][1]["containers"][0]["image"].endswith("@sha256:" + "0" * 64)
     assert edge["unschedulable"][1]["nodeSelector"] == {"fixproof.example/no-such-node": "true"}
     # every (pod, container) the manifests create has an expected verdict, and no more

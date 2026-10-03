@@ -16,7 +16,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from cluster_helpers import by_owner, check_bundle, kubectl, report_of, run_verify
+from cluster_helpers import (
+    assert_nowhere,
+    by_owner,
+    check_bundle,
+    kubectl,
+    reader_token,
+    report_of,
+    run_verify,
+)
 
 import demo_workloads
 
@@ -73,6 +81,7 @@ def test_success_test_six_workloads(tmp_path: Path, setup: tuple[dict[str, str],
     assert "UNAUTHORIZED" in unknown
     assert done.returncode == 1
     check_bundle(tmp_path / "out")
+    assert_nowhere(done, tmp_path / "out", reader_token(kubeconfig))  # the cluster token
     vex = json.loads((tmp_path / "out" / "openvex.json").read_text())
     assert sorted(s["status"] for s in vex["statements"]) == [
         "affected", "affected", "affected", "fixed", "fixed", "under_investigation",
@@ -168,10 +177,7 @@ def test_with_registry_credentials_the_private_workload_gets_a_real_verdict(
     assert private["asset"] == images["auth/requests-2.31.0"]
     assert done.returncode == 1
     check_bundle(tmp_path / "out")
-    written = [p.read_text() for p in (tmp_path / "out").rglob("*") if p.is_file()]
-    for text in [done.stdout, done.stderr, *written]:
-        assert password not in text
-        assert auth not in text
+    assert_nowhere(done, tmp_path / "out", password, auth, reader_token(kubeconfig))
 
 
 def edge_key(workload: str) -> tuple[str, str]:
@@ -245,6 +251,18 @@ def kubectl_can_i(kubeconfig: str, *args: str) -> bool:
     done = kubectl(kubeconfig, "auth", "can-i", *args)
     assert done.stdout.strip() in {"yes", "no"}, done.stderr
     return done.stdout.strip() == "yes"
+
+
+def test_the_denied_subresources_exist_on_this_api_server(
+    setup: tuple[dict[str, str], str],
+) -> None:
+    """The reader is denied pods/exec, pods/log, pods/ephemeralcontainers and
+    serviceaccounts/token below; this API server's own discovery shows those names are real, so
+    a denial cannot pass because of a misspelling."""
+    done = kubectl(setup[1], "get", "--raw", "/api/v1")
+    assert done.returncode == 0, done.stderr
+    names = {resource["name"] for resource in json.loads(done.stdout)["resources"]}
+    assert {"pods/exec", "pods/log", "pods/ephemeralcontainers", "serviceaccounts/token"} <= names
 
 
 ALLOWED = [

@@ -1,17 +1,26 @@
 """M4 integration on a Docker Engine node: minikube with cri-dockerd (ADR-0010 Amendment 2).
 
 Needs FIXPROOF_IT_DOCKER_KUBECONFIG, the reader kubeconfig written by `scripts/demo_minikube.sh up`
-in the CI `integration-docker-runtime` job. The node reports image IDs as
-`docker-pullable://<Docker's short name>@sha256:...` or `docker://sha256:...`, and the pods name
-their images the way users do (`certbot/certbot:v2.6.0`, `python@sha256:...`). Locally these
-tests skip without the variable; in CI they fail instead.
+in the CI `integration-docker-runtime` job (minikube with `--container-runtime=docker`; its
+default is containerd). The node reports image IDs as `docker-pullable://<Docker's short
+name>@sha256:...` or `docker://sha256:...`, and the pods name their images the way users do
+(`certbot/certbot:v2.6.0`, `python@sha256:...`). Locally these tests skip without the variable;
+in CI they fail instead.
 """
 
 import os
 from pathlib import Path
 
 import pytest
-from cluster_helpers import by_owner, check_bundle, kubectl, report_of, run_verify
+from cluster_helpers import (
+    assert_nowhere,
+    by_owner,
+    check_bundle,
+    kubectl,
+    reader_token,
+    report_of,
+    run_verify,
+)
 
 import demo_workloads
 
@@ -42,6 +51,10 @@ def test_the_node_really_runs_docker_engine(kubeconfig: str) -> None:
     assert len(image_ids) == len(demo_workloads.DOCKER)
     assert all(i.startswith(("docker-pullable://", "docker://")) for i in image_ids), image_ids
     assert any(i.startswith("docker://sha256:") for i in image_ids)  # the local image
+    # Docker writes RepoDigests with its short names (SPEC_NOTES §12): this is what fixproof expands
+    for name in ("certbot-2-6-0", "python-official"):
+        image, _, _ = demo_workloads.DOCKER[name]
+        assert f"docker-pullable://{image}" in image_ids, image_ids
 
 
 def test_workloads_on_a_docker_engine_node(tmp_path: Path, kubeconfig: str) -> None:
@@ -60,6 +73,7 @@ def test_workloads_on_a_docker_engine_node(tmp_path: Path, kubeconfig: str) -> N
     assert report["summary"] == {"fixed": 2, "still_affected": 2, "unknown": 1}
     assert done.returncode == 1
     check_bundle(tmp_path / "out")
+    assert_nowhere(done, tmp_path / "out", reader_token(kubeconfig))
 
 
 def test_the_reader_is_limited_on_this_node_too(tmp_path: Path, kubeconfig: str) -> None:

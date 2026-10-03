@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from fixproof.validation import build_validator, check_openvex, load_schema, schema_errors
 
 CVE = "CVE-2023-32681"
@@ -82,6 +84,21 @@ def check_bundle(out: Path) -> dict[str, Any]:
         assert (hashlib.sha256(data).hexdigest(), len(data)) == (entry["sha256"], entry["size"])
     check_openvex(json.loads((out / "openvex.json").read_text()))
     return bundle
+
+
+def reader_token(kubeconfig: str) -> str:
+    """The bearer token in the reader kubeconfig (scripts/reader_kubeconfig.sh)."""
+    config = yaml.safe_load(Path(kubeconfig).read_text(encoding="utf-8"))
+    token: str = config["users"][0]["user"]["token"]
+    return token
+
+
+def assert_nowhere(done: subprocess.CompletedProcess[str], out: Path, *secrets: str) -> None:
+    """No secret appears in what fixproof printed or in any file it wrote."""
+    written = [p.read_text(errors="replace") for p in out.rglob("*") if p.is_file()]
+    for text in [done.stdout, done.stderr, *written]:
+        for secret in secrets:
+            assert secret not in text
 
 
 def kubectl(kubeconfig: str, *args: str) -> subprocess.CompletedProcess[str]:

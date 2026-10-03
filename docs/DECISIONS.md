@@ -553,3 +553,28 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      0, an unreadable one 2); the live suite checks KEV against the live CISA feed.
 - **Consequence:** SUCCESS TEST steps 2 and 3 can be checked end to end; every run records the
   KEV feed it used or why it could not.
+- **Amendment 1 (2026-10-04, from the M5 scope and spec reviews; to confirm with the owner):**
+  details the build settled that the items above do not spell out.
+  1. *Exit 2 and the SUCCESS TEST wording.* Step 3 says the gate exits "zero otherwise". The
+     owner's answer to item 1 ("exit 2, fail the build") reads "otherwise" as "proven gone":
+     an image the gate cannot read is not proven clean, so it does not exit 0.
+  2. *Two tools, two images.* The verdict rule assumes both methods read the same image. If
+     their image IDs differ (a tag moved between the two reads, say), every closed CVE is
+     `unknown` with that reason (exit 2), even if one method found the CVE: neither result can
+     be tied to the image the user named. It still blocks the release.
+  3. *`registry:` prefix.* `--image registry:REF` is accepted as the same as `REF`, matching the
+     tools' own scheme; the help text and README say so.
+  4. *Recorded fields.* The KEV record also carries the feed's `count` and the entry's
+     `vendorProject`, `product` and `vulnerabilityName` (SPEC_NOTES §3). Every method result's
+     scan record gains `image_id` (the tools' `imageID`), so `bundle` 1.2.0 has it too.
+  5. *The `build` asset kind* (`BuildAsset`, used by `gate`) joins the shared asset union, so the
+     `bundle` 1.2.0 schema accepts it; `verify` never writes one, and `gate` writes no bundle.
+  6. *Dependencies* (item 5): `cyclonedx-python-lib` also brings `boolean.py` (BSD-2-Clause) and
+     `defusedxml` (PSFL); the full list with licences is in SPEC_NOTES §16.
+  7. *Vendored official schemas.* The repository's commit text check skips
+     `src/fixproof/schemas/official/` only, where every file is a third-party standard pinned by
+     SHA-256 in a test (owner, 2026-10-03), because the official CycloneDX schema's own text
+     trips it.
+  8. *Integration evidence and cisa.gov.* The integration tests check KEV values when the feed is
+     reachable and otherwise only that the run says why; the strict KEV checks are in the live
+     suite, so SUCCESS TEST evidence never depends on cisa.gov being up.

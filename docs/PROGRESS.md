@@ -214,9 +214,11 @@ the README, and act on the answer?
 ## M5 (week 8)
 
 CI gate, KEV enrichment, HTML report, CycloneDX VEX.
-- [ ] Done: SUCCESS TEST steps 2 and 3 pass (OpenVEX validates against the pinned schema with no
+- [x] Done: SUCCESS TEST steps 2 and 3 pass (OpenVEX validates against the pinned schema with no
       `not_affected` without evidence; `fixproof gate` exits non-zero on a reintroduced closed
-      CVE and zero otherwise).
+      CVE and zero otherwise). Evidence: branch CI 37137847475 and 37138302512 (kind job: 41
+      integration tests, among them the 6 real-image gate tests; every bundle's OpenVEX and
+      CycloneDX validated, statuses exact).
 - [x] OQ-3 (CycloneDX version) answered 2026-10-03: stay on 1.6 (patch 1.6.2).
 - [x] Facts verified (SPEC_NOTES §3, §4, §12, 2026-10-03): the live KEV feed and its schema; the
       CycloneDX 1.6.2 state definitions, its two companion schemas and offline validation of
@@ -233,11 +235,17 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
       and local builds (`docker:`, `docker-archive:`, `oci-archive:`) (df351e3). `oci-archive:`
       checked locally on a real alpine archive: both tools report its image ID and manifest
       digest.
-- [ ] Integration: the gate on real fixture images in CI (reintroduced, fixed, unreadable):
-      written (f716ff2); branch run 37137847475 pending.
-- [ ] Live data (ADR-0008 item 5): KEV enrichment checked against the live CISA feed in the live
-      suite: written (f716ff2) and 6 passed locally with the real scanners and feed; the CI
-      live job runs on Mondays or on dispatch.
+- [x] Integration: the gate on real fixture images in CI (reintroduced, fixed, unreadable), from
+      the Docker daemon, a `docker save` archive, an OCI archive and the registry (f716ff2);
+      green in branch CI 37137847475 and 37138302512.
+- [x] Live data (ADR-0008 item 5): KEV enrichment checked against the live CISA feed in the live
+      suite (f716ff2): 6 passed locally and in the live job on the branch (37138305026).
+- [x] M5 spec and scope reviews (2026-10-04): no out-of-scope work. Fixed: `gate` prints why KEV
+      is unavailable and a test shows it changes no exit code; the integration evidence no
+      longer depends on cisa.gov; SPEC_NOTES gained the CSP, OCI layout, registry API,
+      CycloneDX field and serial-number, library and local-build facts; ADR-0012 Amendment 1
+      records the details the build settled (waiting for the owner's confirmation); three ideas
+      parked.
 
 ## M6 (weeks 9-10)
 
@@ -249,12 +257,12 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M5, built; CI run pending.
-- **`main` = 9826d7d, green** (CI 37135400013). Work branch `m5` (592580b..765c1b9: ADR-0012,
-  KEV, CycloneDX, HTML, gate, real-data tests, README) dispatched as CI 37137847475.
-- **Owner decisions today:** gate exits 2 on `unknown`; gate takes registry digests and local
-  builds; KEV downloaded every run; `cyclonedx-python-lib` + standard-library HTML; the commit
-  word check exempts only `src/fixproof/schemas/official/`.
-- **Next steps, in order:** branch CI green twice (fix on the branch if not); dispatch the live
-  job on the branch; ask for "push"; M5 spec and scope reviews; close M5 when SUCCESS TEST steps 2
-  and 3 pass in CI; then M6 (packaging, `make demo`, hardening).
+- **Date:** 2026-10-04. **Current milestone:** M5, done-criterion met in branch CI; closing.
+- **`main` = 9826d7d, green** (CI 37135400013). Work branch `m5` holds M5 (ADR-0012, KEV,
+  CycloneDX, HTML, gate, real-data tests, README, review fixes); branch CI 37137847475 and
+  37138302512 green, live 37138305026 green. The review-fix commits go through the branch again
+  before `main`.
+- **Waiting on the owner:** (1) confirm ADR-0012 Amendment 1; (2) "push" to move `main`;
+  (3) close M5.
+- **Next steps, in order:** branch CI green twice with the review fixes; `main` on "push"; record
+  the run; close M5; then M6 (packaging, `make demo` for the whole SUCCESS TEST, hardening).

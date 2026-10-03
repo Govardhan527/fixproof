@@ -19,9 +19,10 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 > real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
 > in CI on real nodes with all three common container runtimes: kind (containerd), with the six
 > SUCCESS TEST workloads, real certbot releases and every edge case, and minikube with Docker
-> Engine and with CRI-O. The release gate (`fixproof gate`), CISA KEV enrichment, the HTML
-> summary and CycloneDX VEX are built and unit-tested; their real-image CI run is next; see
-> [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
+> Engine and with CRI-O. The release gate (`fixproof gate`) is checked in CI on real built
+> images (Docker daemon, `docker save` and OCI archives, registry), and every run reports the
+> CVE's CISA KEV status and writes an HTML summary and CycloneDX VEX; see [Roadmap](#roadmap).
+> fixproof produces evidence for your own review. It is not a certification.
 
 ---
 
@@ -69,8 +70,8 @@ flowchart TD
     end
 
     subgraph OUT["3 · You get"]
-        VEX["openvex.json<br/>one statement per image"]
-        BUNDLE["bundle.json + raw/ +<br/>manifest.json (SHA-256)"]
+        VEX["openvex.json + cyclonedx.json<br/>one VEX entry per image"]
+        BUNDLE["bundle.json + raw/ + report.html<br/>+ manifest.json (SHA-256)"]
         CODE["exit code<br/>0 all fixed · 1 still affected<br/>2 unknown · 3 bad input"]
         WL["per workload:<br/>cluster/namespace/pod/container,<br/>owner, digest, verdict"]
     end
@@ -101,9 +102,12 @@ sequenceDiagram
     participant Grype as Grype + vulnerability DB
     participant Syft as Syft
     participant Reg as Registry (e.g. docker.io)
+    participant KEV as CISA KEV feed
 
     You->>FP: fixproof verify --cve --fix --scope --out --author
     FP->>FP: validate fix.yaml and scope.yaml<br/>(registry allowlist, digests, versions)
+    FP->>KEV: download the feed once (HTTPS), check its schema
+    KEV-->>FP: is the CVE known exploited? (never changes a verdict)
     loop every image in scope.yaml
         FP->>Grype: grype registry:IMAGE@DIGEST -o json
         Grype->>Reg: read manifest and layers (read-only)
@@ -114,7 +118,7 @@ sequenceDiagram
         FP->>FP: compare each copy of the package with the fix,<br/>then apply the verdict rule
     end
     FP->>FP: strip image config, file listings and tool config<br/>from what is stored
-    FP-->>You: openvex.json, bundle.json, raw/, manifest.json, exit code
+    FP-->>You: openvex.json, cyclonedx.json, report.html,<br/>bundle.json, raw/, manifest.json, exit code
 ```
 
 ### The verdict rule
@@ -671,14 +675,16 @@ closed:
 
 `--image` takes the image where your pipeline has it: `docker:NAME[:TAG]` (the local Docker
 daemon), `docker-archive:PATH` (`docker save`), `oci-archive:PATH`, or a registry image pinned
-by digest from a registry in `closed.yaml`. Each closed CVE gets both checks and the verdict
-rule, as in `verify`, and the output names the image ID and manifest digest that were read.
+by digest (optionally written `registry:…`) from a registry in `closed.yaml`. Each closed CVE
+gets both checks and the verdict rule, as in `verify`, and the output names the image ID and
+manifest digest that were read. If the two checks read different images (a tag moved between
+them, say), nothing is proven and every closed CVE is `unknown`.
 
 | Exit | Meaning |
 |---|---|
 | `0` | Every closed CVE is proven gone from this image: ship |
 | `1` | At least one closed CVE is back: block the release |
-| `2` | None is back, but at least one could not be proven (the reason is printed): block, then fix the cause |
+| `2` | None is back, but at least one could not be proven (the reason is printed): block, then fix the cause. "Not proven gone" is never treated as "gone". |
 | `3` | Bad input (`closed.yaml`, the image argument) |
 
 `--json` prints the result ([schema](src/fixproof/schemas/gate-result.schema.json),
@@ -717,9 +723,10 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
   the token. The Kubernetes client writes the kubeconfig's embedded certificates to private
   temporary files and deletes them when fixproof exits.
 - **No telemetry.** The tools' update checks are turned off for every run.
-- **Read-only.** fixproof only reads registries in your allowlist, the namespaces in scope and
-  the CISA KEV feed (one HTTPS download per run), and writes only to `--out` (apart from the
-  Kubernetes client's temporary certificate files).
+- **Read-only.** fixproof only reads registries in your allowlist, the namespaces in scope, the
+  image you give `gate` (from the local Docker daemon or an archive file) and the CISA KEV feed
+  (one HTTPS download per run), and writes only to `--out` (apart from the Kubernetes client's
+  temporary certificate files).
 
 ---
 
@@ -754,7 +761,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
-| M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | built; CI run next |
+| M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | built; green in CI; closing |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 
 ---

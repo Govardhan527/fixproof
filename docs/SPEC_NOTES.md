@@ -124,7 +124,9 @@ the exact files read.
   2023-12-12, ransomware `Unknown`), CVE-2021-44228 (added 2021-12-10, due 2021-12-24, ransomware
   `Known`); not in KEV: CVE-2023-32681, CVE-2023-5363, CVE-2023-0286. Fields present on entries:
   the required ones plus `cwes`, `forensicTriage`, `knownRansomwareCampaignUse`, `notes`.
-  VERIFIED.
+  VERIFIED. In that copy `count` equals the number of entries and every `cveID` is unique
+  (1733 of 1733); fixproof keys entries by `cveID`, and the live test asserts the count matches.
+  OBSERVED (2026-10-03, and CI live run 37138305026).
 
 ## 4. CycloneDX 1.6 VEX (second output format, M5)
 
@@ -166,6 +168,27 @@ the exact files read.
   with an OCI purl, a vulnerability with `affects` and `analysis.state` `exploitable`, fixed
   serial number and timestamp) validated against the official 1.6.2 schema with no errors, and
   `state: fixed` was rejected. VERIFIED 2026-10-03 (was UNVERIFIED).
+- Fields fixproof writes, from the 1.6.2 schema (VERIFIED 2026-10-04): `bomFormat` (enum
+  `CycloneDX`), `specVersion`, `version` (integer, minimum 1), `serialNumber` (pattern
+  `^urn:uuid:…$`; "Every BOM generated SHOULD have a unique serial number, even if the contents of
+  the BOM have not changed over time. If specified, the serial number must conform to RFC 4122"),
+  `metadata.timestamp` (`date-time`), `metadata.tools` (the object form with `components`),
+  `components[]` with `type` `container` ("A packaging and/or runtime format … which isolates
+  software inside the container from software outside of a container through virtualization
+  technology"), `name`, `version`, `bom-ref`, `purl`; `vulnerabilities[]` with `id`, `bom-ref`,
+  `analysis` and `affects[].ref`; `dependencies` (written by the library).
+- fixproof's serial number is a version-5 UUID of the document's own content, which includes the
+  run's `metadata.timestamp`, so two runs get different serial numbers and only a byte-identical
+  document repeats one; that keeps golden files stable without breaking the SHOULD above.
+- The library writes a purl with `PackageURL.to_string()`: `cyclonedx/serialization/__init__.py`
+  in 11.12.0 (installed, SHA-256
+  `bf8ae5e1dba0ca79304178044a6374dd4f46fde9c055d0d4f2f6ae3123631f80`), class `PackageUrl`,
+  `serialize`. fixproof's `_CanonicalPurl` overrides `to_string()` so the canonical spelling
+  (§5) reaches the document; a test checks the CycloneDX and OpenVEX purls are identical. The
+  API names used (`Bom`, `BomMetaData`, `Component`, `ComponentType.CONTAINER`,
+  `Vulnerability`, `VulnerabilityAnalysis(state=, responses=, detail=)`, `BomTarget`,
+  `ImpactAnalysisState`, `ImpactAnalysisResponse` from `cyclonedx.model.impact_analysis`,
+  `JsonV1Dot6`) are checked by `mypy --strict` against the installed package. VERIFIED.
 
 ## 5. Package URL (purl) and version ranges (vers) (M1 to M3)
 
@@ -726,6 +749,37 @@ the exact files read.
   daemon), `podman:`, `docker-archive:` (a `docker save` tarball), `oci-archive:`, `oci-dir:`,
   `singularity:`, `dir:`, `file:`, and for Grype `sbom:`. Without a scheme both try the Docker
   daemon first. VERIFIED. fixproof always passes an explicit scheme (ADR-0012).
+- **What the tools read for a local build** (ADR-0012 item 2):
+  - `oci-archive:` (a hand-built OCI layout tar of Docker Hub `alpine:3.22` linux/amd64, Syft
+    1.54.0 and Grype 0.119.0, 2026-10-03): both reported `imageID`
+    `sha256:c83674e1…` (the config digest) and `manifestDigest` `sha256:3e9b4b68…` (the registry's
+    manifest digest), `os` `linux`, `architecture` `amd64`, empty `repoDigests` and `tags`.
+    OBSERVED (local). In CI (runs 37137847475 and 37138302512) an OCI archive assembled from the
+    test registry was gated, and the scanned `manifest_digest` equalled the registry digest.
+    OBSERVED.
+  - `docker-archive:` (`docker save`) in the same CI runs: both tools' `imageID` equalled
+    `docker image inspect --format {{.Id}}` for the saved tag. `docker:` (the daemon): both tools
+    reported the same `imageID`, so no verdict was turned `unknown`. OBSERVED.
+  - Syft 1.54.0 refuses a tar whose entries start `./`: "failed to visit tar entry="./" :
+    potential path traversal attack with entry: "./"" (local, 2026-10-03). The integration test
+    writes entries without the prefix. An archive made that way is reported as an error, so the
+    gate says it cannot prove the image (exit 2), never that it is clean. OBSERVED.
+- **OCI layout and registry API used by the integration test:** image-spec v1.1.1
+  `image-layout.md` (SHA-256 `1acffaec92b011010edc14264ffc772d0699d8917dfcda6f7f824e16823e2d0c`):
+  an `oci-layout` file that "MUST contain an `imageLayoutVersion` field" (`"1.0.0"`), an
+  `index.json`, and "The content of `blobs/<alg>/<encoded>` MUST match the digest
+  `<alg>:<encoded>`". distribution-spec v1.1.1 `spec.md` (SHA-256 as §15): end-2 `GET`
+  `/v2/<name>/blobs/<digest>`; for manifests "The client SHOULD include an `Accept` header
+  indicating which manifest content types it supports". VERIFIED 2026-10-04.
+- **Content Security Policy of `report.html`** (W3C CSP Level 3, Working Draft 16 September 2026,
+  https://www.w3.org/TR/CSP3/, page SHA-256
+  `df90a9028632b39c70d9ed40dadfadbc2f3f690621ecf6212ef4f1376005738e`, read 2026-10-04): "The
+  default-src directive serves as a fallback for the other fetch directives"; a source list of
+  exactly `'none'` returns "Does Not Match"; §3.3 "A Document may deliver a policy via one or
+  more HTML meta elements whose http-equiv attributes are an ASCII case-insensitive match for
+  the string "Content-Security-Policy"". So `default-src 'none'; style-src 'unsafe-inline'` lets
+  the page's own inline style apply and blocks every fetch. VERIFIED. The page also has no
+  script and no external reference (checked on every example).
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod
@@ -850,8 +904,10 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   CC0-1.0 (GitHub licence API, 2026-10-02). Added in M5: the CycloneDX 1.6.2 schemas
   (`bom-1.6`, `spdx`, `jsf-0.82`) from https://github.com/CycloneDX/specification, licence
   Apache-2.0 (GitHub licence API, 2026-10-03); the KEV schema from cisa.gov, which states no
-  licence on the file (a CISA publication). The KEV test excerpt is two entries of the public
-  feed of 2026-10-02. The purl test vectors come from
+  licence on the file (a CISA publication). The KEV test excerpt is two entries
+  (CVE-2023-4911, CVE-2021-44228) copied unchanged from the feed `catalogVersion` 2026.10.02
+  (retrieved 2026-10-03, §3), with that copy's `catalogVersion` and `dateReleased` and `count`
+  set to 2. The purl test vectors come from
   https://github.com/package-url/purl-spec, licence MIT; its `LICENSE` at v1.0.1 (SHA-256
   `24fb7204fd3c9396c9d83533448cb988e8e86d6f598d1ab51c6d2e5d7e42bcb1`) is kept next to them in
   `tests/fixtures/purl-spec/`. VERIFIED.

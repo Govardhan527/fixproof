@@ -41,3 +41,8 @@ waits.
   CRI-O's image ID form is not verified and not tested. The same CI pattern as the Docker
   Engine job would prove it; waits for an owner decision. **Resolved 2026-10-03** (ADR-0011): proven on a real
   CRI-O 1.35.7 node in CI.
+- **2026-10-04, M5 scope review: a KEV cache or local mirror for air-gapped CI.** ADR-0012
+  downloads the feed on every run; offline runs record `unavailable`. Waits for an owner decision.
+- **2026-10-04, M5 scope review: an evidence bundle for `gate` decisions.** Today `gate` prints
+  its result or `--json`; a bundle like `verify`'s would keep the raw tool output too.
+- **2026-10-04, M5 scope review: more `gate` sources** (`podman:`, `oci-dir:`), refused today.

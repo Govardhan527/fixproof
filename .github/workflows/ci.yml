@@ -133,15 +133,15 @@ jobs:
           FIXPROOF_IT_IMAGES: ${{ runner.temp }}/demo/fixture-images.json
           FIXPROOF_IT_KUBECONFIG: ${{ runner.temp }}/demo/reader.kubeconfig
         run: make integration
-      - name: Install fixproof as the README says (uv tool install, no lockfile) and run it
+      - name: Install fixproof with the README's command and run it as a user would
         env:
           KUBECONFIG: ${{ runner.temp }}/demo/reader.kubeconfig
           DOCKER_CONFIG: ${{ runner.temp }}/no-credentials
         run: |
           mkdir -p "$DOCKER_CONFIG"
-          # The README installs from git; this installs the same commit from the checkout, in
-          # its own environment, with dependencies resolved as a user would get them today.
-          uv tool install --python 3.12 .
+          # The README's command, pinned to this commit: its own environment, its dependencies
+          # resolved at install time, as a user gets them.
+          uv tool install --python 3.12 "git+https://github.com/${{ github.repository }}@${{ github.sha }}"
           export PATH="$(uv tool dir --bin):$PATH"
           command -v fixproof
           fixproof --version
@@ -151,9 +151,11 @@ jobs:
           code=0
           fixproof verify --cve CVE-2023-32681 --fix "$RUNNER_TEMP/fix.yaml" \
             --scope examples/scope/kind-demo.yaml --out "$RUNNER_TEMP/evidence" \
-            --author "fixproof CI demo" || code=$?
+            --author "fixproof CI demo" > "$RUNNER_TEMP/demo.out" || code=$?
+          cat "$RUNNER_TEMP/demo.out"
           echo "exit code: $code"
           test "$code" -eq 1
+          grep -q '^2 fixed, 3 still_affected, 1 unknown; evidence in' "$RUNNER_TEMP/demo.out"
       - name: Show the demo cluster's pods
         if: failure()
         run: |
@@ -164,7 +166,7 @@ jobs:
           "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true
 
   # ADR-0010 Amendment 2: the same checks on a node running Docker Engine through cri-dockerd
-  # (minikube's default), pinned by scripts/demo_minikube.sh.
+  # (minikube with --container-runtime=docker), pinned by scripts/demo_minikube.sh.
   integration-docker-runtime:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     needs: [lint-type, test]
@@ -193,14 +195,15 @@ jobs:
         env:
           FIXPROOF_IT_DOCKER_KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
         run: make integration-docker
-      - name: Install fixproof as the README says (uv tool install, no lockfile) and run it
+      - name: Install fixproof with the README's command and run it as a user would
         env:
           KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
           DOCKER_CONFIG: ${{ runner.temp }}/no-credentials
         run: |
           mkdir -p "$DOCKER_CONFIG"
-          uv tool install --python 3.12 .
+          uv tool install --python 3.12 "git+https://github.com/${{ github.repository }}@${{ github.sha }}"
           export PATH="$(uv tool dir --bin):$PATH"
+          fixproof --version
           printf '%s\n' 'schema_version: "1.0.0"' 'cve: CVE-2023-32681' 'packages:' \
             '  - ecosystem: pypi' '    name: requests' '    fixed_version: "2.31.0"' \
             > "$RUNNER_TEMP/fix.yaml"
@@ -210,9 +213,11 @@ jobs:
           code=0
           fixproof verify --cve CVE-2023-32681 --fix "$RUNNER_TEMP/fix.yaml" \
             --scope "$RUNNER_TEMP/scope.yaml" --out "$RUNNER_TEMP/evidence" \
-            --author "fixproof CI demo" || code=$?
+            --author "fixproof CI demo" > "$RUNNER_TEMP/demo.out" || code=$?
+          cat "$RUNNER_TEMP/demo.out"
           echo "exit code: $code"
           test "$code" -eq 1
+          grep -q '^2 fixed, 2 still_affected, 1 unknown; evidence in' "$RUNNER_TEMP/demo.out"
       - name: Show the node's pods
         if: failure()
         run: |

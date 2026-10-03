@@ -47,7 +47,7 @@ def test_golden_files_are_never_regenerated_in_ci() -> None:
     assert not (UPDATE and os.environ.get("CI")), "FIXPROOF_UPDATE_GOLDEN must not be set in CI"
 
 
-@pytest.mark.parametrize("name", ["bundle", "manifest"])
+@pytest.mark.parametrize("name", ["bundle", "manifest", "report"])
 def test_golden_bundle(tmp_path: Path, name: str) -> None:
     """The three-image scenario's bundle.json and manifest.json (tests/scenario.py)."""
     fix = FixFile.model_validate(yaml.safe_load(FIX_YAML))
@@ -70,8 +70,9 @@ def test_golden_bundle(tmp_path: Path, name: str) -> None:
         kev=KEV,
         tool_version=TOOL_VERSION,
     )
-    produced = (tmp_path / "out" / f"{name}.json").read_bytes()
-    path = EXAMPLES / name / "three-images.json"
+    suffix = ".html" if name == "report" else ".json"
+    produced = (tmp_path / "out" / f"{name}{suffix}").read_bytes()
+    path = EXAMPLES / ("html" if name == "report" else name) / f"three-images{suffix}"
     if UPDATE:
         path.parent.mkdir(exist_ok=True)
         path.write_bytes(produced)

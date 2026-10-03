@@ -56,6 +56,7 @@ def test_bundle_layout_and_manifest(tmp_path: Path) -> None:
         "raw/002-grype.json",
         "raw/002-sbom_version.json",
         "raw/003-sbom_version.json",  # grype failed on image 3, so it has no output to keep
+        "report.html",
     ]
     manifest = json.loads((out / "manifest.json").read_text())
     assert [entry["path"] for entry in manifest["files"]] == [

@@ -39,6 +39,11 @@
       "path": "raw/003-sbom_version.json",
       "sha256": "5b0c3dcd468bc97b258a65e737bb79d6685524009aaa6493a876d7195abf537d",
       "size": 9974
+    },
+    {
+      "path": "report.html",
+      "sha256": "518da5cc3572ed1426d461f8825a3ad64ec2de10caf00f4f08e4a44805e3bfa1",
+      "size": 3206
     }
   ],
   "schema_version": "1.0.0"

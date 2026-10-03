@@ -2,6 +2,7 @@
 
     <out>/openvex.json            the VEX document (ADR-0005)
     <out>/cyclonedx.json          the same verdicts as CycloneDX 1.6 VEX (ADR-0012)
+    <out>/report.html             a self-contained summary page for people (ADR-0012)
     <out>/bundle.json             run, inputs, tool versions, every asset's verdict and results
     <out>/raw/NNN-<method>.json   each method's tool output, sanitised (fixproof.sanitize)
     <out>/manifest.json           SHA-256 and size of every other file, sorted by path
@@ -174,6 +175,9 @@ def write_bundle(
         assets=tuple(records),
     )
     files["bundle.json"] = to_json(bundle.model_dump(mode="json"))
+    from fixproof import htmlreport  # here, not at the top: htmlreport imports this module
+
+    files["report.html"] = htmlreport.render(bundle).encode("utf-8")
     manifest = Manifest(
         schema_version=MANIFEST_VERSION,
         files=tuple(

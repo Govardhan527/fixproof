@@ -15,21 +15,24 @@ Exit codes: 0 all examples valid, 1 a schema is missing or invalid, or an exampl
 import argparse
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
 import yaml
 from jsonschema.exceptions import SchemaError
 
+from fixproof import htmlreport
 from fixproof.validation import build_validator, cyclonedx_errors, schema_errors
 
 DEFAULT_SCHEMAS = Path("src/fixproof/schemas")
-SUFFIXES = (".json", ".yaml")
+SUFFIXES = (".json", ".yaml", ".html")
 
 
 def load(path: Path) -> Any:
     text = path.read_text(encoding="utf-8")
+    if path.suffix == ".html":
+        return text
     return yaml.safe_load(text) if path.suffix == ".yaml" else json.loads(text)
 
 
@@ -42,7 +45,10 @@ def problems_for(schema_path: Path, instance: Any) -> list[str]:
 
 
 # Standards whose official schema needs companion schemas: validated through fixproof's own check
-OFFICIAL_CHECKS = {"cyclonedx": ("official CycloneDX 1.6.2 schema", cyclonedx_errors)}
+OFFICIAL_CHECKS: dict[str, tuple[str, Callable[[Any], list[str]]]] = {
+    "cyclonedx": ("official CycloneDX 1.6.2 schema", cyclonedx_errors),
+    "html": ("the self-contained page rules", htmlreport.problems),
+}
 
 
 def validate(examples_dir: Path, schemas_dir: Path) -> tuple[int, list[str]]:

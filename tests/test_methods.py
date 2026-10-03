@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from fixproof.methods import grype, sbom_version
-from fixproof.model import Method, MethodStatus, WorkloadAsset
+from fixproof.model import BuildAsset, Method, MethodStatus, WorkloadAsset
 from fixproof.tools import ToolRun
 from tool_outputs import (
     ASSET,
@@ -219,7 +219,7 @@ def test_unrelated_artifacts_without_a_purl_are_ignored() -> None:
 @pytest.mark.parametrize("assess", [grype.assess, sbom_version.assess])
 def test_methods_need_an_image(assess: Any) -> None:
     pod = WorkloadAsset(cluster="kind", namespace="demo", pod="p", container="c", image=None)
-    with pytest.raises(ValueError, match="needs an asset with an image digest"):
+    with pytest.raises(ValueError, match="need an asset with an image digest"):
         assess(pod, CVE if assess is grype.assess else FIX)
 
 
@@ -236,3 +236,22 @@ def test_stored_output_never_holds_image_config_files_or_tool_configuration() ->
         assert '"labels"' not in stored
         assert result.raw is not None
         assert "files" not in result.raw  # Syft's file listing; package metadata may list files
+
+
+@pytest.mark.parametrize("source", ["docker:app:ci", "oci-archive:build/app.tar"])
+def test_a_local_build_is_read_from_its_source_with_no_digest_to_match(source: str) -> None:
+    """ADR-0012 item 2: the tools read the build where it is; what they read is recorded."""
+    build = BuildAsset(source=source)
+    calls: list[tuple[str, list[str], dict[str, str]]] = []
+    documents = {"grype": GRYPE_VULNERABLE, "syft": SYFT_VULNERABLE}
+    by_grype = grype.assess(build, CVE, runner(documents, calls))
+    by_sbom = sbom_version.assess(build, FIX, runner(documents, calls))
+    assert [call[1][0] for call in calls] == [source, source]
+    assert (by_grype.result.status, by_sbom.result.status) == (
+        MethodStatus.PRESENT,
+        MethodStatus.PRESENT,
+    )
+    image_id = GRYPE_VULNERABLE["source"]["target"]["imageID"]
+    assert image_id.startswith("sha256:")
+    assert by_grype.scanned["image_id"] == image_id
+    assert by_sbom.scanned["image_id"] == SYFT_VULNERABLE["source"]["metadata"]["imageID"]

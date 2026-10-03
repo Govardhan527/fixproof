@@ -9,7 +9,7 @@ from typing import Any
 
 from fixproof import sanitize
 from fixproof.inputs import FixFile, FixPackage
-from fixproof.methods import MethodOutcome, Unusable, outcome, parse_output, scanned_image
+from fixproof.methods import MethodOutcome, Unusable, outcome, parse_output, scanned_image, target
 from fixproof.model import Asset, Method, MethodStatus
 from fixproof.purl import identity
 from fixproof.tools import Runner, run_tool
@@ -47,13 +47,9 @@ def _where(artifact: dict[str, Any]) -> str:
 
 
 def assess(asset: Asset, fix: FixFile, run: Runner = run_tool) -> MethodOutcome:
-    if asset.image is None:
-        raise ValueError("sbom_version needs an asset with an image digest")
-    image = asset.image
+    argument, image = target(asset)
     try:
-        document = parse_output(
-            "syft", run("syft", [f"registry:{image.reference}", "-o", "json"], ENV)
-        )
+        document = parse_output("syft", run("syft", [argument, "-o", "json"], ENV))
         descriptor, schema = document["descriptor"], document["schema"]
         if descriptor.get("name") != "syft":
             raise Unusable("the output is not from syft")

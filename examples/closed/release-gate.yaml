@@ -1,0 +1,17 @@
+# CVEs closed earlier, which a release must not bring back (fixproof gate --closed).
+# Each entry lists the packages of the fix that closed it, exactly as in fix.yaml.
+schema_version: "1.0.0"
+registries: [registry.example.com]  # only for registry images; local builds need none
+closed:
+  - cve: CVE-2023-32681
+    packages:
+      - ecosystem: pypi
+        name: requests
+        fixed_version: "2.31.0"
+  - cve: CVE-2021-44228
+    packages:
+      - ecosystem: maven
+        namespace: org.apache.logging.log4j
+        name: log4j-core
+        fixed_version: "2.15.0"
+        fixed_vers: "vers:maven/>=2.3.1|<2.4|>=2.12.2|<2.13"

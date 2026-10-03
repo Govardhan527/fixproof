@@ -6,6 +6,7 @@
         "asset": {
           "discriminator": {
             "mapping": {
+              "build": "#/$defs/BuildAsset",
               "image": "#/$defs/ImageAsset",
               "workload": "#/$defs/WorkloadAsset"
             },
@@ -17,6 +18,9 @@
             },
             {
               "$ref": "#/$defs/WorkloadAsset"
+            },
+            {
+              "$ref": "#/$defs/BuildAsset"
             }
           ],
           "title": "Asset"
@@ -62,6 +66,33 @@
         "scanned"
       ],
       "title": "AssetRecord",
+      "type": "object"
+    },
+    "BuildAsset": {
+      "additionalProperties": false,
+      "description": "An image a CI job has just built, read where it was built (ADR-0012 item 2).\n\n`source` is the tool argument as given: `docker:NAME[:TAG]` (the local Docker daemon),\n`docker-archive:PATH` or `oci-archive:PATH`. It has no registry digest yet, so `image` is\nalways None; what the tools read is recorded with each result.",
+      "properties": {
+        "image": {
+          "default": null,
+          "title": "Image",
+          "type": "null"
+        },
+        "kind": {
+          "const": "build",
+          "default": "build",
+          "title": "Kind",
+          "type": "string"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "BuildAsset",
       "type": "object"
     },
     "ImageAsset": {
@@ -315,6 +346,7 @@
         "asset": {
           "discriminator": {
             "mapping": {
+              "build": "#/$defs/BuildAsset",
               "image": "#/$defs/ImageAsset",
               "workload": "#/$defs/WorkloadAsset"
             },
@@ -326,6 +358,9 @@
             },
             {
               "$ref": "#/$defs/WorkloadAsset"
+            },
+            {
+              "$ref": "#/$defs/BuildAsset"
             }
           ],
           "title": "Asset"

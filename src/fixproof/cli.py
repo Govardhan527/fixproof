@@ -17,7 +17,8 @@ from fixproof import __version__, kev
 from fixproof.bundle import check_output_dir, summarise, write_bundle
 from fixproof.cyclonedx import build_bom
 from fixproof.errors import FixproofError
-from fixproof.inputs import load_fix, load_scope
+from fixproof.gate import GateLine, GateResult, run_gate
+from fixproof.inputs import load_closed, load_fix, load_scope
 from fixproof.model import AssetVerdict, Verdict, WorkloadAsset
 from fixproof.report import verify_summary
 from fixproof.verify import DEFAULT_JOBS, assess
@@ -129,6 +130,72 @@ def _human(item: AssetVerdict) -> str:
     else:
         head = image
     return f"{item.verdict.value:<15} {head}\n{pad}{item.reason}"
+
+
+@app.command()
+def gate(
+    closed: Annotated[
+        Path,
+        typer.Option(help="closed.yaml: the CVEs marked closed and the fixes that closed them."),
+    ],
+    image: Annotated[
+        str,
+        typer.Option(
+            help="The built image: a registry image pinned by digest, or docker:NAME[:TAG], "
+            "docker-archive:PATH or oci-archive:PATH."
+        ),
+    ],
+    as_json: Annotated[bool, typer.Option("--json", help="Print the result as JSON.")] = False,
+) -> None:
+    """Block a release that brings back a CVE marked closed. Exit 0 when every closed CVE is
+    proven gone from the image, 1 when one is back, 2 when one cannot be proven either way (the
+    reason is printed), 3 on bad input. Needs syft and grype on PATH and a current Grype DB.
+    """
+    try:
+        closed_file = load_closed(closed)
+        catalogue = kev.load(now(), kev_fetcher)
+        result = run_gate(closed_file, image, catalogue)
+    except (FixproofError, ValueError) as exc:
+        typer.echo(f"fixproof: {exc}", err=True)
+        raise typer.Exit(EXIT_USAGE) from exc
+    if as_json:
+        typer.echo(json.dumps(result.model_dump(mode="json"), indent=2, sort_keys=True))
+    else:
+        typer.echo(_gate_human(result))
+    raise typer.Exit(verdict_exit_code([line.verdict for line in result.results]))
+
+
+def _gate_kev(line: GateLine) -> str:
+    if line.kev.status == "listed" and line.kev.entry is not None:
+        return f"in CISA KEV, due {line.kev.entry.due_date}"
+    return "not in CISA KEV" if line.kev.status == "not_listed" else "CISA KEV unavailable"
+
+
+def _gate_human(result: GateResult) -> str:
+    read = "; ".join(
+        f"{tool}: image ID {s.get('image_id') or '?'}, manifest {s.get('manifest_digest') or '?'}, "
+        f"{s.get('platform', '?')}"
+        for tool, s in sorted(result.scanned.items())
+    )
+    lines = [f"image {result.image} ({read or 'not read'})"]
+    pad = " " * 16
+    for line in result.results:
+        lines.append(
+            f"{line.verdict.value:<15} {line.cve}  ({_gate_kev(line)})\n{pad}{line.reason}"
+        )
+    counts, total = result.summary, len(result.results)
+    if counts.still_affected:
+        lines.append(
+            f"BLOCK: {counts.still_affected} of {total} closed CVEs are back in this image."
+        )
+    elif counts.unknown:
+        lines.append(
+            f"CANNOT PROVE: {counts.unknown} of {total} closed CVEs could not be checked; "
+            "see the reasons."
+        )
+    else:
+        lines.append(f"PASS: all {total} closed CVEs are proven gone from this image.")
+    return "\n".join(lines)
 
 
 def kev_line(cve: str, status: kev.Kev) -> str:

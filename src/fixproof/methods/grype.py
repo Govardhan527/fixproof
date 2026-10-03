@@ -9,7 +9,7 @@ DB is an error.
 from typing import Any
 
 from fixproof import sanitize
-from fixproof.methods import MethodOutcome, Unusable, outcome, parse_output, scanned_image
+from fixproof.methods import MethodOutcome, Unusable, outcome, parse_output, scanned_image, target
 from fixproof.model import Asset, Method, MethodStatus
 from fixproof.tools import Runner, run_tool
 
@@ -32,13 +32,9 @@ def _package(match: dict[str, Any]) -> str:
 
 
 def assess(asset: Asset, cve: str, run: Runner = run_tool) -> MethodOutcome:
-    if asset.image is None:
-        raise ValueError("grype needs an asset with an image digest")
-    image = asset.image
+    argument, image = target(asset)
     try:
-        document = parse_output(
-            "grype", run("grype", [f"registry:{image.reference}", "-o", "json"], ENV)
-        )
+        document = parse_output("grype", run("grype", [argument, "-o", "json"], ENV))
         descriptor = document["descriptor"]
         if descriptor.get("name") != "grype":
             raise Unusable("the output is not from grype")

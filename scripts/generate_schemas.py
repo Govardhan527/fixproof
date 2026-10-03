@@ -17,7 +17,15 @@ from typing import Any
 from pydantic import BaseModel
 
 from fixproof.bundle import BUNDLE_VERSION, MANIFEST_VERSION, Bundle, Manifest
-from fixproof.inputs import FIX_VERSION, SCOPE_VERSION, FixFile, ScopeFile
+from fixproof.gate import GATE_VERSION, GateResult
+from fixproof.inputs import (
+    CLOSED_VERSION,
+    FIX_VERSION,
+    SCOPE_VERSION,
+    ClosedFile,
+    FixFile,
+    ScopeFile,
+)
 from fixproof.report import SUMMARY_VERSION, VerifySummary
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +33,8 @@ OUTPUT = ROOT / "src" / "fixproof" / "schemas"
 ID_BASE = "https://github.com/Govardhan527/fixproof/schemas"
 FORMATS: dict[str, tuple[type[BaseModel], str]] = {
     "bundle": (Bundle, BUNDLE_VERSION),
+    "closed": (ClosedFile, CLOSED_VERSION),
+    "gate-result": (GateResult, GATE_VERSION),
     "fix": (FixFile, FIX_VERSION),
     "manifest": (Manifest, MANIFEST_VERSION),
     "scope": (ScopeFile, SCOPE_VERSION),

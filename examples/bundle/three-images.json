@@ -43,10 +43,12 @@
       ],
       "scanned": {
         "grype": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
           "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
           "platform": "linux/amd64"
         },
         "sbom_version": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
           "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
           "platform": "linux/amd64"
         }
@@ -96,10 +98,12 @@
       ],
       "scanned": {
         "grype": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
           "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
           "platform": "linux/amd64"
         },
         "sbom_version": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
           "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
           "platform": "linux/amd64"
         }
@@ -149,6 +153,7 @@
       ],
       "scanned": {
         "sbom_version": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
           "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
           "platform": "linux/amd64"
         }

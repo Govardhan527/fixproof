@@ -1,4 +1,4 @@
-"""The `fix.yaml` and `scope.yaml` input formats (ADR-0005 items 1 and 2).
+"""The `fix.yaml`, `scope.yaml` and `closed.yaml` input formats (ADR-0005, ADR-0012 item 3).
 
 Both are read with `yaml.safe_load` only. Every problem becomes an `InputError` that names the
 file, the field and the reason.
@@ -17,6 +17,7 @@ from fixproof.vers import check_vers
 
 FIX_VERSION = "1.0.0"
 SCOPE_VERSION = "1.0.0"
+CLOSED_VERSION = "1.0.0"
 
 Ecosystem = Literal["deb", "rpm", "apk", "pypi", "npm", "maven"]
 
@@ -59,10 +60,49 @@ class FixFile(Contract):
     @field_validator("packages")
     @classmethod
     def _unique_packages(cls, packages: tuple[FixPackage, ...]) -> tuple[FixPackage, ...]:
-        purls = [package.purl for package in packages]
-        if len(set(purls)) != len(purls):
-            raise ValueError("each package may be listed only once")
-        return packages
+        return _unique_purls(packages)
+
+
+def _unique_purls(packages: tuple[FixPackage, ...]) -> tuple[FixPackage, ...]:
+    purls = [package.purl for package in packages]
+    if len(set(purls)) != len(purls):
+        raise ValueError("each package may be listed only once")
+    return packages
+
+
+class ClosedCve(Contract):
+    """One CVE marked closed, with the packages of the fix that closed it (as in `fix.yaml`)."""
+
+    cve: CveId
+    packages: Annotated[tuple[FixPackage, ...], Field(min_length=1)]
+
+    @field_validator("packages")
+    @classmethod
+    def _unique_packages(cls, packages: tuple[FixPackage, ...]) -> tuple[FixPackage, ...]:
+        return _unique_purls(packages)
+
+    @property
+    def fix(self) -> FixFile:
+        return FixFile(schema_version="1.0.0", cve=self.cve, packages=self.packages)
+
+
+class ClosedFile(Contract):
+    """`closed.yaml`: CVEs marked closed, which a release must not bring back (ADR-0012 item 3)."""
+
+    schema_version: Literal["1.0.0"]
+    registries: tuple[Registry, ...] = Field(
+        default=(), description="Registries `gate` may read a registry image from."
+    )
+    closed: Annotated[tuple[ClosedCve, ...], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def _consistent(self) -> Self:
+        if len(set(self.registries)) != len(self.registries):
+            raise ValueError("each registry may be listed only once")
+        cves = [entry.cve for entry in self.closed]
+        if len(set(cves)) != len(cves):
+            raise ValueError("each CVE may be listed only once")
+        return self
 
 
 ImageReference = Annotated[
@@ -150,6 +190,14 @@ def load_fix(path: Path, cve: str) -> FixFile:
     if fix.cve != cve:
         raise InputError(path, [f"cve: the file is for {fix.cve}, not {cve}"])
     return fix
+
+
+def load_closed(path: Path) -> ClosedFile:
+    """Read `closed.yaml`."""
+    try:
+        return ClosedFile.model_validate(_read_yaml(path))
+    except ValidationError as exc:
+        raise InputError(path, _problems(exc)) from exc
 
 
 def load_scope(path: Path) -> ScopeFile:

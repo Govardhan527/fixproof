@@ -108,7 +108,20 @@ class WorkloadAsset(Contract):
         return f"{self.cluster}/{self.namespace}/{self.pod}/{self.container}"
 
 
-Asset = Annotated[ImageAsset | WorkloadAsset, Field(discriminator="kind")]
+class BuildAsset(Contract):
+    """An image a CI job has just built, read where it was built (ADR-0012 item 2).
+
+    `source` is the tool argument as given: `docker:NAME[:TAG]` (the local Docker daemon),
+    `docker-archive:PATH` or `oci-archive:PATH`. It has no registry digest yet, so `image` is
+    always None; what the tools read is recorded with each result.
+    """
+
+    kind: Literal["build"] = "build"
+    source: Text
+    image: None = None
+
+
+Asset = Annotated[ImageAsset | WorkloadAsset | BuildAsset, Field(discriminator="kind")]
 
 
 class Method(StrEnum):

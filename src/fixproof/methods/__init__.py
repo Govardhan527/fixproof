@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from fixproof.model import Asset, ImageRef, Method, MethodResult, MethodStatus
+from fixproof.model import Asset, BuildAsset, ImageRef, Method, MethodResult, MethodStatus
 from fixproof.tools import ToolRun, last_line
 
 
@@ -44,15 +44,33 @@ def parse_output(name: str, run: ToolRun) -> dict[str, Any]:
     return document
 
 
-def scanned_image(name: str, metadata: Any, image: ImageRef) -> dict[str, str]:
+def target(asset: Asset) -> tuple[str, ImageRef | None]:
+    """The tools' argument for an asset, and the digest they must have read, if one is known.
+
+    A registry image is read by digest (`registry:`); a local build by the source the user gave,
+    which has no registry digest to check against (ADR-0012 item 2).
+    """
+    if isinstance(asset, BuildAsset):
+        return asset.source, None
+    if asset.image is None:
+        raise ValueError("the methods need an asset with an image digest")
+    return f"registry:{asset.image.reference}", asset.image
+
+
+def scanned_image(name: str, metadata: Any, image: ImageRef | None) -> dict[str, str]:
     """Check the tool scanned the requested digest (ADR-0007 item 6) and say what it scanned."""
     if not isinstance(metadata, dict):
         raise Unusable(f"{name} did not report an image source")
     manifest = str(metadata.get("manifestDigest", ""))
     repo_digests = [str(d) for d in metadata.get("repoDigests") or []]
-    if image.digest != manifest and not any(d.endswith("@" + image.digest) for d in repo_digests):
+    if (
+        image is not None
+        and image.digest != manifest
+        and not any(d.endswith("@" + image.digest) for d in repo_digests)
+    ):
         raise Unusable(f"{name} scanned {manifest or 'an unknown digest'}, not {image.digest}")
     return {
+        "image_id": str(metadata.get("imageID", "")),
         "manifest_digest": manifest,
         "platform": f"{metadata.get('os', '?')}/{metadata.get('architecture', '?')}",
     }

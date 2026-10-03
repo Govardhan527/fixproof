@@ -107,3 +107,25 @@ def test_golden_cyclonedx() -> None:
         path.parent.mkdir(exist_ok=True)
         path.write_bytes(produced)
     assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"
+
+
+def test_golden_gate_result() -> None:
+    """`fixproof gate --json` on the scenario's vulnerable image (examples/gate-result/)."""
+    from fixproof import kev
+    from fixproof.gate import run_gate
+    from fixproof.inputs import ClosedFile
+    from scenario import KEV_FEED, VULNERABLE, answers
+    from tool_outputs import image_runner
+
+    closed = ClosedFile.model_validate(
+        yaml.safe_load((EXAMPLES / "closed" / "release-gate.yaml").read_text(encoding="utf-8"))
+    )
+    closed = closed.model_copy(update={"registries": ("localhost:5001",)})
+    catalogue = kev.load(START, lambda url: KEV_FEED)
+    result = run_gate(closed, VULNERABLE.reference, catalogue, image_runner(answers()))
+    produced = to_json(result.model_dump(mode="json"))
+    path = EXAMPLES / "gate-result" / "reintroduced.json"
+    if UPDATE:
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(produced)
+    assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"

@@ -2,8 +2,8 @@
   "files": [
     {
       "path": "bundle.json",
-      "sha256": "0ed41c7a3748c943704bbb319bd617029df0ca52ee7f726f96f405b39ccba9b7",
-      "size": 7299
+      "sha256": "56b1abba8e9320089fe038e4d5208977b2f0ebfb03c7545d4eae83c815d58f81",
+      "size": 7784
     },
     {
       "path": "cyclonedx.json",

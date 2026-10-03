@@ -148,23 +148,8 @@ wait_for_edge_cases() {  # each fixproof-edge workload in the state its test exp
 }
 
 reader_kubeconfig() {  # fixproof's view: a 2-hour token for fixproof-reader, nothing else
-    local admin=(kubectl --kubeconfig "$work/admin.kubeconfig")
-    local reader=(kubectl --kubeconfig "$work/reader.kubeconfig")
-    local token server
-    token="$("${admin[@]}" create token fixproof-reader -n fixproof --duration=2h)"
-    if [[ -n "${GITHUB_ACTIONS:-}" ]]; then echo "::add-mask::$token"; fi
-    server="$("${admin[@]}" config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
-    "${admin[@]}" config view --raw --minify \
-        -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > "$work/ca.crt"
-    rm -f "$work/reader.kubeconfig"
-    "${reader[@]}" config set-cluster "$CONTEXT" --server="$server" \
-        --certificate-authority="$work/ca.crt" --embed-certs=true > /dev/null
-    "${reader[@]}" config set-credentials fixproof-reader --token="$token" > /dev/null
-    "${reader[@]}" config set-context "$CONTEXT" --cluster="$CONTEXT" --user=fixproof-reader \
-        > /dev/null
-    "${reader[@]}" config use-context "$CONTEXT" > /dev/null
-    chmod 600 "$work/reader.kubeconfig"
-    "${reader[@]}" auth can-i --list -n fixproof-demo
+    "$repo/scripts/reader_kubeconfig.sh" "$work/admin.kubeconfig" "$work/reader.kubeconfig" \
+        "$CONTEXT" fixproof-demo
 }
 
 case "$command" in

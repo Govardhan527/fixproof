@@ -90,3 +90,31 @@ def test_main_prints_the_manifests(tmp_path: Path, capsys: pytest.CaptureFixture
     names = [d["metadata"]["name"] for d in documents]
     assert names[:9] == [*demo_workloads.DEMO, *demo_workloads.LIVE]
     assert len(names) == 15
+
+
+def test_the_docker_runtime_workloads_use_short_names_as_users_write_them() -> None:
+    documents = demo_workloads.docker_manifests()
+    assert [d["metadata"]["name"] for d in documents] == list(demo_workloads.DOCKER)
+    assert {d["metadata"]["namespace"] for d in documents} == {"fixproof-docker"}
+    for document in documents:
+        (item,) = document["spec"]["template"]["spec"]["containers"]
+        image, _, reported = demo_workloads.DOCKER[document["metadata"]["name"]]
+        assert item["image"] == image
+        assert not image.startswith("docker.io/")  # short names, expanded by fixproof
+        if reported is None:
+            assert item["imagePullPolicy"] == "Never"
+        else:
+            assert ImageRef.parse(reported).registry == "docker.io"
+    verdicts = Counter(verdict for _, verdict, _ in demo_workloads.DOCKER.values())
+    assert verdicts == {"still_affected": 2, "fixed": 2, "unknown": 1}
+
+
+def test_main_prints_the_docker_runtime_set_or_asks_for_its_inputs(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert demo_workloads.main(["--docker"]) == 0
+    documents = list(yaml.safe_load_all(capsys.readouterr().out))
+    assert len(documents) == len(demo_workloads.DOCKER)
+    with pytest.raises(SystemExit):
+        demo_workloads.main(["--images", "x.json"])
+    assert "give --docker, or --images and --pull-secret" in capsys.readouterr().err

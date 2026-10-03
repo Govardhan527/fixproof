@@ -163,4 +163,61 @@ jobs:
           done
           "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true
 
+  # ADR-0010 Amendment 2: the same checks on a node running Docker Engine through cri-dockerd
+  # (minikube's default), pinned by scripts/demo_minikube.sh.
+  integration-docker-runtime:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [lint-type, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - name: Install Syft 1.54.0 and Grype 0.119.0 (checksum-verified)
+        run: |
+          scripts/install_scanners.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Download the Grype DB and record its status
+        env:
+          GRYPE_CHECK_FOR_APP_UPDATE: "false"
+        run: |
+          grype db update
+          grype db status -o json
+      - name: Start a minikube node with the Docker runtime and deploy the workloads
+        run: scripts/demo_minikube.sh up "$RUNNER_TEMP/minikube"
+      - name: Run the Docker-runtime integration tests (read-only token, no registry credentials)
+        env:
+          FIXPROOF_IT_DOCKER_KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
+        run: make integration-docker
+      - name: Install fixproof as the README says (uv tool install, no lockfile) and run it
+        env:
+          KUBECONFIG: ${{ runner.temp }}/minikube/reader.kubeconfig
+          DOCKER_CONFIG: ${{ runner.temp }}/no-credentials
+        run: |
+          mkdir -p "$DOCKER_CONFIG"
+          uv tool install --python 3.12 .
+          export PATH="$(uv tool dir --bin):$PATH"
+          printf '%s\n' 'schema_version: "1.0.0"' 'cve: CVE-2023-32681' 'packages:' \
+            '  - ecosystem: pypi' '    name: requests' '    fixed_version: "2.31.0"' \
+            > "$RUNNER_TEMP/fix.yaml"
+          printf '%s\n' 'schema_version: "1.0.0"' 'registries: [docker.io]' 'clusters:' \
+            '  - context: fixproof-docker' '    namespaces: [fixproof-docker]' \
+            > "$RUNNER_TEMP/scope.yaml"
+          code=0
+          fixproof verify --cve CVE-2023-32681 --fix "$RUNNER_TEMP/fix.yaml" \
+            --scope "$RUNNER_TEMP/scope.yaml" --out "$RUNNER_TEMP/evidence" \
+            --author "fixproof CI demo" || code=$?
+          echo "exit code: $code"
+          test "$code" -eq 1
+      - name: Show the node's pods
+        if: failure()
+        run: |
+          kubectl=("$RUNNER_TEMP/minikube/bin/kubectl" --kubeconfig "$RUNNER_TEMP/minikube/admin.kubeconfig")
+          "${kubectl[@]}" describe pods -n fixproof-docker || true
+          "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true
+
   # The `release` job (tag v*: build, SBOM, PyPI trusted publishing) is added only after M6.

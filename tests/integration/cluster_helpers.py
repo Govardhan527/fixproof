@@ -1,0 +1,95 @@
+"""What the cluster integration suites share: running fixproof as a user would, and checking
+its evidence (tests/integration/test_cluster.py, test_docker_runtime.py)."""
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+from fixproof.validation import build_validator, check_openvex, load_schema, schema_errors
+
+CVE = "CVE-2023-32681"
+FIX = f"""\
+schema_version: "1.0.0"
+cve: {CVE}
+packages:
+  - ecosystem: pypi
+    name: requests
+    fixed_version: "2.31.0"
+"""
+
+
+def run_verify(
+    tmp_path: Path,
+    kubeconfig: str,
+    context: str,
+    namespaces: list[str],
+    registries: list[str],
+    *flags: str,
+    images: tuple[str, ...] = (),
+    docker_config: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """`fixproof verify` on one cluster context, with the reader's kubeconfig and, unless given,
+    no registry credentials at all."""
+    scope = f'schema_version: "1.0.0"\nregistries: [{", ".join(registries)}]\n'
+    if images:
+        scope += "images:\n" + "".join(f"  - {image}\n" for image in images)
+    scope += f"clusters:\n  - context: {context}\n    namespaces: [{', '.join(namespaces)}]\n"
+    (tmp_path / "fix.yaml").write_text(FIX, encoding="utf-8")
+    (tmp_path / "scope.yaml").write_text(scope, encoding="utf-8")
+    if docker_config is None:
+        docker_config = tmp_path / "docker-config"
+        docker_config.mkdir()
+    return subprocess.run(
+        [
+            sys.executable, "-c", "from fixproof.cli import main; main()",
+            "verify", "--cve", CVE, "--fix", str(tmp_path / "fix.yaml"),
+            "--scope", str(tmp_path / "scope.yaml"), "--out", str(tmp_path / "out"),
+            "--author", "fixproof integration tests", *flags,
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "DOCKER_CONFIG": str(docker_config), "KUBECONFIG": kubeconfig},
+        check=False,
+        timeout=3600,
+    )  # fmt: skip
+
+
+def report_of(done: subprocess.CompletedProcess[str]) -> dict[str, Any]:
+    """The `--json` summary, checked against its schema."""
+    assert done.stdout, done.stderr
+    report: dict[str, Any] = json.loads(done.stdout)
+    validator = build_validator(load_schema("verify-summary.schema.json"))
+    assert schema_errors(validator, report) == []
+    return report
+
+
+def by_owner(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {item["owner"].removeprefix("Deployment/"): item for item in report["assets"]}
+
+
+def check_bundle(out: Path) -> dict[str, Any]:
+    """The bundle and manifest validate, and every file matches its manifest entry."""
+    bundle: dict[str, Any] = json.loads((out / "bundle.json").read_text())
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert schema_errors(build_validator(load_schema("bundle.schema.json")), bundle) == []
+    assert schema_errors(build_validator(load_schema("manifest.schema.json")), manifest) == []
+    for entry in manifest["files"]:
+        data = (out / entry["path"]).read_bytes()
+        assert (hashlib.sha256(data).hexdigest(), len(data)) == (entry["sha256"], entry["size"])
+    check_openvex(json.loads((out / "openvex.json").read_text()))
+    return bundle
+
+
+def kubectl(kubeconfig: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """The pinned kubectl the setup scripts put in `<work>/bin`, next to the kubeconfig."""
+    return subprocess.run(
+        [str(Path(kubeconfig).parent / "bin" / "kubectl"), "--kubeconfig", kubeconfig, *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )

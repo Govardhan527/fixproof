@@ -8,34 +8,22 @@ without the variables; in CI they fail instead.
 """
 
 import base64
-import hashlib
 import json
 import os
 import re
-import subprocess
-import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
 import pytest
+from cluster_helpers import by_owner, check_bundle, kubectl, report_of, run_verify
 
 import demo_workloads
-from fixproof.validation import build_validator, check_openvex, load_schema, schema_errors
 
 pytestmark = pytest.mark.integration
 
-CVE = "CVE-2023-32681"
 CONTEXT = "kind-fixproof"
 OPEN, AUTH = "localhost:5001", "localhost:5002"
-FIX = f"""\
-schema_version: "1.0.0"
-cve: {CVE}
-packages:
-  - ecosystem: pypi
-    name: requests
-    fixed_version: "2.31.0"
-"""
 
 
 @pytest.fixture(scope="module")
@@ -59,54 +47,11 @@ def verify(
     *flags: str,
     images: tuple[str, ...] = (),
     docker_config: Path | None = None,
-) -> subprocess.CompletedProcess[str]:
-    scope = f'schema_version: "1.0.0"\nregistries: [{", ".join(registries)}]\n'
-    if images:
-        scope += "images:\n" + "".join(f"  - {image}\n" for image in images)
-    scope += f"clusters:\n  - context: {CONTEXT}\n    namespaces: [{', '.join(namespaces)}]\n"
-    (tmp_path / "fix.yaml").write_text(FIX, encoding="utf-8")
-    (tmp_path / "scope.yaml").write_text(scope, encoding="utf-8")
-    if docker_config is None:  # no registry credentials at all
-        docker_config = tmp_path / "docker-config"
-        docker_config.mkdir()
-    return subprocess.run(
-        [
-            sys.executable, "-c", "from fixproof.cli import main; main()",
-            "verify", "--cve", CVE, "--fix", str(tmp_path / "fix.yaml"),
-            "--scope", str(tmp_path / "scope.yaml"), "--out", str(tmp_path / "out"),
-            "--author", "fixproof integration tests", *flags,
-        ],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "DOCKER_CONFIG": str(docker_config), "KUBECONFIG": kubeconfig},
-        check=False,
-        timeout=3600,
+) -> Any:
+    return run_verify(
+        tmp_path, kubeconfig, CONTEXT, namespaces, registries, *flags,
+        images=images, docker_config=docker_config,
     )  # fmt: skip
-
-
-def report_of(done: subprocess.CompletedProcess[str]) -> dict[str, Any]:
-    assert done.stdout, done.stderr
-    report: dict[str, Any] = json.loads(done.stdout)
-    validator = build_validator(load_schema("verify-summary.schema.json"))
-    assert schema_errors(validator, report) == []
-    return report
-
-
-def by_owner(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {item["owner"].removeprefix("Deployment/"): item for item in report["assets"]}
-
-
-def check_bundle(out: Path) -> dict[str, Any]:
-    """The bundle and manifest validate, and every file matches its manifest entry."""
-    bundle: dict[str, Any] = json.loads((out / "bundle.json").read_text())
-    manifest = json.loads((out / "manifest.json").read_text())
-    assert schema_errors(build_validator(load_schema("bundle.schema.json")), bundle) == []
-    assert schema_errors(build_validator(load_schema("manifest.schema.json")), manifest) == []
-    for entry in manifest["files"]:
-        data = (out / entry["path"]).read_bytes()
-        assert (hashlib.sha256(data).hexdigest(), len(data)) == (entry["sha256"], entry["size"])
-    check_openvex(json.loads((out / "openvex.json").read_text()))
-    return bundle
 
 
 def test_success_test_six_workloads(tmp_path: Path, setup: tuple[dict[str, str], str]) -> None:
@@ -297,14 +242,7 @@ def test_a_side_loaded_image_is_unknown_even_when_docker_hub_is_allowed(
 
 
 def kubectl_can_i(kubeconfig: str, *args: str) -> bool:
-    kubectl = Path(kubeconfig).parent / "bin" / "kubectl"  # demo_cluster.sh's layout
-    done = subprocess.run(
-        [str(kubectl), "--kubeconfig", kubeconfig, "auth", "can-i", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=60,
-    )
+    done = kubectl(kubeconfig, "auth", "can-i", *args)
     assert done.stdout.strip() in {"yes", "no"}, done.stderr
     return done.stdout.strip() == "yes"
 

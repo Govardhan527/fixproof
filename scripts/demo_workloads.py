@@ -66,6 +66,41 @@ EDGE: dict[tuple[str, str], tuple[str, str]] = {
 }
 
 
+DOCKER_NAMESPACE = "fixproof-docker"  # on the minikube node (scripts/demo_minikube.sh)
+DOCKER_LOCAL = "fixproof-docker-local:it"  # built and loaded with `minikube image load`
+_CERTBOT_2_6_0 = LIVE["certbot-2-6-0"][0].split("@")[1]
+_CERTBOT_2_7_0 = LIVE["certbot-2-7-0"][0].split("@")[1]
+_PYTHON_SLIM = "sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3"
+# Namespace fixproof-docker, on a node running Docker Engine through cri-dockerd (ADR-0010
+# Amendment 2), written with Docker's short names as users write them. Deployment -> (image in
+# the pod spec, expected verdict, the full reference fixproof must report, or None)
+DOCKER: dict[str, tuple[str, str, str | None]] = {
+    "certbot-2-6-0": (
+        f"certbot/certbot@{_CERTBOT_2_6_0}",
+        "still_affected",
+        f"docker.io/certbot/certbot@{_CERTBOT_2_6_0}",
+    ),
+    "certbot-2-7-0": (
+        f"certbot/certbot@{_CERTBOT_2_7_0}",
+        "fixed",
+        f"docker.io/certbot/certbot@{_CERTBOT_2_7_0}",
+    ),
+    "certbot-by-tag": (
+        "certbot/certbot:v2.6.0",
+        "still_affected",
+        f"docker.io/certbot/certbot@{_CERTBOT_2_6_0}",
+    ),
+    # python:3.12-slim-bookworm (tests/live): an official image, so Docker writes `python@...`
+    # and fixproof must expand it to docker.io/library/python; it has no requests: fixed
+    "python-official": (
+        f"python@{_PYTHON_SLIM}",
+        "fixed",
+        f"docker.io/library/python@{_PYTHON_SLIM}",
+    ),
+    "local-only": (DOCKER_LOCAL, "unknown", None),  # no repository digest: docker://sha256:...
+}
+
+
 def container(
     name: str, image: str, command: Sequence[str] = ("sleep", "86400"), pull: str | None = None
 ) -> dict[str, Any]:
@@ -189,13 +224,32 @@ def manifests(images: dict[str, str], pull_secret: str) -> list[dict[str, Any]]:
     return documents + edge
 
 
+def docker_manifests() -> list[dict[str, Any]]:
+    """The minikube node's workloads (namespace fixproof-docker)."""
+    return [
+        deployment(
+            name,
+            DOCKER_NAMESPACE,
+            pod_spec([container("app", image, pull="Never" if image == DOCKER_LOCAL else None)]),
+        )
+        for name, (image, _, _) in DOCKER.items()
+    ]
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Print the demo cluster's workloads.")
-    parser.add_argument("--images", type=Path, required=True, help="build_fixtures.py output")
-    parser.add_argument("--pull-secret", required=True, help="secret for the auth registry")
+    parser = argparse.ArgumentParser(description="Print the demo clusters' workloads.")
+    parser.add_argument("--images", type=Path, help="build_fixtures.py output (kind cluster)")
+    parser.add_argument("--pull-secret", help="secret for the auth registry (kind cluster)")
+    parser.add_argument("--docker", action="store_true", help="the minikube node's workloads")
     args = parser.parse_args(argv)
-    images = json.loads(args.images.read_text(encoding="utf-8"))
-    sys.stdout.write(yaml.safe_dump_all(manifests(images, args.pull_secret), sort_keys=False))
+    if args.docker:
+        documents = docker_manifests()
+    elif args.images and args.pull_secret:
+        images = json.loads(args.images.read_text(encoding="utf-8"))
+        documents = manifests(images, args.pull_secret)
+    else:
+        parser.error("give --docker, or --images and --pull-secret")
+    sys.stdout.write(yaml.safe_dump_all(documents, sort_keys=False))
     return 0
 
 

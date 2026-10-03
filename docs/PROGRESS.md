@@ -226,13 +226,14 @@ Packaging, docs, demo, hardening only.
 ## Last session (resume here)
 
 - **Date:** 2026-10-03. **Current milestone:** M4 closed (owner, 2026-10-03); M5 next.
-- **`main`:** f2da9da green (CI 37124348833). The M4 close commits (review fixes, the native
-  sidecar, token and subresource checks, docs) go through a work branch with two green runs
-  before `main` moves (owner rule: `main` never red).
+- **`main` = 0727948, green:** work branch `m4-close` passed twice (CI 37128352390,
+  37128943741), then `main` CI 37130234076: all seven jobs, kind 35 and Docker Engine node 3
+  integration tests. The branch was deleted.
 - **Owner rules (2026-10-03):** `main` never red; no test missing; every step judged by whether a
   real user can run it on their own systems and act on it ("Value test for M4" above).
 - **Open for the owner:** a cloud test account for managed clusters and registry credential
   helpers; CRI-O nodes; parallel scanning (all in PARKED).
-- **Next steps, in order:** land the close on `main`; then M5: read the plan's M5 items, verify
-  the facts they rely on (CISA KEV feed, CycloneDX 1.6.2 VEX, the gate's `closed.yaml`), propose
-  the M5 design as an ADR, wait for approval, build.
+- **Next steps, in order (M5):** read the plan's M5 items; verify the facts they rely on (the
+  CISA KEV JSON feed fields and caching, CycloneDX 1.6.2 VEX fields and `cyclonedx-python-lib`,
+  the HTML summary, the gate's `closed.yaml` and exit codes); propose the M5 design as an ADR;
+  wait for approval; build, with real-data tests from the start.

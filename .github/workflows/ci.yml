@@ -101,8 +101,9 @@ jobs:
           uv run --frozen pip-audit --strict --disable-pip --require-hashes \
             --requirement "$RUNNER_TEMP/requirements.txt"
 
-  # ADR-0007 item 10: real Syft and Grype against the 8 fixture images. Images are pinned by
-  # digest (looked up 2026-10-02): registry:2 (index) and httpd:2.4-alpine (for htpasswd).
+  # ADR-0007 item 10: real Syft and Grype against the 8 fixture images. ADR-0010 item 9: the kind
+  # demo cluster (scripts/demo_cluster.sh pins kind, kubectl, the node image, registry:2 and
+  # httpd by digest) with the 6 SUCCESS TEST workloads and 2 real certbot releases.
   integration:
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     needs: [lint-type, test]
@@ -132,6 +133,21 @@ jobs:
           FIXPROOF_IT_IMAGES: ${{ runner.temp }}/demo/fixture-images.json
           FIXPROOF_IT_KUBECONFIG: ${{ runner.temp }}/demo/reader.kubeconfig
         run: make integration
+      - name: Show a fixproof run against the demo cluster, as a user sees it
+        env:
+          KUBECONFIG: ${{ runner.temp }}/demo/reader.kubeconfig
+          DOCKER_CONFIG: ${{ runner.temp }}/no-credentials
+        run: |
+          mkdir -p "$DOCKER_CONFIG"
+          printf '%s\n' 'schema_version: "1.0.0"' 'cve: CVE-2023-32681' 'packages:' \
+            '  - ecosystem: pypi' '    name: requests' '    fixed_version: "2.31.0"' \
+            > "$RUNNER_TEMP/fix.yaml"
+          code=0
+          uv run --frozen fixproof verify --cve CVE-2023-32681 --fix "$RUNNER_TEMP/fix.yaml" \
+            --scope examples/scope/kind-demo.yaml --out "$RUNNER_TEMP/evidence" \
+            --author "fixproof CI demo" || code=$?
+          echo "exit code: $code"
+          test "$code" -eq 1
       - name: Show the demo cluster's pods
         if: failure()
         run: |

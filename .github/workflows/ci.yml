@@ -152,7 +152,7 @@ jobs:
         if: failure()
         run: |
           kubectl=("$RUNNER_TEMP/demo/bin/kubectl" --kubeconfig "$RUNNER_TEMP/demo/admin.kubeconfig")
-          for namespace in fixproof-demo fixproof-live; do
+          for namespace in fixproof-demo fixproof-live fixproof-edge; do
             "${kubectl[@]}" describe pods -n "$namespace" || true
           done
           "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true

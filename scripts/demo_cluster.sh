@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The demo cluster (ADR-0010 item 9): two local registries (one open, one that needs a password),
-# the fixture images, a kind cluster that pulls from both, the demo workloads, and a kubeconfig
-# for fixproof's read-only account. The CI `integration` job runs it; `make demo` will in M6.
+# the fixture images, a kind cluster that pulls from both, the demo workloads in three namespaces
+# (scripts/demo_workloads.py), and a kubeconfig for fixproof's read-only account. The CI
+# `integration` job runs it; `make demo` will in M6.
 #   scripts/demo_cluster.sh up WORKDIR      needs Docker, curl, openssl and uv
 #   scripts/demo_cluster.sh down WORKDIR
 # WORKDIR receives bin/ (kind and kubectl, checksum-verified), fixture-images.json,
@@ -20,7 +21,8 @@ HTPASSWD_IMAGE=httpd@sha256:4e585da9d0125dec36d4500a9f5c5df7b2c0a01f67cb47865a91
 OPEN_REGISTRY=fixproof-registry OPEN_PORT=5001
 AUTH_REGISTRY=fixproof-auth-registry AUTH_PORT=5002
 PULL_SECRET=auth-registry
-NAMESPACES=(fixproof-demo fixproof-live)  # as in scripts/demo_workloads.py
+NAMESPACES=(fixproof-demo fixproof-live fixproof-edge)  # as in scripts/demo_workloads.py
+SIDE_LOADED=fixproof-side-loaded:it  # demo_workloads.SIDE_LOADED
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 command="${1:?usage: demo_cluster.sh up|down WORKDIR}"
@@ -111,11 +113,37 @@ deploy() {
     uv run --frozen python "$repo/scripts/demo_workloads.py" \
         --images "$work/fixture-images.json" --pull-secret "$PULL_SECRET" \
         | "${admin[@]}" apply -f -
-    for namespace in "${NAMESPACES[@]}"; do
+    for namespace in fixproof-demo fixproof-live; do
         "${admin[@]}" wait --for=condition=Available deployment --all -n "$namespace" \
             --timeout=600s
     done
+    wait_for_edge_cases
     "${admin[@]}" get pods -A -o wide
+}
+
+side_load() {  # an image with no registry digest: built here, copied into the node by kind
+    docker build --quiet --label fixproof.fixture.loaded=kind --tag "$SIDE_LOADED" \
+        "$repo/tests/fixtures/images/requests-2.31.0" > /dev/null
+    kind load docker-image "$SIDE_LOADED" --name "$CLUSTER"
+}
+
+wait_for_edge_cases() {  # each fixproof-edge workload in the state its test expects
+    local edge=(kubectl --kubeconfig "$work/admin.kubeconfig" -n fixproof-edge)
+    local debug_image
+    "${edge[@]}" wait --for=condition=Available deployment/two-replicas deployment/side-loaded \
+        --timeout=600s
+    "${edge[@]}" wait --for=condition=Ready pod/bare-pod --timeout=600s
+    "${edge[@]}" wait --for=condition=PodScheduled=false pod \
+        -l app.kubernetes.io/name=unschedulable --timeout=300s
+    "${edge[@]}" wait --for=jsonpath='{.status.containerStatuses[0].state.waiting.reason}'=ImagePullBackOff \
+        pod -l app.kubernetes.io/name=pull-backoff --timeout=300s
+    # An ephemeral debug container, which fixproof must skip (ADR-0010 item 1)
+    debug_image="$(uv run --frozen python -c \
+        'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' \
+        "$work/fixture-images.json" requests-2.25.1)"  # demo_workloads.DEBUG_FIXTURE
+    "${edge[@]}" debug pod/bare-pod --image="$debug_image" --container=debugger -- sleep 86400
+    "${edge[@]}" wait --for=jsonpath='{.status.ephemeralContainerStatuses[0].state.running}' \
+        pod/bare-pod --timeout=300s
 }
 
 reader_kubeconfig() {  # fixproof's view: a 2-hour token for fixproof-reader, nothing else
@@ -144,6 +172,7 @@ case "$command" in
         start_registries
         push_fixtures
         create_cluster
+        side_load
         deploy
         reader_kubeconfig
         echo "demo cluster ready: KUBECONFIG=$work/reader.kubeconfig, context $CONTEXT"

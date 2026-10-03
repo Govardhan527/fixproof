@@ -562,6 +562,21 @@ the exact files read.
   `docker.io/certbot/certbot@sha256:<the digest in the pod spec>`; the `fixproof-reader` token
   could list pods in `fixproof-demo` and got `403 Forbidden` for `kube-system`; `kubectl auth
   can-i --list` showed `pods` and `replicasets.apps` with `get` and `list` only. OBSERVED.
+- **kubectl and kind behaviour the demo's edge cases rely on** (read 2026-10-03):
+  - `kubectl wait` (`staging/src/k8s.io/kubectl/pkg/cmd/wait/wait.go` at v1.37.1, SHA-256
+    `278a643094fa2ebbb450787b365a4e70e9122493c11f1f5e63dd26fb08513a66`): `--for=condition=Ready=false`
+    waits for a condition value; `--for=jsonpath='{...}'=value` for a field value; a jsonpath
+    with no value waits for the field to exist. VERIFIED.
+  - `kubectl debug POD --image=IMAGE -c NAME -- COMMAND` adds an ephemeral container to a running
+    pod (kubectl reference, `kubectl debug`: "Add an ephemeral container to an already running
+    pod"; "Create a debug container named debugger"). VERIFIED.
+  - `kubectl auth can-i VERB [TYPE | TYPE/NAME | NONRESOURCEURL]` with `-n`, `--all-namespaces`
+    and `--subresource` ("SubResource such as pod/log"); it prints `yes` or `no` (kubectl
+    reference, `kubectl auth can-i`). VERIFIED.
+  - `kind load docker-image IMAGE --name CLUSTER` copies a local image into the nodes; the
+    container then needs `imagePullPolicy: IfNotPresent` or `Never` (kind v0.33.0 quick start,
+    "Loading an Image Into Your Cluster"). VERIFIED. Whether such an image has a repository
+    digest on the node is what `test_edge_cases_on_a_real_node` checks.
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod

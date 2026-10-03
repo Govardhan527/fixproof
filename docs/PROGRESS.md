@@ -154,6 +154,12 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 - [x] Live data (ADR-0008 item 5): the kind cluster runs workloads from real public images, not
       only fixture images: namespace `fixproof-live` runs certbot v2.6.0 (`still_affected`) and
       v2.7.0 (`fixed`), both as expected in CI 37110967647.
+- [ ] Every ADR-0010 case tested on the real cluster, not only on fakes (owner, 2026-10-03:
+      no test may be missing): namespace `fixproof-edge` (init container, sidecar, two replicas
+      sharing evidence, bare pod, ephemeral container skipped, pull failure, unscheduled pod,
+      side-loaded image), images and clusters in one scope, two namespaces with one token, a
+      registry outside the allowlist, and a `kubectl auth can-i` matrix for the reader. Written;
+      waiting for a green run on a work branch.
 - [x] Scope and spec reviews (2026-10-03). Fixed: pods with no container status yet were dropped
       (ab0d024); the client could write refreshed tokens back to the kubeconfig and read
       `KUBECONFIG` only at import (41041e9); 21 undocumented Kubernetes facts verified and
@@ -179,16 +185,15 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M4; done-criterion met; ready to close.
-- **`main` = c230151, green:** work branch `m4-close` proved it first (dispatched CI 37115772416,
-  all six jobs, integration 6 passed, demo 2 / 3 / 1), then `main` CI 37116173157, all six jobs
-  green. The branch was deleted after. Integration is now green three runs in a row since the
-  demo-digest fix (ad0bc59).
-- **Owner rule (2026-10-03): `main` must never go red.** Changes that can affect the integration
-  or live jobs are proven green on a work branch (`gh workflow run ci.yml --ref <branch>`)
-  before `main` moves.
-- **Committed locally, not pushed:** this resume block.
-- **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1 (RBAC as two files, the `fixproof`
-  Namespace object, the kubectl pin); (2) close M4.
-- **Next steps, in order:** on the owner's word, tick the RBAC item, record M4 closed, push
-  through a work branch; then M5 (gate, KEV, HTML, CycloneDX 1.6).
+- **Date:** 2026-10-03. **Current milestone:** M4; done-criterion met; closing.
+- **`main` = c230151, green** (CI 37116173157). Local and unpushed: 4901dce (run ids) and the
+  edge-case commit after it.
+- **Owner asked (2026-10-03) that no test be missing.** Every ADR-0010 case now has a real-cluster
+  integration test (`tests/integration/test_cluster.py`, namespace `fixproof-edge`, the
+  allowlist, two namespaces, images plus clusters, a `can-i` matrix). Not run yet: needs a work
+  branch push and a dispatched run, then `main` (owner rule: `main` never red).
+- **Waiting on the owner:** (1) "push" for the work branch; (2) confirm ADR-0010 Amendment 1;
+  (3) close M4.
+- **Next steps, in order:** push the work branch, dispatch CI, fix until green (twice), move
+  `main`; record what the side-loaded and pull-failure pods showed in SPEC_NOTES §12; close M4
+  on the owner's word; then M5.

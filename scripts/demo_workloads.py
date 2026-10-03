@@ -5,8 +5,13 @@
 Namespace `fixproof-demo` runs the six SUCCESS TEST workloads from the fixture images
 (scripts/build_fixtures.py): two fixed, three still affected, and one whose registry needs
 credentials that fixproof is not given. Namespace `fixproof-live` runs two real certbot releases
-from Docker Hub (ADR-0008 item 5). Each Deployment pins its image by digest, only sleeps, and
-runs unprivileged. The namespaces themselves are created by scripts/demo_cluster.sh.
+from Docker Hub (ADR-0008 item 5). Namespace `fixproof-edge` holds the cases ADR-0010 must get
+right on a real node: init containers, sidecars, two replicas sharing evidence, a bare pod, an
+image that cannot be pulled, a pod that cannot be scheduled, and an image side-loaded with
+`kind load` (no registry digest). scripts/demo_cluster.sh creates the namespaces, side-loads
+that image and adds an ephemeral container to the bare pod, which fixproof must skip. Every
+container only sleeps and runs unprivileged; every image except the side-loaded one is pinned
+by digest.
 """
 
 import argparse
@@ -18,7 +23,7 @@ from typing import Any
 
 import yaml
 
-DEMO_NAMESPACE, LIVE_NAMESPACE = "fixproof-demo", "fixproof-live"
+DEMO_NAMESPACE, LIVE_NAMESPACE, EDGE_NAMESPACE = "fixproof-demo", "fixproof-live", "fixproof-edge"
 # Deployment name -> (fixture image, verdict expected for CVE-2023-32681 fixed in requests 2.31.0)
 DEMO: dict[str, tuple[str, str]] = {
     "orders": ("requests-2.30.0", "still_affected"),
@@ -39,47 +44,91 @@ LIVE: dict[str, tuple[str, str]] = {  # the digests of tests/live/test_public_im
         "fixed",  # certbot v2.7.0 pins requests 2.31.0
     ),
 }
+SIDE_LOADED = "fixproof-side-loaded:it"  # built and loaded with `kind load` by demo_cluster.sh
+DEBUG_FIXTURE = "requests-2.25.1"  # the ephemeral container demo_cluster.sh adds to bare-pod
+# Namespace fixproof-edge: (pod name prefix, container) -> (verdict, text the reason contains)
+EDGE: dict[tuple[str, str], tuple[str, str]] = {
+    ("bare-pod", "app"): ("still_affected", "requests 2.25.1"),
+    ("pull-backoff-", "app"): ("unknown", "the container has not started ("),
+    ("side-loaded-", "app"): ("unknown", "has no registry digest"),
+    ("two-replicas-", "setup"): ("fixed", "requests 2.32.3"),
+    ("two-replicas-", "app"): ("still_affected", "requests 2.30.0"),
+    ("two-replicas-", "sidecar"): ("fixed", "both methods agree"),
+    ("unschedulable-", "app"): ("unknown", "no status yet, pod Pending"),
+}
 
 
-def deployment(
-    name: str, namespace: str, image: str, pull_secret: str | None = None
+def container(
+    name: str, image: str, command: Sequence[str] = ("sleep", "86400"), pull: str | None = None
 ) -> dict[str, Any]:
-    labels = {"app.kubernetes.io/name": name, "app.kubernetes.io/part-of": "fixproof-demo"}
-    pod: dict[str, Any] = {
+    spec: dict[str, Any] = {
+        "name": name,
+        "image": image,
+        "command": list(command),
+        "securityContext": {
+            "allowPrivilegeEscalation": False,
+            "readOnlyRootFilesystem": True,
+            "capabilities": {"drop": ["ALL"]},
+        },
+        "resources": {
+            "requests": {"cpu": "10m", "memory": "16Mi"},
+            "limits": {"memory": "64Mi"},
+        },
+    }
+    if pull:
+        spec["imagePullPolicy"] = pull
+    return spec
+
+
+def pod_spec(
+    containers: list[dict[str, Any]],
+    init: list[dict[str, Any]] | None = None,
+    pull_secret: str | None = None,
+    node_selector: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    spec: dict[str, Any] = {
         "automountServiceAccountToken": False,
         "securityContext": {
             "runAsNonRoot": True,
             "runAsUser": 65534,
             "seccompProfile": {"type": "RuntimeDefault"},
         },
-        "containers": [
-            {
-                "name": "app",
-                "image": image,
-                "command": ["sleep", "86400"],
-                "securityContext": {
-                    "allowPrivilegeEscalation": False,
-                    "readOnlyRootFilesystem": True,
-                    "capabilities": {"drop": ["ALL"]},
-                },
-                "resources": {
-                    "requests": {"cpu": "10m", "memory": "16Mi"},
-                    "limits": {"memory": "64Mi"},
-                },
-            }
-        ],
+        "containers": containers,
     }
+    if init:
+        spec["initContainers"] = init
     if pull_secret:
-        pod["imagePullSecrets"] = [{"name": pull_secret}]
+        spec["imagePullSecrets"] = [{"name": pull_secret}]
+    if node_selector:
+        spec["nodeSelector"] = node_selector
+    return spec
+
+
+def _labels(name: str) -> dict[str, str]:
+    return {"app.kubernetes.io/name": name, "app.kubernetes.io/part-of": "fixproof-demo"}
+
+
+def deployment(
+    name: str, namespace: str, spec: dict[str, Any], replicas: int = 1
+) -> dict[str, Any]:
     return {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
-        "metadata": {"name": name, "namespace": namespace, "labels": labels},
+        "metadata": {"name": name, "namespace": namespace, "labels": _labels(name)},
         "spec": {
-            "replicas": 1,
+            "replicas": replicas,
             "selector": {"matchLabels": {"app.kubernetes.io/name": name}},
-            "template": {"metadata": {"labels": labels}, "spec": pod},
+            "template": {"metadata": {"labels": _labels(name)}, "spec": spec},
         },
+    }
+
+
+def bare_pod(name: str, namespace: str, spec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "apiVersion": "v1",
+        "kind": "Pod",
+        "metadata": {"name": name, "namespace": namespace, "labels": _labels(name)},
+        "spec": spec,
     }
 
 
@@ -87,14 +136,48 @@ def manifests(images: dict[str, str], pull_secret: str) -> list[dict[str, Any]]:
     documents = []
     for name, (fixture, _) in DEMO.items():
         secret = pull_secret if fixture.startswith("auth/") else None
-        documents.append(deployment(name, DEMO_NAMESPACE, images[fixture], secret))
+        spec = pod_spec([container("app", images[fixture])], pull_secret=secret)
+        documents.append(deployment(name, DEMO_NAMESPACE, spec))
     for name, (image, _) in LIVE.items():
-        documents.append(deployment(name, LIVE_NAMESPACE, image))
-    return documents
+        documents.append(deployment(name, LIVE_NAMESPACE, pod_spec([container("app", image)])))
+    registry = images["requests-2.30.0"].split("/", 1)[0]
+    missing = f"{registry}/fixproof/missing@sha256:{'0' * 64}"  # no such image: never pulls
+    edge = [
+        bare_pod(
+            "bare-pod", EDGE_NAMESPACE, pod_spec([container("app", images["requests-2.25.1"])])
+        ),
+        deployment(
+            "two-replicas",
+            EDGE_NAMESPACE,
+            pod_spec(
+                [
+                    container("app", images["requests-2.30.0"]),
+                    container("sidecar", images["no-requests"]),
+                ],
+                init=[container("setup", images["requests-2.32.3"], command=("true",))],
+            ),
+            replicas=2,
+        ),
+        deployment("pull-backoff", EDGE_NAMESPACE, pod_spec([container("app", missing)])),
+        deployment(
+            "unschedulable",
+            EDGE_NAMESPACE,
+            pod_spec(
+                [container("app", images["requests-2.31.0"])],
+                node_selector={"fixproof.example/no-such-node": "true"},
+            ),
+        ),
+        deployment(
+            "side-loaded",
+            EDGE_NAMESPACE,
+            pod_spec([container("app", SIDE_LOADED, pull="Never")]),
+        ),
+    ]
+    return documents + edge
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Print the demo cluster's Deployments.")
+    parser = argparse.ArgumentParser(description="Print the demo cluster's workloads.")
     parser.add_argument("--images", type=Path, required=True, help="build_fixtures.py output")
     parser.add_argument("--pull-secret", required=True, help="secret for the auth registry")
     args = parser.parse_args(argv)

@@ -180,17 +180,15 @@ Packaging, docs, demo, hardening only.
 ## Last session (resume here)
 
 - **Date:** 2026-10-03. **Current milestone:** M4; done-criterion met; ready to close.
-- **`main` = 1fd0221, green:** CI 37112944135, all six jobs; integration 6 passed and the demo
-  step printed 2 fixed / 3 still_affected / 1 unknown (copied into the README). An earlier run
-  (37112442952) was red: the demo's private image shared a digest with an open one; fixed in
-  ad0bc59.
+- **`main` = c230151, green:** work branch `m4-close` proved it first (dispatched CI 37115772416,
+  all six jobs, integration 6 passed, demo 2 / 3 / 1), then `main` CI 37116173157, all six jobs
+  green. The branch was deleted after. Integration is now green three runs in a row since the
+  demo-digest fix (ad0bc59).
 - **Owner rule (2026-10-03): `main` must never go red.** Changes that can affect the integration
   or live jobs are proven green on a work branch (`gh workflow run ci.yml --ref <branch>`)
   before `main` moves.
-- **Committed locally, not pushed:** the docs commit with the README cluster run and these
-  PROGRESS ticks.
+- **Committed locally, not pushed:** this resume block.
 - **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1 (RBAC as two files, the `fixproof`
-  Namespace object, the kubectl pin); (2) say "push" (branch first, then `main`); (3) close M4.
-- **Next steps, in order:** push the docs commit through a work branch and a green dispatched
-  run; on the owner's word, tick the RBAC item and record M4 closed; then M5 (gate, KEV, HTML,
-  CycloneDX 1.6).
+  Namespace object, the kubectl pin); (2) close M4.
+- **Next steps, in order:** on the owner's word, tick the RBAC item, record M4 closed, push
+  through a work branch; then M5 (gate, KEV, HTML, CycloneDX 1.6).

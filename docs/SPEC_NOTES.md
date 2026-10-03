@@ -462,8 +462,9 @@ the exact files read.
       digest; the platform digest is reported separately as `ImageId`.
     - So a pod pulled from a registry reports `registry/repository@sha256:<digest>` (the index
       digest for a multi-platform image), which fixproof can scan; an image with no repository
-      digest (for example one side-loaded with `kind load`) does not, and fixproof reports such a
-      workload as `unknown`. The M4 demo therefore pulls from a local registry.
+      digest does not, and fixproof reports such a workload as `unknown`. The M4 demo pulls
+      from a local registry. Correction (CI 37117704337, 2026-10-03): an image side-loaded with
+      `kind load` is not such a case on kind v0.33.0; see "A side-loaded image" below.
   - **Kubernetes Python client** `kubernetes` 36.0.3 (PyPI, Apache-2.0): `V1PodStatus` has
     `container_statuses`, `init_container_statuses`, `ephemeral_container_statuses`;
     `V1ContainerStatus` has `name`, `image`, `image_id`, `state`, `ready`; `V1OwnerReference` has
@@ -577,6 +578,25 @@ the exact files read.
     container then needs `imagePullPolicy: IfNotPresent` or `Never` (kind v0.33.0 quick start,
     "Loading an Image Into Your Cluster"). VERIFIED. Whether such an image has a repository
     digest on the node is what `test_edge_cases_on_a_real_node` checks.
+- **A side-loaded image** (CI run 37117704337, 2026-10-03; kind v0.33.0, node v1.37.0): a pod
+  with `image: fixproof-side-loaded:it`, loaded with `kind load docker-image`, reported
+  `imageID` `docker.io/library/import-2026-10-03@sha256:9ecbc2c0…`, a name made at import that
+  no registry holds. fixproof treats it as any reference: outside the allowlist it is `unknown`
+  without being read; with `docker.io` allowed the read fails and it is `unknown`
+  (`test_a_side_loaded_image_is_unknown_even_when_docker_hub_is_allowed`). OBSERVED.
+- **cri-dockerd image IDs** (cri-dockerd v0.4.7, tag commit `d75bfd1c`, `core/convert.go`
+  SHA-256 `7db84e68175012732050ddcc705cfe0d831d67f8e996039fed182bd410cd70d4`,
+  `toPullableImageID`; prefixes in `core/naming.go`): on a node running Docker Engine through
+  cri-dockerd, `ImageRef` is `docker-pullable://` + the image's first `RepoDigests` entry, or
+  `docker://` + the image ID when it has none. fixproof (ADR-0010 item 1) does not accept the
+  `docker-pullable://` form yet, so such a node's workloads are all `unknown`. VERIFIED; the
+  owner decides (ADR-0010 Amendment 2, proposed).
+  - Docker's `RepoDigests` hold familiar names (`nginx@sha256:…`). The normalisation rule
+    (`github.com/distribution/reference` v0.6.0, tag commit `ff14fafe`, `normalize.go` SHA-256
+    `7bad23a44f1bca325c5de6185092b9992c55b7db211fa4f5444b2d80853e7599`, `splitDockerDomain`):
+    the first path element is the registry host if it is `localhost`, contains `.` or `:`, or is
+    not all lower case; `index.docker.io` becomes `docker.io`; otherwise the host is `docker.io`,
+    and a single-element name gets `library/`. VERIFIED.
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod

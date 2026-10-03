@@ -464,3 +464,15 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   `fixproof` Namespace object the account lives in; and the demo script pins kubectl v1.37.1
   (checksum in SPEC_NOTES §12) next to kind, a setup tool like kind, not a runtime dependency.
   Item 8's transitive packages are listed with versions and licences in SPEC_NOTES §16.
+- **Amendment 2 (2026-10-03, proposed; waiting on the owner): read cri-dockerd image IDs.**
+  - *Why:* a node that runs Docker Engine through cri-dockerd (minikube's default, some
+    on-premises clusters) reports `imageID` as `docker-pullable://<RepoDigests[0]>`, with
+    Docker's familiar names (`nginx@sha256:…`). Item 1 accepts only `registry/repository@sha256:…`,
+    so every workload on such a node is `unknown` today: no value for those users (SPEC_NOTES §12).
+  - *Change:* strip `docker-pullable://`, expand the familiar name with Docker's own rule
+    (SPEC_NOTES §12, distribution/reference v0.6.0), then parse it as now. `docker://sha256:…`
+    (no repository digest) stays `unknown`. Nothing else changes: same RBAC, same allowlist.
+  - *Proof:* unit tests for the prefix and every normalisation branch; and a real-node test, a
+    CI job on minikube (pinned by version and checksum, Docker driver, Docker runtime) running
+    two certbot releases by digest and one by short name and tag, expecting `still_affected`,
+    `fixed`, `still_affected`. minikube would be a new CI tool, like kind.

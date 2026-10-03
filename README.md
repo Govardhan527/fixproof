@@ -477,8 +477,15 @@ if the node holds the same digest under two registries, it may name either one, 
 reads the content through that name only if it is in `registries`.
 
 A workload is `unknown`, with the reason, when its container has not started, when its image
-has no registry digest (for example one side-loaded into the node), or when its registry is not
-in `registries`: fixproof never reads an image from outside the allowlist.
+has no registry digest, or when its registry is not in `registries`: fixproof never reads an
+image from outside the allowlist. An image loaded straight into a kind node (`kind load`) is
+reported by the node as `docker.io/library/import-<date>@sha256:…`, a name no registry holds,
+so it comes out `unknown` too.
+
+**Container runtimes.** fixproof reads the image IDs that containerd reports (kind, and most
+managed clusters). A node that runs Docker Engine through cri-dockerd (minikube's default, some
+on-premises clusters) reports `docker-pullable://…` IDs, which fixproof does not read yet, so
+every workload there comes out `unknown`.
 
 **Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
 reads, and nothing else. [`deploy/kubernetes/`](deploy/kubernetes/) ships a ServiceAccount and a

@@ -222,15 +222,22 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
       CycloneDX 1.6.2 state definitions, its two companion schemas and offline validation of
       `cyclonedx-python-lib` 11.12.0 output; the pinned tools' image source schemes.
 - [x] M5 design accepted: ADR-0012 (owner answered the four questions 2026-10-03).
-- [ ] KEV enrichment: fetched on every run, validated, recorded; `unavailable` never changes a
-      verdict; `bundle` and `verify-summary` 1.2.0.
-- [ ] CycloneDX 1.6 VEX (`cyclonedx.json`) validated against the official schema; golden file.
-- [ ] HTML summary (`report.html`), self-contained; golden file.
-- [ ] `closed.yaml` and `fixproof gate` (exit 0 / 1 / 2 / 3, `gate-result`), registry by digest
-      and local builds (`docker:`, `docker-archive:`, `oci-archive:`).
-- [ ] Integration: the gate on real fixture images in CI (reintroduced, fixed, unreadable).
+- [x] KEV enrichment: fetched on every run, validated, recorded; `unavailable` never changes a
+      verdict; `bundle` and `verify-summary` 1.2.0 (19aa0d4). The live KEV test passed locally
+      against the real feed (2026-10-03).
+- [x] CycloneDX 1.6 VEX (`cyclonedx.json`) validated against the official schema; golden file
+      (2061608). Owner approved exempting `src/fixproof/schemas/official/` (pinned third-party
+      schemas) from the commit word check, as the official schema's own text trips it.
+- [x] HTML summary (`report.html`), self-contained; golden file (263314c).
+- [x] `closed.yaml` and `fixproof gate` (exit 0 / 1 / 2 / 3, `gate-result`), registry by digest
+      and local builds (`docker:`, `docker-archive:`, `oci-archive:`) (df351e3). `oci-archive:`
+      checked locally on a real alpine archive: both tools report its image ID and manifest
+      digest.
+- [ ] Integration: the gate on real fixture images in CI (reintroduced, fixed, unreadable):
+      written (f716ff2); branch run 37137847475 pending.
 - [ ] Live data (ADR-0008 item 5): KEV enrichment checked against the live CISA feed in the live
-      suite.
+      suite: written (f716ff2) and 6 passed locally with the real scanners and feed; the CI
+      live job runs on Mondays or on dispatch.
 
 ## M6 (weeks 9-10)
 
@@ -242,13 +249,12 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M5 (design accepted, ADR-0012; building).
-- **`main`:** 9826d7d (ADR-0011: CRI-O nodes, `verify --jobs`), CI 37135400013 running.
-- **Owner rules (2026-10-03):** `main` never red; no test missing; every step judged by whether a
-  real user can run it on their own systems and act on it.
-- **M5 decisions (owner):** gate exits 2 on `unknown`; gate takes registry images by digest and
-  local builds (`docker:`, `docker-archive:`, `oci-archive:`); KEV downloaded on every run;
-  `cyclonedx-python-lib` 11.12.0 for CycloneDX, standard library for the HTML.
-- **Next steps, in order:** KEV module; CycloneDX writer; HTML report; `closed.yaml` and `gate`;
-  integration (gate on real images) and live (KEV) tests; work branch with two green runs; ask
-  for "push"; reviews; close M5.
+- **Date:** 2026-10-03. **Current milestone:** M5, built; CI run pending.
+- **`main` = 9826d7d, green** (CI 37135400013). Work branch `m5` (592580b..765c1b9: ADR-0012,
+  KEV, CycloneDX, HTML, gate, real-data tests, README) dispatched as CI 37137847475.
+- **Owner decisions today:** gate exits 2 on `unknown`; gate takes registry digests and local
+  builds; KEV downloaded every run; `cyclonedx-python-lib` + standard-library HTML; the commit
+  word check exempts only `src/fixproof/schemas/official/`.
+- **Next steps, in order:** branch CI green twice (fix on the branch if not); dispatch the live
+  job on the branch; ask for "push"; M5 spec and scope reviews; close M5 when SUCCESS TEST steps 2
+  and 3 pass in CI; then M6 (packaging, `make demo`, hardening).

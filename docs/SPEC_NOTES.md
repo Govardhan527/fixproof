@@ -6,6 +6,8 @@ date. Tags:
 - **UNVERIFIED**: not yet read in a primary source. It blocks the milestone named next to it.
 - **OPEN**: the source is clear (or contradicts itself), and applying it needs an owner decision
   (see §14).
+- **OBSERVED**: seen in a real run of the named tool, cluster or CI job (the run id is given),
+  not read in a specification. Used for behaviour a source does not state.
 
 All retrievals are dated 2026-10-02 unless noted otherwise. Commit SHAs and file hashes are of
 the exact files read.
@@ -588,13 +590,21 @@ the exact files read.
   SHA-256 `7db84e68175012732050ddcc705cfe0d831d67f8e996039fed182bd410cd70d4`,
   `toPullableImageID`; prefixes in `core/naming.go`): on a node running Docker Engine through
   cri-dockerd, `ImageRef` is `docker-pullable://` + the image's first `RepoDigests` entry, or
-  `docker://` + the image ID when it has none. fixproof (ADR-0010 item 1) does not accept the
-  `docker-pullable://` form, and expands Docker's short names, from ADR-0010 Amendment 2
-  (accepted 2026-10-03). VERIFIED. The same function is in cri-dockerd v0.4.3 (tag commit
+  `docker://` + the image ID when it has none. ADR-0010 item 1 did not accept the
+  `docker-pullable://` form; Amendment 2 (accepted 2026-10-03) added it: fixproof strips the
+  prefix and expands Docker's short name. VERIFIED. The same function is in cri-dockerd v0.4.3 (tag commit
   `d969e29f`), `core/convert.go` with the identical SHA-256, which is the version minikube
   v1.39.0 ships.
-  - Docker's `RepoDigests` hold familiar names (`nginx@sha256:…`). The normalisation rule
-    (`github.com/distribution/reference` v0.6.0, tag commit `ff14fafe`, `normalize.go` SHA-256
+  - Docker's `RepoDigests` hold familiar names (`nginx@sha256:…`): moby at tag `docker-v29.7.2`
+    (tag object `d681cdae`, commit `6a43e3d5`), `daemon/images/image_inspect.go` (SHA-256
+    `2a6384588aa047e3545863e709736a3587191fcb09089889ef806d20e3a5cded`) and
+    `daemon/containerd/image_inspect.go` (SHA-256
+    `d39fd6e65b3487e9899eccf8115b7e6a0948f04ce26a6840d4d6d522096ad302`) both append
+    `reference.FamiliarString(ref)` to `repoDigests`. VERIFIED; and OBSERVED in the
+    Docker-runtime job (`test_the_node_really_runs_docker_engine` asserts the raw IDs
+    `docker-pullable://certbot/certbot@…` and `docker-pullable://python@…`).
+  - The normalisation rule (`github.com/distribution/reference` v0.6.0, commit `ff14fafe`, tag
+    object `7b3d8f93`, `normalize.go` SHA-256
     `7bad23a44f1bca325c5de6185092b9992c55b7db211fa4f5444b2d80853e7599`, `splitDockerDomain`):
     the first path element is the registry host if it is `localhost`, contains `.` or `:`, or is
     not all lower case; `index.docker.io` becomes `docker.io`; otherwise the host is `docker.io`,
@@ -617,6 +627,45 @@ the exact files read.
   both resolved to `docker.io/certbot/certbot@sha256:92092d…`; `python@sha256:54c85f…` to
   `docker.io/library/python@sha256:54c85f…`; the image loaded with `minikube image load` reported
   `docker://sha256:2a3c286d…`. OBSERVED.
+- **Facts checked for the M4 close** (2026-10-03):
+  - **minikube's default runtime is containerd**, not Docker Engine: v1.39.0
+    `cmd/minikube/cmd/start.go` (SHA-256
+    `640f4ea2e88392eb77a6f0690373f399bee8ca2c6ae3c6212411a14a5daae2c2`), `defaultRuntime()`
+    returns `constants.Containerd`. Docker Engine needs `--container-runtime=docker`. `--wait`
+    accepts `all` (`start_flags.go`, SHA-256
+    `a130f3c006b797a7fcb9888ad590c7dbc2fddc1da916767552148d43f21ed64d`). VERIFIED. Earlier
+    notes and the README said "minikube's default"; corrected. The profile name becoming the
+    kubeconfig context and `--driver=docker`: OBSERVED (CI 37123230999).
+  - `kubectl config view --flatten`: "Flatten the resulting kubeconfig file into self-contained
+    output" (kubectl reference, `kubectl config view`): it embeds a CA given as a file path, as
+    minikube's kubeconfig does. VERIFIED. The README's reader-kubeconfig commands
+    (`config view`, `set-cluster --embed-certs`, `set-credentials --token`, `set-context`,
+    `use-context`) are the ones `scripts/reader_kubeconfig.sh` runs on both CI clusters. OBSERVED.
+  - Native sidecar: an init container with `restartPolicy: Always` keeps running and "is often
+    referred to as a 'sidecar' container" (`core/v1/types.go` at v1.37.0, `Container.RestartPolicy`,
+    SHA-256 above); its status is in `initContainerStatuses`. VERIFIED.
+  - Pod conditions `Ready` and `PodScheduled` (`core/v1/types.go` at v1.37.0). VERIFIED.
+    Deployment condition `Available` with `kubectl wait`: OBSERVED in every integration run.
+  - Python client 36.0.3: `V1PodSpec.containers` / `init_containers` (`initContainers`),
+    `V1Container.restart_policy`, `V1PodStatus.phase`; `new_client_from_config(config_file,
+    context, persist_config, client_configuration)`. VERIFIED (installed package).
+  - `tempfile.mkstemp`: "The file is readable and writable only by the creating user ID"
+    (Python 3.12 docstring), so the client's temporary certificate files are private. VERIFIED.
+  - RBAC verbs: the request-verb table (authorization docs, above) lists create, get, list,
+    watch, update, patch, delete, deletecollection. The subresources the reader is denied
+    (`pods/exec`, `pods/log`, `pods/ephemeralcontainers`, `serviceaccounts/token`) are checked
+    against the API server's own discovery (`/api/v1`) in
+    `test_the_denied_subresources_exist_on_this_api_server`, so a denial cannot pass by a
+    misspelling.
+  - Docker `config.json`: `docker login` into a fresh `DOCKER_CONFIG` wrote
+    `auths.<registry>.auth`, base64 of `user:password`, which the credentials test reads.
+    OBSERVED (CI 37118476594 and later).
+  - `python:3.12-slim-bookworm` (§17 digest) has no `requests`: "no requests package among 113
+    packages" (CI 37123230999). OBSERVED.
+  - Demo manifests (`nodeSelector` keeping a pod unscheduled, a bare `v1` Pod, `apps/v1`
+    Deployments with `replicas`, `imagePullPolicy: Never` after `kind load` or `minikube image
+    load`): the pods reached the states the tests expect. OBSERVED.
+  - GitHub Actions pins are recorded in the `ci.yml` header (looked up 2026-10-02).
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod
@@ -681,8 +730,9 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   Categories" > "Pull" > "Pulling manifests": `<name>` "MUST match"
   `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`. VERIFIED.
 - **Full reference with registry host:** the OCI specs do not define it. The de facto grammar is
-  `github.com/distribution/reference` **v0.6.0** (commit
-  `7b3d8f9323cf25dd4e1a3868cd9be990bfe06308`), `reference.go`, SHA-256
+  `github.com/distribution/reference` **v0.6.0** (tag object
+  `7b3d8f9323cf25dd4e1a3868cd9be990bfe06308`, commit `ff14fafe2236e51c2894ac07d4bdfc778e96d682`;
+  corrected 2026-10-03, this said "commit"), `reference.go`, SHA-256
   `39d358c9e2539646ea612a6c9eda1d671b3cd71287873a3cc5fd0ffb2be6c6f3`:
   `reference := name [ ":" tag ] [ "@" digest ]`, `name := [domain '/'] remote-name`,
   `domain := host [':' port-number]`; host is a domain name, IPv4 or bracketed IPv6 address;
@@ -919,7 +969,9 @@ All retrieved 2026-10-02.
 - **Certbot images** (Docker Hub registry API, manifest-list digests): `certbot/certbot:v2.6.0`
   `sha256:92092d214a4eb75d049720d04f7acc50b40ea226d77736bce6a6bf43981b6e86`, `v2.7.0`
   `sha256:68e0f51ce9037d3b022d446772277beb1e9c0fe801e75fbf87db105ab165ad54`, `v5.8.0`
-  `sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20`. VERIFIED.
+  `sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20`. VERIFIED. Read
+  again 2026-10-03 for the tag-referenced demo pods: `v2.6.0` still resolves to
+  `sha256:92092d21…` (manifest list). VERIFIED.
 - **CVE-2023-4911** (glibc, "Looney Tunables"): Debian security tracker,
   https://security-tracker.debian.org/tracker/CVE-2023-4911: source package `glibc` fixed in
   bookworm `2.36-9+deb12u3` and bullseye `2.31-13+deb11u7` (both DSA-5514-1), unstable `2.37-12`;

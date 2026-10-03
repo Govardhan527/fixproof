@@ -31,3 +31,12 @@ waits.
   node holds one digest under two registries, `imageID` may name the other registry than the
   pod spec. The verdict is unaffected (same digest), but showing the spec's image too would
   explain the difference. It is a new output field, so it waits for an owner decision.
+- **2026-10-03, M4 value test: scan distinct images in parallel.** Each distinct image is scanned
+  once but one after another, so clusters with many images are slow. A new feature; waits for an
+  owner decision.
+- **2026-10-03, M4 value test: managed clusters and cloud registries.** EKS, GKE and AKS (with
+  their exec credential plugins) and cloud registry credential helpers (ECR, Artifact Registry,
+  ACR) are untested. Needs a cloud test account from the owner.
+- **2026-10-03, M4 final spec review: CRI-O nodes.** minikube offers `--container-runtime=cri-o`;
+  CRI-O's image ID form is not verified and not tested. The same CI pattern as the Docker
+  Engine job would prove it; waits for an owner decision.

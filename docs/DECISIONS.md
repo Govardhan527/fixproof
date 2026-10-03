@@ -453,7 +453,7 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** fixproof reads running clusters with get and list on two resource types only,
   never pulls from a registry outside the allowlist, and reports pods it cannot resolve as
   `unknown`.
-- **Amendment 1 (2026-10-03, implementation detail; to confirm with the owner):** item 7's
+- **Amendment 1 (2026-10-03, implementation detail; confirmed by the owner 2026-10-03):** item 7's
   manifest is two files in `deploy/kubernetes/`, not one. `fixproof-reader.yaml` holds the
   `fixproof` namespace and the `fixproof-reader` ServiceAccount (no mounted token);
   `fixproof-reader-role.yaml` holds the Role and the RoleBinding with no namespace, so the same
@@ -466,8 +466,9 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   Item 8's transitive packages are listed with versions and licences in SPEC_NOTES §16.
 - **Amendment 2 (2026-10-03, accepted: the owner, "I need minikube and docker nodes"): read
   cri-dockerd image IDs.**
-  - *Why:* a node that runs Docker Engine through cri-dockerd (minikube's default, some
-    on-premises clusters) reports `imageID` as `docker-pullable://<RepoDigests[0]>`, with
+  - *Why:* a node that runs Docker Engine through cri-dockerd (for example minikube with
+    `--container-runtime=docker`; correction 2026-10-03: minikube's own default is containerd,
+    SPEC_NOTES §12) reports `imageID` as `docker-pullable://<RepoDigests[0]>`, with
     Docker's familiar names (`nginx@sha256:…`). Item 1 accepts only `registry/repository@sha256:…`,
     so every workload on such a node is `unknown` today: no value for those users (SPEC_NOTES §12).
   - *Change:* strip `docker-pullable://`, expand the familiar name with Docker's own rule

@@ -17,9 +17,9 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 
 > **Status: early development.** Image verification works today and is exercised weekly against
 > real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
-> on a kind cluster in CI against the six SUCCESS TEST workloads and two real certbot releases;
-> that milestone is closing. The release
-> gate command, CISA KEV enrichment, the HTML report and CycloneDX VEX are planned; see
+> in CI on two real clusters: kind (containerd), with the six SUCCESS TEST workloads, real certbot
+> releases and every edge case, and minikube with Docker Engine. The release gate command, CISA
+> KEV enrichment, the HTML report and CycloneDX VEX are planned; see
 > [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
 
 ---
@@ -482,10 +482,10 @@ image from outside the allowlist. An image loaded straight into a kind node (`ki
 reported by the node as `docker.io/library/import-<date>@sha256:…`, a name no registry holds,
 so it comes out `unknown` too.
 
-**Container runtimes.** fixproof reads the image IDs of both common runtimes, and CI proves each
-on a real node: containerd (kind, most managed clusters) reports `registry/repository@sha256:…`;
-Docker Engine through cri-dockerd (minikube's default, some on-premises clusters) reports
-`docker-pullable://` and Docker's short name, which fixproof expands with Docker's own rule
+**Container runtimes.** CI proves two runtimes on real nodes. containerd (kind; also minikube's
+default) reports `registry/repository@sha256:…`. Docker Engine through cri-dockerd (for example
+minikube with `--container-runtime=docker`) reports `docker-pullable://` and Docker's short name,
+which fixproof expands with Docker's own rule
 (`python` → `docker.io/library/python`, `certbot/certbot` → `docker.io/certbot/certbot`). From
 a minikube node with Docker Engine 29.7.2 (CI run
 [37123230999](https://github.com/Govardhan527/fixproof/actions/runs/37123230999); reasons
@@ -505,7 +505,8 @@ fixed           fixproof-docker/fixproof-docker/python-official-5c45b87c69-5t8k2
 
 The pod `certbot-by-tag` names its image `certbot/certbot:v2.6.0`; the node reports the digest it
 runs, which is what fixproof checks. An image loaded straight into the node, with no registry
-digest, is `unknown`.
+digest, is `unknown`. Nodes running CRI-O and managed clusters (EKS, GKE, AKS)
+are not tested yet; see [Limitations](#limitations).
 
 **Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
 reads, and nothing else. [`deploy/kubernetes/`](deploy/kubernetes/) ships a ServiceAccount and a
@@ -521,7 +522,7 @@ Then give fixproof a kubeconfig with a short-lived token for that account, and n
 
 ```console
 $ TOKEN="$(kubectl create token fixproof-reader -n fixproof --duration=1h)"
-$ kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' \
+$ kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' \
     | base64 -d > ca.crt
 $ export KUBECONFIG="$PWD/fixproof.kubeconfig"
 $ kubectl config set-cluster prod-eu-1 --server=https://… --certificate-authority=ca.crt --embed-certs=true
@@ -662,6 +663,11 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
   the checks disagree and the verdict is `unknown`, which is why both checks run.
 - **The scanner install script is Linux x86-64 only**; elsewhere, install the two pinned versions
   yourself.
+- **Not tested yet on:** managed clusters (EKS, GKE, AKS) and their sign-in plugins; nodes running
+  CRI-O; cloud registry credential helpers (ECR, Artifact Registry, ACR). The read-only account
+  and token work on any conformant API server, but these have not been run.
+- **One image at a time.** Each distinct image is scanned once, but one after another, so a
+  cluster with many different images takes a while.
 
 ---
 
@@ -673,7 +679,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M1 | Data model, `fix.yaml`/`scope.yaml`, OpenVEX writer with schema validation | done |
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
-| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload | built; closing after a stable green CI run |
+| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | planned |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 
@@ -687,6 +693,8 @@ $ make setup          # uv sync and the commit-msg hook
 $ make check          # lint, types, unit tests (100% line coverage today), schema validation
 $ make integration    # fixture images and the kind demo cluster (needs Docker and
                       # scripts/demo_cluster.sh up; CI runs it)
+$ make integration-docker  # a minikube node with Docker Engine (needs Docker and
+                           # scripts/demo_minikube.sh up; CI runs it)
 $ make live           # real public images (needs Syft, Grype and a current DB)
 ```
 
@@ -695,7 +703,7 @@ Three test tiers, each saying plainly what it uses:
 | Tier | Runs | Data |
 |---|---|---|
 | Unit (`make check`) | every commit, no network | synthetic inputs and trimmed real tool output |
-| Integration | every push to `main` | 8 fixture images built in CI and a kind cluster running the 6 SUCCESS TEST workloads and 2 real certbot releases; real Syft and Grype, a fresh DB |
+| Integration | every push to `main` | 8 fixture images built in CI; a kind cluster running the 6 SUCCESS TEST workloads, real certbot releases and every edge case (`fixproof-edge`); a minikube node with Docker Engine; real Syft and Grype, a fresh DB; fixproof installed with the README's command |
 | Live | weekly and on demand | real public images, real tools, the DB as published that day |
 
 Design decisions are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md); every fact taken from a

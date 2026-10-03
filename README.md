@@ -287,6 +287,49 @@ CVE-2023-4911, in CISA KEV), Alpine and AlmaLinux (OpenSSL), and a Java jar (Log
 CVE-2021-44228, in CISA KEV). Each case's expected verdict has an independent source; see
 [`tests/live/test_public_images.py`](tests/live/test_public_images.py).
 
+### A real run on a kind cluster
+
+This run is from CI run
+[37112944135](https://github.com/Govardhan527/fixproof/actions/runs/37112944135) (2026-10-03),
+against the demo cluster that [`scripts/demo_cluster.sh`](scripts/demo_cluster.sh) builds: six
+Deployments in namespace `fixproof-demo`, five from an open local registry and one
+(`partner-gateway`) from a registry that needs a password. The cluster pulls `partner-gateway`
+with an image pull secret; fixproof gets only the read-only `fixproof-reader` token and no
+registry credentials. Scope: [`examples/scope/kind-demo.yaml`](examples/scope/kind-demo.yaml).
+Long reasons are abridged with `…`; everything else is as printed.
+
+```console
+$ export KUBECONFIG=reader.kubeconfig DOCKER_CONFIG=no-credentials
+$ fixproof verify --cve CVE-2023-32681 --fix fix.yaml --scope examples/scope/kind-demo.yaml \
+    --out evidence --author "fixproof CI demo"
+still_affected  kind-fixproof/fixproof-demo/billing-67b7db4d78-lttsw/app  Deployment/billing
+                localhost:5001/fixproof/requests-2.25.1@sha256:03c2e314aa42e4bcb2eb4c2eee32896d121cfefa7343e3cc644256a53126b660
+                both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.25.1 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.25.1 at …/requests-2.25.1.dist-info/METADATA is below the fix (2.31.0).
+still_affected  kind-fixproof/fixproof-demo/orders-b845c4c74-86x5f/app  Deployment/orders
+                localhost:5001/fixproof/requests-2.30.0@sha256:ca6caa03e5ae870034fc02e26f07e2511328050766e6b53bcba5c0889b8cdfa6
+                both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at …/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).
+unknown         kind-fixproof/fixproof-demo/partner-gateway-5d6f7d95c8-qt77n/app  Deployment/partner-gateway
+                localhost:5002/fixproof/requests-2.31.0@sha256:d8696080016a8241f68568bd21a9eb3eb612d774014b29f80444c0d7620fbb3e
+                both methods failed. grype: grype exited 1: - oci-model: failed to fetch descriptor: GET http://localhost:5002/v2/fixproof/requests-2.31.0/manifests/sha256:d869…: UNAUTHORIZED: authe…. sbom_version: syft exited 1: … UNAUTHORIZED: authe….
+fixed           kind-fixproof/fixproof-demo/payments-8564c469df-pfcbf/app  Deployment/payments
+                localhost:5001/fixproof/requests-2.31.0@sha256:7efe6533c644b0959ecb99615632b242fd529bdd136c6c2208fb3021db72d22f
+                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 287 matches. sbom_version: requests 2.31.0 at …/requests-2.31.0.dist-info/METADATA is fixed.
+still_affected  kind-fixproof/fixproof-demo/reports-589678bff6-54l85/app  Deployment/reports
+                localhost:5001/fixproof/venv-only@sha256:1bde4034b260957c7611f8f06889399656df040991c2cf01936b7f117af9b7c1
+                both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /opt/app/venv/…/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).
+fixed           kind-fixproof/fixproof-demo/search-6d9f7cb8f9-cxpf7/app  Deployment/search
+                localhost:5001/fixproof/requests-2.32.3@sha256:2a46b13cde10bed033b448639b386e97fca2946b6267f9a7d09b37850c4ced06
+                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 286 matches. sbom_version: requests 2.32.3 at …/requests-2.32.3.dist-info/METADATA is fixed.
+2 fixed, 3 still_affected, 1 unknown; evidence in evidence
+$ echo $?
+1
+```
+
+`reports` is the case a version check on the system Python alone would miss: `requests` 2.30.0
+lives only in a virtual environment at `/opt/app/venv`. The same CI job checks two real Certbot
+releases running as pods (v2.6.0 `still_affected`, v2.7.0 `fixed`) and that the reader account
+gets `403 Forbidden` outside its namespaces.
+
 ---
 
 ## Install

@@ -128,11 +128,12 @@ Version comparators for dpkg, rpm, apk, PyPI, npm and Maven with spec-derived te
 ## M4 (weeks 6-7)
 
 Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
-- [ ] Done: SUCCESS TEST step 1 passes (2 `fixed`, 3 `still_affected` with image digests and
+- [x] Done: SUCCESS TEST step 1 passes (2 `fixed`, 3 `still_affected` with image digests and
       pod names, 1 `unknown` with the reason). CI run 37110967647 passed, but run 37112442952
       failed (3 / 3 / 0): the password-protected demo image shared its digest with an open one,
-      and the node named the open registry in `imageID` (SPEC_NOTES §12). The first pass
-      depended on pull order. Fixed in the demo build; needs a green run to tick.
+      and the node named the open registry in `imageID` (SPEC_NOTES §12), so the first pass
+      depended on pull order. Fixed in ad0bc59 (own digest, and the build fails on a shared
+      one); CI 37112944135 green, 6 passed, and its demo step printed 2 / 3 / 1 (README).
 - [x] OQ-5 (the unreadable workload) answered 2026-10-03: (a), an image in a registry fixproof
       has no credentials for.
 - [x] `imageID` format verified (SPEC_NOTES §12, 2026-10-03, from the kubelet and containerd
@@ -143,9 +144,9 @@ Kubernetes inventory on kind; pod to digest mapping; verdict per workload.
 - [x] Inventory (`fixproof.inventory`) with unit tests on a fake Kubernetes API (bd2a951).
 - [x] `verify` handles clusters: per-workload verdicts, each image scanned once, pod names in
       the output (a0b408a; unit tests on a fake cluster).
-- [ ] kind setup script and the CI integration job for the 6 success-test workloads
-      (`scripts/demo_cluster.sh`, `tests/integration/test_cluster.py`, 78cffd9); green in CI
-      37110967647, red in 37112442952 (see the done-criterion); needs a green run to tick.
+- [x] kind setup script and the CI integration job for the 6 success-test workloads
+      (`scripts/demo_cluster.sh`, `tests/integration/test_cluster.py`, 78cffd9, ad0bc59); green
+      in CI 37112944135.
 - [ ] Read-only Role and RoleBinding YAML shipped (`deploy/kubernetes/`, 78cffd9), with a unit
       test that every inventory API call is granted; applied in CI 37110967647 (`can-i` showed get
       and list on pods and replicasets only; `403` for kube-system). Waiting on the owner to
@@ -178,15 +179,18 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M4; done-criterion not yet stable.
-- **Pushed:** everything up to e6a7efb (owner's "push" twice). CI 37110967647 green; CI
-  37112442952 red in `integration` only: 3 fixed / 3 still_affected / 0 unknown. Cause, from the
-  run's `kubectl describe`: the password-protected demo image had the same digest as the open
-  `requests-2.31.0` image, and the node reported the open registry in `imageID`, so fixproof
-  read it. The first green run depended on pull order.
-- **Committed locally, not pushed:** the fix (the private demo image gets its own digest, and
-  the build fails if it ever shares one) and the docs recording what the run showed.
-- **Waiting on the owner:** say "push"; confirm ADR-0010 Amendment 1; close M4 after a green run.
-- **Next steps, in order:** push; watch CI; if green, tick the done-criterion and the kind item
-  with the run id and paste the real cluster run from the new CI step into the README; ask to
-  close M4. Then M5.
+- **Date:** 2026-10-03. **Current milestone:** M4; done-criterion met; ready to close.
+- **`main` = 1fd0221, green:** CI 37112944135, all six jobs; integration 6 passed and the demo
+  step printed 2 fixed / 3 still_affected / 1 unknown (copied into the README). An earlier run
+  (37112442952) was red: the demo's private image shared a digest with an open one; fixed in
+  ad0bc59.
+- **Owner rule (2026-10-03): `main` must never go red.** Changes that can affect the integration
+  or live jobs are proven green on a work branch (`gh workflow run ci.yml --ref <branch>`)
+  before `main` moves.
+- **Committed locally, not pushed:** the docs commit with the README cluster run and these
+  PROGRESS ticks.
+- **Waiting on the owner:** (1) confirm ADR-0010 Amendment 1 (RBAC as two files, the `fixproof`
+  Namespace object, the kubectl pin); (2) say "push" (branch first, then `main`); (3) close M4.
+- **Next steps, in order:** push the docs commit through a work branch and a green dispatched
+  run; on the owner's word, tick the RBAC item and record M4 closed; then M5 (gate, KEV, HTML,
+  CycloneDX 1.6).

@@ -5,10 +5,13 @@
 scripts/demo_cluster.sh runs it with the demo cluster's registries.
 
 Each directory under tests/fixtures/images/ is built and pushed to `--registry` (open). The
-`requests-2.31.0` image is also pushed to `--auth-registry`, which needs credentials: log in
-with `docker login` first. fixproof is then run without them, so that image must come out
-`unknown` (ADR-0007 item 9). Needs Docker. The output maps each fixture name, plus
-`auth/requests-2.31.0`, to its `registry/repository@sha256:...` reference.
+`requests-2.31.0` image is built once more with an extra label and pushed to `--auth-registry`,
+which needs credentials: log in with `docker login` first. fixproof is then run without them,
+so that image must come out `unknown` (ADR-0007 item 9). The label gives it a digest of its own:
+a node holding the same digest under both registries may report either name as the pod's
+`imageID` (SPEC_NOTES §12), and then fixproof would read the open copy. Needs Docker. The output
+maps each fixture name, plus `auth/requests-2.31.0`, to its `registry/repository@sha256:...`
+reference.
 """
 
 import argparse
@@ -53,8 +56,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         references[directory.name] = push(tag, args.registry)
         print(f"{directory.name}: {references[directory.name]}")
     auth_tag = f"{args.auth_registry}/fixproof/{AUTH_FIXTURE}:it"
-    docker("tag", f"{args.registry}/fixproof/{AUTH_FIXTURE}:it", auth_tag)
-    references[f"auth/{AUTH_FIXTURE}"] = push(auth_tag, args.auth_registry)
+    docker(
+        "build", "--quiet", "--label", "fixproof.fixture.registry=auth", "--tag", auth_tag,
+        str(FIXTURES / AUTH_FIXTURE),
+    )  # fmt: skip
+    references[f"auth/{AUTH_FIXTURE}"] = auth = push(auth_tag, args.auth_registry)
+    digest = auth.partition("@")[2]
+    shared = [name for name, ref in references.items() if ref != auth and ref.endswith(digest)]
+    if shared:
+        raise RuntimeError(f"the auth-registry image has the same digest as {shared}")
     print(f"auth/{AUTH_FIXTURE}: {references[f'auth/{AUTH_FIXTURE}']}")
     args.out.write_text(json.dumps(references, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0

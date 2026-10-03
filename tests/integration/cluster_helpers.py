@@ -145,3 +145,18 @@ def kubectl(kubeconfig: str, *args: str) -> subprocess.CompletedProcess[str]:
         check=False,
         timeout=120,
     )
+
+
+def kev_or_unavailable(kev: dict[str, Any], expected: str) -> bool:
+    """The KEV status read from the live CISA feed during the run, if cisa.gov answered.
+
+    The SUCCESS TEST evidence must not depend on cisa.gov: when the feed could not be read the
+    run says so, with the reason, and the KEV values are left to the live suite. Returns whether
+    the feed was available (and then its status must be `expected`).
+    """
+    if kev["status"] == "unavailable":
+        assert kev["reason"], kev
+        return False
+    assert kev["status"] == expected, kev
+    assert kev["feed"]["url"].startswith("https://www.cisa.gov/")
+    return True

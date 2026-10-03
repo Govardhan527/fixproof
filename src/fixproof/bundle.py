@@ -1,4 +1,4 @@
-"""The evidence bundle (ADR-0007 item 7): formats `bundle` 1.1.0 and `manifest` 1.0.0.
+"""The evidence bundle (ADR-0007 item 7): formats `bundle` 1.2.0 and `manifest` 1.0.0.
 
     <out>/openvex.json            the VEX document (ADR-0005)
     <out>/cyclonedx.json          the same verdicts as CycloneDX 1.6 VEX (ADR-0012)

@@ -241,3 +241,17 @@ def test_tool_runs_are_cached_by_argument_list() -> None:
     cached("grype", ["a"], {})
     cached("grype", ["b"], {})
     assert seen == ["grype", "grype"]
+
+
+def test_an_unreachable_kev_feed_changes_no_gate_verdict_or_exit_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def offline(url: str) -> bytes:
+        raise kev.KevFetchError("cannot download the KEV feed: network is unreachable")
+
+    monkeypatch.setattr(cli, "kev_fetcher", offline)
+    assert gate_cli(tmp_path, monkeypatch, VULNERABLE.reference) == cli.EXIT_AFFECTED
+    out = ANSI.sub("", capsys.readouterr().out)
+    assert "KEV: unavailable (cannot download the KEV feed: network is unreachable)" in out
+    assert f"still_affected  {CVE}  (CISA KEV unavailable)" in out
+    assert "BLOCK: 1 of 2 closed CVEs are back in this image." in out

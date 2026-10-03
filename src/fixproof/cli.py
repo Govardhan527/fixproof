@@ -141,8 +141,8 @@ def gate(
     image: Annotated[
         str,
         typer.Option(
-            help="The built image: a registry image pinned by digest, or docker:NAME[:TAG], "
-            "docker-archive:PATH or oci-archive:PATH."
+            help="The built image: a registry image pinned by digest (registry: optional), or "
+            "docker:NAME[:TAG], docker-archive:PATH or oci-archive:PATH."
         ),
     ],
     as_json: Annotated[bool, typer.Option("--json", help="Print the result as JSON.")] = False,
@@ -178,6 +178,8 @@ def _gate_human(result: GateResult) -> str:
         for tool, s in sorted(result.scanned.items())
     )
     lines = [f"image {result.image} ({read or 'not read'})"]
+    unavailable = {line.kev.reason for line in result.results if line.kev.status == "unavailable"}
+    lines.extend(f"KEV: unavailable ({reason})" for reason in sorted(r for r in unavailable if r))
     pad = " " * 16
     for line in result.results:
         lines.append(

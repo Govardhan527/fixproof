@@ -8,7 +8,8 @@ credentials that fixproof is not given. Namespace `fixproof-live` runs two real 
 from Docker Hub (ADR-0008 item 5). Namespace `fixproof-edge` holds the cases ADR-0010 must get
 right on a real node: init containers, sidecars, two replicas sharing evidence, a bare pod, an
 image that cannot be pulled, a pod that cannot be scheduled, an image side-loaded with
-`kind load` (no registry digest), and an image referenced by tag. scripts/demo_cluster.sh
+`kind load` (the node names it `docker.io/library/import-<date>`, an image that exists in no
+registry), and an image referenced by tag. scripts/demo_cluster.sh
 creates the namespaces, side-loads that image and adds an ephemeral container to the bare pod,
 which fixproof must skip. Every container only sleeps and runs unprivileged. Images are pinned
 by digest, except the side-loaded one and the two referenced by tag, as real Deployments often
@@ -54,7 +55,9 @@ DEBUG_FIXTURE = "requests-2.25.1"  # the ephemeral container demo_cluster.sh add
 EDGE: dict[tuple[str, str], tuple[str, str]] = {
     ("bare-pod", "app"): ("still_affected", "requests 2.25.1"),
     ("pull-backoff-", "app"): ("unknown", "the container has not started ("),
-    ("side-loaded-", "app"): ("unknown", "has no registry digest"),
+    # The node reports a side-loaded image as docker.io/library/import-<date>@sha256:... (seen in
+    # CI 37117704337), a name no registry holds: outside the allowlist here, so never read.
+    ("side-loaded-", "app"): ("unknown", "registry not in scope: docker.io"),
     ("two-replicas-", "setup"): ("fixed", "requests 2.32.3"),
     ("two-replicas-", "app"): ("still_affected", "requests 2.30.0"),
     ("two-replicas-", "sidecar"): ("fixed", "both methods agree"),

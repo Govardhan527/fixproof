@@ -277,6 +277,25 @@ def test_edge_cases_on_a_real_node(tmp_path: Path, setup: tuple[dict[str, str], 
     assert len(raw) == 2 * len(scanned)  # each image's two outputs written once
 
 
+def test_a_side_loaded_image_is_unknown_even_when_docker_hub_is_allowed(
+    tmp_path: Path, setup: tuple[dict[str, str], str]
+) -> None:
+    """The node names a `kind load` image docker.io/library/import-<date>; with docker.io in the
+    allowlist fixproof tries that name, finds nothing, and says unknown, never fixed."""
+    _, kubeconfig = setup
+    done = verify(tmp_path, kubeconfig, ["fixproof-edge"], [OPEN, "docker.io"], "--json")
+    items = [
+        item
+        for item in report_of(done)["assets"]
+        if item["workload"].split("/")[2].startswith("side-loaded-")
+    ]
+    assert len(items) == 1
+    (item,) = items
+    assert re.fullmatch(r"docker\.io/library/import-[0-9-]+@sha256:[0-9a-f]{64}", item["asset"])
+    assert item["verdict"] == "unknown"
+    assert item["reason"].startswith("both methods failed"), item["reason"]
+
+
 def kubectl_can_i(kubeconfig: str, *args: str) -> bool:
     kubectl = Path(kubeconfig).parent / "bin" / "kubectl"  # demo_cluster.sh's layout
     done = subprocess.run(

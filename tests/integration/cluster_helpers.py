@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -99,6 +100,31 @@ def assert_nowhere(done: subprocess.CompletedProcess[str], out: Path, *secrets: 
     for text in [done.stdout, done.stderr, *written]:
         for secret in secrets:
             assert secret not in text
+
+
+def docker_hub_platforms(repository: str, digest: str) -> dict[str, str]:
+    """`os/architecture` -> manifest digest for a Docker Hub image index, read anonymously."""
+    token_url = (
+        "https://auth.docker.io/token?service=registry.docker.io"
+        f"&scope=repository:{repository}:pull"
+    )
+    with urllib.request.urlopen(token_url, timeout=60) as response:  # noqa: S310 (fixed https)
+        token = json.load(response)["token"]
+    request = urllib.request.Request(
+        f"https://registry-1.docker.io/v2/{repository}/manifests/{digest}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.oci.image.index.v1+json, "
+            "application/vnd.docker.distribution.manifest.list.v2+json",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310 (fixed https)
+        index = json.load(response)
+    return {
+        f"{m['platform']['os']}/{m['platform']['architecture']}": m["digest"]
+        for m in index["manifests"]
+        if "platform" in m
+    }
 
 
 def kubectl(kubeconfig: str, *args: str) -> subprocess.CompletedProcess[str]:

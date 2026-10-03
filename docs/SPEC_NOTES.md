@@ -679,6 +679,17 @@ the exact files read.
   `reference.Canonical.String()`, the full name. `server/container_status.go` (SHA-256
   `7962de2a4a2272e4f240ac9c931a705b7aed17edef9a9640595bebc6d0a89bad`) returns that `ImageRef`.
   VERIFIED; what a real node reports is checked by the minikube CI job (ADR-0011).
+- **Observed on a CRI-O node** (CI run 37133417583, 2026-10-03; minikube v1.39.0, Kubernetes
+  v1.37.0, `CONTAINER-RUNTIME cri-o://1.35.7`): pods written with Docker's short names
+  (`certbot/certbot:v2.6.0`, `python@sha256:…`) pulled from Docker Hub; `imageID` was the full
+  name (`docker.io/certbot/certbot@…`, `docker.io/library/python@…`). For three images it was the
+  index digest the pod named; for `certbot/certbot@sha256:68e0f5…` (v2.7.0) it was
+  `sha256:0a228a84…`, the `linux/amd64` manifest Docker Hub lists in that index (checked with the
+  registry API the same day). The image loaded with `minikube image load` reported
+  `localhost/fixproof-local@sha256:85ba21…`, a name made on the node, so with `docker.io`
+  allowed it is `unknown` as outside the allowlist. fixproof's verdicts were all as expected.
+  OBSERVED. So on CRI-O the reported digest may be the platform manifest's rather than the
+  index's; fixproof then scans exactly the platform the node runs.
 - **Scanning in parallel** (measured locally 2026-10-03, 8 CPUs, 5 GB RAM, the 2026-10-02 DB):
   one Grype scan of certbot v2.6.0 took 18.0 s at 264 MB peak, one Syft scan 12.9 s at 250 MB;
   three Grype scans at once (certbot v2.6.0, v2.7.0, v5.8.0) on the same database all exited 0

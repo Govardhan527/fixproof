@@ -16,6 +16,7 @@ from cluster_helpers import (
     assert_nowhere,
     by_owner,
     check_bundle,
+    docker_hub_platforms,
     kubectl,
     reader_token,
     report_of,
@@ -84,7 +85,12 @@ def test_workloads_get_the_expected_verdicts(tmp_path: Path, node: tuple[str, st
         item = found[name]
         assert item["verdict"] == verdict, (name, item["reason"])
         if reported is not None:
-            assert item["asset"] == reported  # the full name, whatever form the node used
+            # The full name, whatever form the node used. CRI-O may report the linux/amd64
+            # manifest of the index the pod named instead of the index (SPEC_NOTES §12): accept
+            # that one only, as Docker Hub lists it for that index.
+            repository, digest = reported.removeprefix("docker.io/").split("@")
+            platform = docker_hub_platforms(repository, digest)["linux/amd64"]
+            assert item["asset"] in {reported, f"docker.io/{repository}@{platform}"}, item
         assert item["workload"].startswith(f"{namespace}/{namespace}/{name}-")
     # The image loaded into the node is never read: it has no registry digest, or (CRI-O may name
     # it localhost/...@sha256 from its own manifest) its registry is outside the allowlist.

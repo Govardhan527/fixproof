@@ -188,8 +188,8 @@ The owner's test: could a user run this today, on their own clusters and images,
 the README, and act on the answer?
 - Can, with CI evidence: install with the README's `uv tool install git+https://…` command (the
   CI demo steps run exactly that, pinned to the commit under test), point fixproof at a namespace
-  with the shipped read-only account, on a containerd node (kind) or a Docker Engine node
-  (minikube with `--container-runtime=docker`), get a verdict per pod with pod name,
+  with the shipped read-only account, on a containerd node (kind), a Docker Engine node or a
+  CRI-O node (minikube), get a verdict per pod with pod name, scanning several images at once,
   owner and digest, for images referenced by tag, short name or digest, from Docker Hub or a
   private registry, with or without registry credentials, and keep evidence that holds neither
   the registry password nor the Kubernetes token.
@@ -198,12 +198,18 @@ the README, and act on the answer?
     server, but a user's own context with an exec credential plugin has not been tried.
   - Cloud registry credential helpers (ECR, Artifact Registry, ACR) are untested; only a
     user-and-password Docker config is.
-  - Speed on large clusters: each distinct image is scanned once, but one after another. Many
-    images mean a long run.
   - Pods on arm64 nodes (PARKED: the node's platform is not checked).
-  - Nodes running CRI-O (PARKED).
   - fixproof is not on PyPI (M6).
   Each needs an owner decision (a cloud account to test against, or M6 scope).
+
+## After M4: owner additions (ADR-0011, 2026-10-03)
+
+- [x] `verify --jobs N` (default 4): distinct images scanned several at a time; identical evidence
+      for any N; overlap proven by a barrier test (b45a770).
+- [x] CRI-O nodes proven on a real minikube node with CRI-O 1.35.7: the minikube CI job is a
+      matrix over Docker Engine and CRI-O (11864f6). The node reported the `linux/amd64`
+      manifest for one multi-platform image; the test accepts it only as Docker Hub lists it
+      (f965004). Branch run 37134011580: kind 35, Docker Engine 4, CRI-O 4 passed.
 
 ## M5 (week 8)
 
@@ -225,15 +231,14 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-03. **Current milestone:** M4 closed (owner, 2026-10-03); M5 next.
-- **`main` = 0727948, green:** work branch `m4-close` passed twice (CI 37128352390,
-  37128943741), then `main` CI 37130234076: all seven jobs, kind 35 and Docker Engine node 3
-  integration tests. The branch was deleted.
+- **Date:** 2026-10-03. **Current milestone:** M4 closed; ADR-0011 additions (CRI-O nodes,
+  `--jobs`) built and green on work branch `crio-jobs` (run 37134011580); M5 next.
+- **`main` = 0727948, green** (CI 37130234076). Not on `main` yet: 7024f93 and the ADR-0011
+  commits. A second branch run goes first, then `main` on the owner's "push" (owner rule:
+  `main` never red).
 - **Owner rules (2026-10-03):** `main` never red; no test missing; every step judged by whether a
-  real user can run it on their own systems and act on it ("Value test for M4" above).
+  real user can run it on their own systems and act on it.
 - **Open for the owner:** a cloud test account for managed clusters and registry credential
-  helpers; CRI-O nodes; parallel scanning (all in PARKED).
-- **Next steps, in order (M5):** read the plan's M5 items; verify the facts they rely on (the
-  CISA KEV JSON feed fields and caching, CycloneDX 1.6.2 VEX fields and `cyclonedx-python-lib`,
-  the HTML summary, the gate's `closed.yaml` and exit codes); propose the M5 design as an ADR;
-  wait for approval; build, with real-data tests from the start.
+  helpers (PARKED).
+- **Next steps, in order:** second green branch run; `main` on "push"; then M5 (verify the facts,
+  propose ADR-0012, wait for approval, build with real-data tests from the start).

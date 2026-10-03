@@ -17,8 +17,9 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 
 > **Status: early development.** Image verification works today and is exercised weekly against
 > real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
-> in CI on two real clusters: kind (containerd), with the six SUCCESS TEST workloads, real certbot
-> releases and every edge case, and minikube with Docker Engine. The release gate command, CISA
+> in CI on real nodes with all three common container runtimes: kind (containerd), with the six
+> SUCCESS TEST workloads, real certbot releases and every edge case, and minikube with Docker
+> Engine and with CRI-O. The release gate command, CISA
 > KEV enrichment, the HTML report and CycloneDX VEX are planned; see
 > [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
 
@@ -482,10 +483,12 @@ image from outside the allowlist. An image loaded straight into a kind node (`ki
 reported by the node as `docker.io/library/import-<date>@sha256:…`, a name no registry holds,
 so it comes out `unknown` too.
 
-**Container runtimes.** CI proves two runtimes on real nodes. containerd (kind; also minikube's
-default) reports `registry/repository@sha256:…`. Docker Engine through cri-dockerd (for example
-minikube with `--container-runtime=docker`) reports `docker-pullable://` and Docker's short name,
-which fixproof expands with Docker's own rule
+**Container runtimes.** CI proves three runtimes on real nodes. containerd (kind; also minikube's
+default) and CRI-O report `registry/repository@sha256:…`; CRI-O may give the digest of the
+platform manifest the node runs (for example the `linux/amd64` entry of a multi-platform image)
+rather than the index digest in the pod spec, and fixproof then scans exactly that. Docker Engine
+through cri-dockerd (for example minikube with `--container-runtime=docker`) reports
+`docker-pullable://` and Docker's short name, which fixproof expands with Docker's own rule
 (`python` → `docker.io/library/python`, `certbot/certbot` → `docker.io/certbot/certbot`). From
 a minikube node with Docker Engine 29.7.2 (CI run
 [37123230999](https://github.com/Govardhan527/fixproof/actions/runs/37123230999); reasons
@@ -505,8 +508,21 @@ fixed           fixproof-docker/fixproof-docker/python-official-5c45b87c69-5t8k2
 
 The pod `certbot-by-tag` names its image `certbot/certbot:v2.6.0`; the node reports the digest it
 runs, which is what fixproof checks. An image loaded straight into the node, with no registry
-digest, is `unknown`. Nodes running CRI-O and managed clusters (EKS, GKE, AKS)
-are not tested yet; see [Limitations](#limitations).
+digest, is `unknown`. From a CRI-O 1.35.7 node (CI run
+[37134011580](https://github.com/Govardhan527/fixproof/actions/runs/37134011580); reasons
+abridged with `…`), where the pod `certbot-2-7-0` names the multi-platform index `68e0f5…` and the
+node reports its `linux/amd64` manifest:
+
+```text
+fixed           fixproof-crio/fixproof-crio/certbot-2-7-0-6c86db7d76-5z2vb/app  Deployment/certbot-2-7-0
+                docker.io/certbot/certbot@sha256:0a228a84eab88b893de30d3f0b027ee3cf08c681fde1c9f712e3f94e295d1f4f
+                both methods agree the vulnerable component is gone. grype: … sbom_version: requests 2.31.0 at … is fixed.
+unknown         fixproof-crio/fixproof-crio/local-only-64d94bdb8c-svc4h/app  Deployment/local-only
+                localhost/fixproof-local@sha256:5ac6fd5093f78ce0ac1a661f431f4cfb2590c659f0bf43b81af7cccb2fa6258d
+                registry not in scope: localhost; fixproof did not read the image
+```
+
+Managed clusters (EKS, GKE, AKS) are not tested yet; see [Limitations](#limitations).
 
 **Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
 reads, and nothing else. [`deploy/kubernetes/`](deploy/kubernetes/) ships a ServiceAccount and a
@@ -664,9 +680,9 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
   the checks disagree and the verdict is `unknown`, which is why both checks run.
 - **The scanner install script is Linux x86-64 only**; elsewhere, install the two pinned versions
   yourself.
-- **Not tested yet on:** managed clusters (EKS, GKE, AKS) and their sign-in plugins; nodes running
-  CRI-O; cloud registry credential helpers (ECR, Artifact Registry, ACR). The read-only account
-  and token work on any conformant API server, but these have not been run.
+- **Not tested yet on:** managed clusters (EKS, GKE, AKS) and their sign-in plugins; cloud
+  registry credential helpers (ECR, Artifact Registry, ACR). The read-only account and token work
+  on any conformant API server, but these have not been run.
 
 
 ---
@@ -703,7 +719,7 @@ Three test tiers, each saying plainly what it uses:
 | Tier | Runs | Data |
 |---|---|---|
 | Unit (`make check`) | every commit, no network | synthetic inputs and trimmed real tool output |
-| Integration | every push to `main` | 8 fixture images built in CI; a kind cluster running the 6 SUCCESS TEST workloads, real certbot releases and every edge case (`fixproof-edge`); a minikube node with Docker Engine; real Syft and Grype, a fresh DB; fixproof installed with the README's command |
+| Integration | every push to `main` | 8 fixture images built in CI; a kind cluster running the 6 SUCCESS TEST workloads, real certbot releases and every edge case (`fixproof-edge`); minikube nodes with Docker Engine and with CRI-O; real Syft and Grype, a fresh DB; fixproof installed with the README's command |
 | Live | weekly and on demand | real public images, real tools, the DB as published that day |
 
 Design decisions are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md); every fact taken from a

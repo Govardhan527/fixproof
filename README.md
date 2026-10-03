@@ -19,8 +19,8 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 > real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
 > in CI on real nodes with all three common container runtimes: kind (containerd), with the six
 > SUCCESS TEST workloads, real certbot releases and every edge case, and minikube with Docker
-> Engine and with CRI-O. The release gate command, CISA
-> KEV enrichment, the HTML report and CycloneDX VEX are planned; see
+> Engine and with CRI-O. The release gate (`fixproof gate`), CISA KEV enrichment, the HTML
+> summary and CycloneDX VEX are built and unit-tested; their real-image CI run is next; see
 > [Roadmap](#roadmap). fixproof produces evidence for your own review. It is not a certification.
 
 ---
@@ -585,7 +585,9 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | File | What it holds |
 |---|---|
 | `openvex.json` | One OpenVEX v0.2.0 statement per image, validated against the official schema before it is written |
-| `bundle.json` | Run times, fixproof version, SHA-256 of `fix.yaml` and `scope.yaml`, Syft/Grype/DB versions, and per image or workload: verdict, reason, both check results, scanned manifest digest and platform; a workload also has its cluster, namespace, pod, container and owner |
+| `cyclonedx.json` | The same verdicts as CycloneDX 1.6 VEX, one entry per image, validated against the official 1.6.2 schema before it is written |
+| `report.html` | A self-contained page for people: the counts, the KEV status, and every image or workload with its verdict, digest and reason. No JavaScript; it loads nothing from the network. |
+| `bundle.json` | Run times, fixproof version, SHA-256 of `fix.yaml` and `scope.yaml`, Syft/Grype/DB versions, the CISA KEV feed used (or why it could not be read), and per image or workload: verdict, reason, both check results, scanned image ID, manifest digest and platform; a workload also has its cluster, namespace, pod, container and owner |
 | `raw/NNN-grype.json`, `raw/NNN-sbom_version.json` | Each tool's own output for asset NNN, minus anything that is not package metadata (see below). Workloads running the same image share its files. |
 | `manifest.json` | SHA-256 and size of every other file |
 
@@ -597,7 +599,25 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | `still_affected` | `affected` | `action_statement` ("Upgrade … to … or later"), `status_notes` |
 | `unknown` | `under_investigation` | `status_notes` with the reason |
 
-fixproof never writes `not_affected`: that would claim more than two scans can prove.
+The CycloneDX VEX uses the spec's own definitions of each `analysis.state`:
+
+| fixproof verdict | CycloneDX `analysis.state` | Spec definition |
+|---|---|---|
+| `fixed` | `resolved` | "The vulnerability has been remediated." |
+| `still_affected` | `exploitable` (response `update`) | "The vulnerability may be directly or indirectly exploitable." |
+| `unknown` | `in_triage` | "The vulnerability is being investigated." |
+
+fixproof never writes `not_affected` (or CycloneDX `false_positive`): that would claim more than
+two scans can prove.
+
+### CISA KEV
+
+Every `verify` and `gate` run downloads the CISA Known Exploited Vulnerabilities feed over
+HTTPS, checks it against CISA's own schema, and reports whether the CVE is in it, with the date
+CISA added it, the due date and known ransomware use. The bundle records the feed's version,
+release time, retrieval time and SHA-256. KEV status is information for you: it never changes a
+verdict or an exit code. If the feed cannot be read (no network, CISA down, an invalid file),
+the run says `KEV: unavailable` with the reason and carries on.
 
 ---
 
@@ -624,8 +644,45 @@ GitHub Actions:
 ```
 
 Exit code `1` or `2` fails the step. If `unknown` should not block a release, check the code
-yourself and fail only on `1`. A dedicated `fixproof gate` command that fails a build when an
-image reintroduces a closed CVE is planned.
+yourself and fail only on `1`.
+
+### The release gate: never ship a closed CVE again
+
+Once a CVE is closed, list it in `closed.yaml` with the fix that closed it (the same package
+list as `fix.yaml`), and gate every build on it:
+
+```yaml
+schema_version: "1.0.0"
+registries: [registry.example.com]  # only needed to gate a registry image
+closed:
+  - cve: CVE-2023-32681
+    packages:
+      - ecosystem: pypi
+        name: requests
+        fixed_version: "2.31.0"
+```
+
+```yaml
+- name: Build
+  run: docker build -t app:ci .
+- name: Gate the release on every closed CVE
+  run: fixproof gate --closed security/closed.yaml --image docker:app:ci
+```
+
+`--image` takes the image where your pipeline has it: `docker:NAME[:TAG]` (the local Docker
+daemon), `docker-archive:PATH` (`docker save`), `oci-archive:PATH`, or a registry image pinned
+by digest from a registry in `closed.yaml`. Each closed CVE gets both checks and the verdict
+rule, as in `verify`, and the output names the image ID and manifest digest that were read.
+
+| Exit | Meaning |
+|---|---|
+| `0` | Every closed CVE is proven gone from this image: ship |
+| `1` | At least one closed CVE is back: block the release |
+| `2` | None is back, but at least one could not be proven (the reason is printed): block, then fix the cause |
+| `3` | Bad input (`closed.yaml`, the image argument) |
+
+`--json` prints the result ([schema](src/fixproof/schemas/gate-result.schema.json),
+[example](examples/gate-result/reintroduced.json)).
 
 ---
 
@@ -660,8 +717,9 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
   the token. The Kubernetes client writes the kubeconfig's embedded certificates to private
   temporary files and deletes them when fixproof exits.
 - **No telemetry.** The tools' update checks are turned off for every run.
-- **Read-only.** fixproof only reads registries in your allowlist and the namespaces in scope,
-  and writes only to `--out` (apart from the client's temporary certificate files).
+- **Read-only.** fixproof only reads registries in your allowlist, the namespaces in scope and
+  the CISA KEV feed (one HTTPS download per run), and writes only to `--out` (apart from the
+  Kubernetes client's temporary certificate files).
 
 ---
 
@@ -696,7 +754,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
-| M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | planned |
+| M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | built; CI run next |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 
 ---

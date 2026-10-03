@@ -86,14 +86,27 @@ class KubernetesSource:
         )
         pods = []
         for pod in listing.items:
-            status = pod.status
+            status, spec = pod.status, pod.spec
+            statuses = {
+                item.name: item
+                for item in [
+                    *(status.init_container_statuses or []),
+                    *(status.container_statuses or []),
+                ]
+            }
             containers = []
-            statuses = [*(status.init_container_statuses or []), *(status.container_statuses or [])]
-            for item in statuses:
+            # The spec names every container, so one with no status yet (an unscheduled pod) is
+            # still reported, as not started.
+            for name in [c.name for c in [*(spec.init_containers or []), *spec.containers]]:
+                item = statuses.get(name)
+                if item is None:
+                    waiting_reason = f"no status yet, pod {status.phase or 'Pending'}"
+                    containers.append(ContainerInfo(name, "", waiting_reason))
+                    continue
                 waiting = item.state.waiting if item.state else None
                 containers.append(
                     ContainerInfo(
-                        name=item.name,
+                        name=name,
                         image_id=item.image_id or "",
                         waiting_reason=waiting.reason if waiting else None,
                     )

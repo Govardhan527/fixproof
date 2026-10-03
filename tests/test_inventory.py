@@ -99,8 +99,12 @@ def test_unresolved_images_keep_the_reason(
 def k8s_pod(
     name: str, statuses: list[Any], init: list[Any] | None = None, owner: Any = None
 ) -> Any:
+    def spec(items: list[Any] | None) -> list[Any] | None:
+        return [k8s.V1Container(name=item.name) for item in items] if items else None
+
     return k8s.V1Pod(
         metadata=k8s.V1ObjectMeta(name=name, owner_references=[owner] if owner else None),
+        spec=k8s.V1PodSpec(containers=spec(statuses), init_containers=spec(init)),
         status=k8s.V1PodStatus(container_statuses=statuses, init_container_statuses=init),
     )
 
@@ -154,7 +158,11 @@ def test_kubernetes_source_reads_statuses_and_owners(monkeypatch: pytest.MonkeyP
             owner=owner("ReplicaSet", "web-7d9"),
         ),
         k8s_pod("bare", [status("app", IMAGE_ID)], owner=owner("Node", "n", controller=False)),
-        k8s.V1Pod(metadata=k8s.V1ObjectMeta(name="pending"), status=k8s.V1PodStatus()),
+        k8s.V1Pod(  # not scheduled yet: the spec names the container, the status has none
+            metadata=k8s.V1ObjectMeta(name="pending"),
+            spec=k8s.V1PodSpec(containers=[k8s.V1Container(name="app")]),
+            status=k8s.V1PodStatus(phase="Pending"),
+        ),
     ]
     patch_client(monkeypatch, FakeCore(pods))
     workloads = inventory(Cluster(context="ctx", namespaces=("demo",)))
@@ -162,12 +170,16 @@ def test_kubernetes_source_reads_statuses_and_owners(monkeypatch: pytest.MonkeyP
         (w.asset.pod, w.asset.container, w.asset.owner, w.problem is None) for w in workloads
     ] == [
         ("bare", "app", None, True),
+        ("pending", "app", None, False),
         ("web-1", "setup", "Deployment/web", True),
         ("web-1", "app", "Deployment/web", True),
         ("web-1", "sidecar", "Deployment/web", False),
     ]
     assert workloads[-1].problem == (
         "image digest not resolved: the container has not started (ErrImagePull)"
+    )
+    assert workloads[1].problem == (
+        "image digest not resolved: the container has not started (no status yet, pod Pending)"
     )
 
 

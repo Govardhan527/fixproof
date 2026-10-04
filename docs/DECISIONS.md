@@ -579,3 +579,44 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   8. *Integration evidence and cisa.gov.* The integration tests check KEV values when the feed is
      reachable and otherwise only that the run says why; the strict KEV checks are in the live
      suite, so SUCCESS TEST evidence never depends on cisa.gov being up.
+
+## ADR-0013: M6 design: `make demo`, docs that match the CLI, hardening, release
+
+- **Date:** 2026-10-04. **Status:** Accepted (owner answered the four questions, 2026-10-04).
+- **Context:** M6 is "packaging, docs, demo, hardening only", done when `make demo` runs the
+  SUCCESS TEST end to end and the docs match the CLI; the release job comes after that.
+- **Decision:**
+  1. **`make demo`** (owner: "locally and in CI"): `scripts/demo.sh` installs the pinned scanners,
+     updates the Grype DB, brings up the kind demo cluster (`scripts/demo_cluster.sh`), then runs
+     the SUCCESS TEST as a user would and checks it (`scripts/success_test.py`): step 1
+     `fixproof verify` on the six workloads (exactly 2 / 3 / 1, digests, pod names, the reason);
+     step 2 the OpenVEX validates against the pinned schema with no `not_affected`; step 3
+     `fixproof gate` on a built image that brings a closed CVE back (non-zero) and on one that
+     does not (zero). It prints PASS or FAIL per step and exits non-zero on any failure.
+     `make demo-down` removes the cluster and registries. A CI `demo` job runs exactly
+     `make demo` on `main` and on dispatch.
+  2. **Docs match the CLI:** a unit test compares every option of `verify` and `gate`, every exit
+     code and every `make` target the README names with the CLI and the Makefile, both ways.
+  3. **Hardening** (owner chose all four):
+     - `fix.yaml`, `scope.yaml` and `closed.yaml` over 1 MB, or with YAML anchors or aliases,
+       are refused with the reason (exit 3).
+     - Every Kubernetes API call has a timeout (10 s to connect, 60 s to read); a slow or silent
+       API server ends the run with exit 3 and the reason.
+     - Syft and Grype output is read up to 512 MB per run; beyond that the method is an error,
+       so the verdict is `unknown` with the reason, never `fixed`.
+     - Property-based tests with `hypothesis` 6.168.3 (dev only, MPL-2.0): the six version
+       comparators are a total order on generated versions (reflexive, antisymmetric,
+       transitive), and the purl and vers parsers never crash or lose round-trips.
+  4. **Version and packaging** (owner: "0.1.0"): version 0.1.0, project URLs and keywords in
+     `pyproject.toml`; CI builds the wheel and sdist, installs the wheel in a clean environment
+     and runs `fixproof --version` and a schema check.
+  5. **Release** (owner: "PyPI, TestPyPI first"), after the done-criterion: `.github/workflows/
+     release.yml` on tags `v*`: build, CycloneDX SBOM of the package, SHA-256 sums, a GitHub
+     release with all of them attached, and PyPI trusted publishing (no stored token) from a
+     protected environment: pre-release tags (`v0.1.0rc1`) go to TestPyPI, final tags to PyPI.
+     The owner creates the two pending publishers and the GitHub environments; every tag push is
+     the owner's call. After the TestPyPI rehearsal, fixproof is installed from TestPyPI and run
+     on a real image before the final tag.
+- **Consequence:** the SUCCESS TEST is one command anyone can run and CI proves on every change;
+  the README is held to the CLI by a test; fixproof refuses or reports, rather than hangs or
+  runs out of memory on, hostile or broken inputs; a user can `pip install fixproof`.

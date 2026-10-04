@@ -780,6 +780,20 @@ the exact files read.
   the string "Content-Security-Policy"". So `default-src 'none'; style-src 'unsafe-inline'` lets
   the page's own inline style apply and blocks every fetch. VERIFIED. The page also has no
   script and no external reference (checked on every example).
+- **Facts behind the M6 hardening** (ADR-0013 item 3, read 2026-10-04):
+  - Kubernetes Python client 36.0.3: every API method takes `_request_timeout`, "If one number
+    provided, it will be total request timeout. It can also be a pair (tuple) of (connection,
+    read) timeouts" (`kubernetes/client/api/core_v1_api.py`, SHA-256
+    `e2973ac1e337c2488e2b43847798f75e150a9fb74bd66f1f02f95cafdfe627c1`). A read timeout raises
+    urllib3's `ReadTimeoutError`, a subclass of `urllib3.exceptions.HTTPError`, which fixproof
+    already turns into an inventory error. VERIFIED (installed packages).
+  - PyYAML 6.0.3: `yaml.parse` yields events; an alias is an `AliasEvent`, and every node event
+    carries an `anchor` attribute (`yaml/events.py`, SHA-256
+    `e74fd392c810884e2ea7e94aa3f57e9c1cbeb402319083d0c58e6a0e1282787c`). fixproof refuses both
+    before loading. VERIFIED (installed package).
+  - Tool output sizes: Syft JSON for certbot v2.6.0 1,793,121 bytes, Grype JSON 1,735,085 bytes;
+    Grype for v2.7.0 1,650,074 and v5.8.0 264,335 bytes (local, 2026-10-03). The 512 MB limit is
+    far above real outputs. OBSERVED.
 - **`imageID` names one of the node's names for a digest, not necessarily the pod's registry**
   (CI run 37112442952, 2026-10-03): the same image (one digest) was pushed to both demo
   registries; pod `payments` pulled it as `localhost:5001/…@sha256:83a8…` and pod
@@ -896,6 +910,10 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   (BSD-2-Clause), `py-serializable` 2.1.0 (Apache-2.0), `defusedxml` 0.7.1 (PSFL),
   `sortedcontainers` 2.4.0 (Apache-2.0) and `typing_extensions` 4.16.0 (PSF-2.0). All were
   already locked as dev dependencies of `pip-audit`; they are now runtime dependencies. VERIFIED.
+
+  Added in M6, dev only (ADR-0013 item 3; PyPI metadata, 2026-10-04): `hypothesis` 6.168.3
+  (MPL-2.0, a file-level copyleft; used unmodified to generate test inputs, never shipped),
+  requiring `sortedcontainers` (already locked). VERIFIED.
 
   Dev only: `types-pyyaml` 6.0.12.20260906, Apache-2.0; `python-debian` 1.1.1, GPL-2.0-or-later
   (PyPI metadata, 2026-10-02), the dpkg oracle that is never shipped (OQ-4, ADR-0009 item 2). The per-file hashes are recorded by

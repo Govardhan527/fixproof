@@ -282,17 +282,23 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M6, done-criterion met in branch CI; release next.
-- **`main` = 4a7e714, green** (CI 37164741543; M5 closed). Work branch `m6` holds M6: hardening,
-  `make demo` and its CI job, the README-to-CLI test, 0.1.0 packaging, the release workflow and
-  the review fixes. Branch runs 37165585399 and 37166399390 green ("SUCCESS TEST: PASS").
-- **Review-fix runs 37167191406 and 37167684642 green** (kind 42, "SUCCESS TEST: PASS" in both).
-  Amendment 1 confirmed and `main` moved on the owner's "confirm and push".
-- **Waiting on the owner:** (3) on test.pypi.org add a pending trusted publisher
-  (project `fixproof`, owner `Govardhan527`, repository `fixproof`, workflow `release.yml`,
-  environment `testpypi`) and create the GitHub environments `testpypi` and `pypi` (with a
-  required reviewer on `pypi`); (4) the rehearsal tag.
-- **Next steps, in order:** branch CI with the review fixes; `main`; rehearsal commit
-  `0.1.0rc1` and tag `v0.1.0rc1`; install from TestPyPI and run on a real image; then the PyPI
-  pending publisher, the final commit (`0.1.0`, README install from PyPI) and tag `v0.1.0`; close
-  M6.
+- **Date:** 2026-10-04. **Current milestone:** M6, done-criterion met; the first release is next.
+- **`main` = 0ecd07b, green** (CI 37172771442: all 10 jobs, "SUCCESS TEST: PASS (3/3 steps)").
+  The work branch `m6` is merged and deleted.
+- **Release route changed (ADR-0013 Amendment 2, owner's instruction 2026-10-04):** PyPI upload
+  is the owner's step with `scripts/publish.sh` and their `~/.pypirc` (twine 7.0.0), as for
+  their other package. No trusted publishing, no TestPyPI, no GitHub environments. The tag
+  workflow builds, checks and makes the GitHub release only. The package author is Govardhan
+  Yadava <govardhan@seccrypto.dev>.
+- **Work branch `release`:** the author, `twine check --strict` in `check_package.sh`, the
+  GitHub-only workflow with `publish.sh` and its tests, Amendment 2, and version `0.1.0rc1`.
+  Push run 37173742059 green (package job: both rc1 files pass `twine check --strict`); full
+  runs on the branch before `main` moves.
+- **Waiting on the owner:** confirm Amendment 2, then say go for `main` and the tag
+  `v0.1.0rc1`; later, run the upload `scripts/publish.sh v0.1.0` (or say to run it).
+- **Next steps, in order:** a second full green branch run; `main`; tag `v0.1.0rc1` (GitHub
+  pre-release); install its wheel in a fresh environment and run it on a real image;
+  `scripts/publish.sh v0.1.0rc1` (checks, no upload); the final commit (`0.1.0`, README install
+  from PyPI) through branch CI to `main`; tag `v0.1.0`; the owner's upload; check the GitHub
+  release, the tags on `origin` and PyPI's JSON API sha256 values against `SHA256SUMS`;
+  `pip install fixproof` in a fresh environment and run it; close M6.

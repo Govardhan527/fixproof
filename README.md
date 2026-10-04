@@ -34,11 +34,11 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 - [Using fixproof](#using-fixproof)
 - [Reading the results](#reading-the-results)
 - [Use in CI](#use-in-ci)
-- [Run the SUCCESS TEST yourself: `make demo`](#run-the-success-test-yourself-make-demo)
 - [Supported package ecosystems](#supported-package-ecosystems)
 - [Credentials, privacy and what is stored](#credentials-privacy-and-what-is-stored)
 - [Limitations](#limitations)
 - [Roadmap](#roadmap)
+- [Run the SUCCESS TEST yourself: `make demo`](#run-the-success-test-yourself-make-demo)
 - [Development](#development)
 
 ---
@@ -291,17 +291,17 @@ all files match
 The same kind of check runs every week in CI against real images for Python, Debian (glibc
 CVE-2023-4911, in CISA KEV), Alpine and AlmaLinux (OpenSSL), and a Java jar (Log4Shell,
 CVE-2021-44228, in CISA KEV). Each case's expected verdict has an independent source; see
-[`tests/live/test_public_images.py`](tests/live/test_public_images.py).
+[`tests/live/test_public_images.py`](https://github.com/Govardhan527/fixproof/blob/main/tests/live/test_public_images.py).
 
 ### A real run on a kind cluster
 
 This run is from CI run
 [37112944135](https://github.com/Govardhan527/fixproof/actions/runs/37112944135) (2026-10-03),
-against the demo cluster that [`scripts/demo_cluster.sh`](scripts/demo_cluster.sh) builds: six
+against the demo cluster that [`scripts/demo_cluster.sh`](https://github.com/Govardhan527/fixproof/blob/main/scripts/demo_cluster.sh) builds: six
 Deployments in namespace `fixproof-demo`, five from an open local registry and one
 (`partner-gateway`) from a registry that needs a password. The cluster pulls `partner-gateway`
 with an image pull secret; fixproof gets only the read-only `fixproof-reader` token and no
-registry credentials. Scope: [`examples/scope/kind-demo.yaml`](examples/scope/kind-demo.yaml).
+registry credentials. Scope: [`examples/scope/kind-demo.yaml`](https://github.com/Govardhan527/fixproof/blob/main/examples/scope/kind-demo.yaml).
 Long reasons are abridged with `…`; everything else is as printed.
 
 ```console
@@ -458,7 +458,7 @@ clusters:
 
 To find an image's digest: `docker buildx imagetools inspect IMAGE:TAG`, `crane digest IMAGE:TAG`,
 or `skopeo inspect docker://IMAGE:TAG`. JSON Schemas for both files ship in
-[`src/fixproof/schemas/`](src/fixproof/schemas/); point your editor's YAML schema support at them
+[`src/fixproof/schemas/`](https://github.com/Govardhan527/fixproof/tree/main/src/fixproof/schemas/); point your editor's YAML schema support at them
 to catch mistakes while you type.
 
 ### Kubernetes workloads
@@ -530,7 +530,7 @@ unknown         fixproof-crio/fixproof-crio/local-only-64d94bdb8c-svc4h/app  Dep
 Managed clusters (EKS, GKE, AKS) are not tested yet; see [Limitations](#limitations).
 
 **Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
-reads, and nothing else. [`deploy/kubernetes/`](deploy/kubernetes/) ships a ServiceAccount and a
+reads, and nothing else. [`deploy/kubernetes/`](https://github.com/Govardhan527/fixproof/tree/main/deploy/kubernetes/) ships a ServiceAccount and a
 namespaced Role and RoleBinding for exactly that. As a cluster admin:
 
 ```console
@@ -569,7 +569,7 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | `--scope` | Path to `scope.yaml` |
 | `--out` | A **new or empty** directory. fixproof never overwrites evidence. |
 | `--author` | Who issues the VEX (OpenVEX `author`), e.g. your team and address |
-| `--json` | Print a machine-readable summary on stdout ([schema](src/fixproof/schemas/verify-summary.schema.json), [example](examples/verify-summary/three-images.json)) |
+| `--json` | Print a machine-readable summary on stdout ([schema](https://github.com/Govardhan527/fixproof/blob/main/src/fixproof/schemas/verify-summary.schema.json), [example](https://github.com/Govardhan527/fixproof/blob/main/examples/verify-summary/three-images.json)) |
 | `--jobs` | How many images to scan at the same time (default 4; each scan peaks at about 300 MB). The results are the same for any value; `--jobs 1` scans one at a time. |
 
 ---
@@ -701,8 +701,8 @@ $ fixproof gate --closed closed.yaml --image docker:app:ci
 | `2` | None is back, but at least one could not be proven (the reason is printed): block, then fix the cause. "Not proven gone" is never treated as "gone". |
 | `3` | Bad input (`closed.yaml`, the image argument) |
 
-`--json` prints the result ([schema](src/fixproof/schemas/gate-result.schema.json),
-[example](examples/gate-result/reintroduced.json)).
+`--json` prints the result ([schema](https://github.com/Govardhan527/fixproof/blob/main/src/fixproof/schemas/gate-result.schema.json),
+[example](https://github.com/Govardhan527/fixproof/blob/main/examples/gate-result/reintroduced.json)).
 
 ---
 
@@ -759,6 +759,10 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
   the checks disagree and the verdict is `unknown`, which is why both checks run.
 - **The scanner install script is Linux x86-64 only**; elsewhere, install the two pinned versions
   yourself.
+- **Limits that protect a run:** input files (`fix.yaml`, `scope.yaml`, `closed.yaml`) must be
+  UTF-8, at most 1 MiB, and without YAML anchors or aliases; each Kubernetes API call gives up
+  after 10 s connecting or 60 s waiting for an answer (exit 3 with the reason); Syft or Grype
+  output beyond 512 MiB stops the tool and the verdict is `unknown`, never `fixed`.
 - **Not tested yet on:** managed clusters (EKS, GKE, AKS) and their sign-in plugins; cloud
   registry credential helpers (ECR, Artifact Registry, ACR). The read-only account and token work
   on any conformant API server, but these have not been run.
@@ -776,7 +780,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
-| M6 | Packaging, docs, end-to-end demo, hardening | planned |
+| M6 | Packaging, docs, end-to-end demo, hardening | built; `make demo` green in CI; first release next |
 
 ---
 
@@ -802,9 +806,10 @@ password for), and then runs, as a user would:
    one that does not (exit 0).
 
 It prints `PASS` or `FAIL` for each step and `SUCCESS TEST: PASS (3/3 steps)` at the end, exiting
-non-zero if any step fails; the evidence stays under `.demo/runs/`. The first run takes about 10
-minutes, later runs reuse the cluster. `make demo-down` removes the cluster and the registries.
-CI runs exactly `make demo` on every change to `main`.
+non-zero if any step fails; the evidence stays under `.demo/runs/` (set `FIXPROOF_DEMO_DIR` to use
+another directory). On a CI runner it takes about 4 minutes, most of it the database download;
+later runs reuse the cluster. `make demo-down` removes the cluster and the registries. CI runs
+exactly `make demo`, then `make demo-down`, on every change to `main`.
 
 ## Development
 
@@ -827,11 +832,13 @@ Three test tiers, each saying plainly what it uses:
 | Unit (`make check`) | every commit, no network | synthetic inputs and trimmed real tool output |
 | Integration | every push to `main` | 8 fixture images built in CI; a kind cluster running the 6 SUCCESS TEST workloads, real certbot releases and every edge case (`fixproof-edge`); minikube nodes with Docker Engine and with CRI-O; real Syft and Grype, a fresh DB; fixproof installed with the README's command |
 | Live | weekly and on demand | real public images, real tools, the DB as published that day |
+| Package | every push | the built wheel installed in a fresh environment: version, command, packaged schemas |
+| Demo | every push to `main` | `make demo` from a fresh runner: the whole SUCCESS TEST, then `make demo-down` |
 
-Design decisions are recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md); every fact taken from a
+Design decisions are recorded in [`docs/DECISIONS.md`](https://github.com/Govardhan527/fixproof/blob/main/docs/DECISIONS.md); every fact taken from a
 standard or a vendor, with its source and retrieval date, is in
-[`docs/SPEC_NOTES.md`](docs/SPEC_NOTES.md).
+[`docs/SPEC_NOTES.md`](https://github.com/Govardhan527/fixproof/blob/main/docs/SPEC_NOTES.md).
 
 ## Licence
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](https://github.com/Govardhan527/fixproof/blob/main/LICENSE).

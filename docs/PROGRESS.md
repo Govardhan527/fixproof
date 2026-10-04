@@ -267,16 +267,29 @@ Packaging, docs, demo, hardening only.
 - [x] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs
       (7d28898); green in CI 37165585399 (job `package`).
 - [ ] Add the CI `release` job (tag `v*`: build, SBOM, PyPI trusted publishing), only after M6;
-      TestPyPI rehearsal first (ADR-0013 item 5): `.github/workflows/release.yml` written; needs
-      the owner's pending publishers and environments, then a rehearsal tag.
+      TestPyPI rehearsal first (ADR-0013 item 5 and Amendment 1): `.github/workflows/release.yml`
+      written (86428d3) and hardened after the reviews; needs the owner's TestPyPI pending
+      publisher and environments, then the rehearsal tag `v0.1.0rc1`.
+- [x] M6 spec and scope reviews (2026-10-04): nothing out of scope. Fixed: pre-releases detected
+      with `packaging` (dev releases were missed); the release checks the commit is on a green
+      `main`; README links absolute for the PyPI page; limits documented; test gaps closed (make
+      targets both ways, purls of every type, the purl parser fuzzed, a real silent API server, an
+      oversized output reaching `unknown`); `make demo-down` in CI; 18 release and packaging
+      facts recorded. ADR-0013 Amendment 1 waits for the owner. Second branch run
+      37166399390 green, again "SUCCESS TEST: PASS (3/3 steps)".
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M5 closed; M6 started (ADR-0013 accepted).
-- **`main` = 6b09f36, green** (CI 37164132919, all eight jobs); the M5 branch was deleted.
-- **M6 decisions (owner, 2026-10-04):** release to PyPI with trusted publishing, TestPyPI first;
-  version 0.1.0; `make demo` locally and in CI; hardening: safe YAML inputs, Kubernetes API
-  timeouts, tool output limits, property-based tests.
-- **Next steps, in order:** the hardening slices; `make demo` and its CI job; docs-match-CLI test;
-  packaging 0.1.0; branch CI twice; `main` on "push"; M6 reviews; the release job; the owner sets
-  up the PyPI and TestPyPI pending publishers; rehearsal tag to TestPyPI; final tag.
+- **Date:** 2026-10-04. **Current milestone:** M6, done-criterion met in branch CI; release next.
+- **`main` = 4a7e714, green** (CI 37164741543; M5 closed). Work branch `m6` holds M6: hardening,
+  `make demo` and its CI job, the README-to-CLI test, 0.1.0 packaging, the release workflow and
+  the review fixes. Branch runs 37165585399 and 37166399390 green ("SUCCESS TEST: PASS").
+- **Waiting on the owner:** (1) confirm ADR-0013 Amendment 1; (2) "push" to move `main` (after the
+  review fixes pass on the branch); (3) on test.pypi.org add a pending trusted publisher
+  (project `fixproof`, owner `Govardhan527`, repository `fixproof`, workflow `release.yml`,
+  environment `testpypi`) and create the GitHub environments `testpypi` and `pypi` (with a
+  required reviewer on `pypi`); (4) the rehearsal tag.
+- **Next steps, in order:** branch CI with the review fixes; `main`; rehearsal commit
+  `0.1.0rc1` and tag `v0.1.0rc1`; install from TestPyPI and run on a real image; then the PyPI
+  pending publisher, the final commit (`0.1.0`, README install from PyPI) and tag `v0.1.0`; close
+  M6.

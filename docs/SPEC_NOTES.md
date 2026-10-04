@@ -1113,8 +1113,39 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   - `uv export --format cyclonedx1.5` (uv 0.12.9) writes the release SBOM; uv warns it "is
     experimental and may change without warning" unless `--preview-features sbom-export` is
     given, which the workflow does. VERIFIED (`uv export --help` and a local run).
-  - PEP 440 pre-release spelling `0.1.0rc1`: the workflow treats a version ending in `aN`, `bN`
-    or `rcN` as a rehearsal for TestPyPI (§9).
+  - Pre-releases: the workflow parses the version with `packaging.version.Version`, refuses a
+    non-canonical spelling (`str(Version(v)) != v`, so `0.1.0c1` or `0.1.0-rc1` are refused), and
+    sends any version whose `is_prerelease` is true (a, b, rc and dev releases, §9) to TestPyPI;
+    checked locally for `0.1.0`, `0.1.0rc1`, `0.1.0.dev1`, `0.1.0a1`, `0.1.0c1`, `0.1.0-rc1`.
+    VERIFIED (packaging 26.3).
+  - `pypa/gh-action-pypi-publish` v1.14.2 `action.yml`: input `repository-url` (default
+    `https://upload.pypi.org/legacy/`) and `packages-dir` (default `dist`). TestPyPI's upload URL
+    is `https://test.pypi.org/legacy/`; its project page is `https://test.pypi.org/project/<name>`
+    and a user installs from it with `pip install --index-url https://test.pypi.org/simple/ <name>`
+    (PyPA guide "Using TestPyPI"). VERIFIED.
+  - `actions/upload-artifact` v7.0.1 README: "If multiple paths are provided as input, the least
+    common ancestor of all the search paths will be used as the root directory of the artifact",
+    so `dist/` and `release/` keep their paths; `if-no-files-found: error` fails the step when
+    nothing matched. VERIFIED.
+  - `gh release create` (gh 2.99.0 help): `-R/--repo`, `-p/--prerelease`, `-t/--title`,
+    `-n/--notes`, then the files to attach; it uses `GH_TOKEN`, and the job has `contents: write`.
+    VERIFIED.
+  - GitHub Actions variables (`github/docs`, `content/actions/reference/workflows-and-actions/
+    variables.md`, SHA-256 `38a4ba0d8cbd440e1cdde96c0c6384d8ee60bf844b7c934ab1516d9206669922`):
+    `GITHUB_OUTPUT` (the file a step writes its outputs to) and `GITHUB_REF_NAME` (the tag name on
+    a tag push). VERIFIED.
+  - Package metadata: every classifier in `pyproject.toml` is on PyPI's official list
+    (`https://pypi.org/pypi?:action=list_classifiers`, 895 entries, read 2026-10-04); the project
+    URL labels `Homepage`, `Source`, `Issues`, `Changelog` are the well-known labels `homepage`,
+    `source`, `issues`, `changelog` (PyPA "Well-known Project URLs in Metadata", SHA-256
+    `7937895dc96cf5e47ae66b9850421a410d3b08c52b2679c734084e492541a6ff`). VERIFIED.
+  - `uv build --no-sources --out-dir` (uv 0.12.9 help); the SBOM made with `--no-emit-project`
+    lists the 50 locked runtime dependencies, with fixproof itself as `metadata.component`
+    (local run, 2026-10-04). OBSERVED.
+  - hypothesis 6.168.3 `settings` has `derandomize` (a fixed seed) and `database` (`None` stores
+    nothing). VERIFIED (installed package).
+  - The CI `demo` job (`make demo` from a fresh runner) took 4 min 15 s in run 37165585399.
+    OBSERVED.
 
 ## 19. Live-check ground truth (ADR-0008)
 

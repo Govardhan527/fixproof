@@ -620,3 +620,19 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** the SUCCESS TEST is one command anyone can run and CI proves on every change;
   the README is held to the CLI by a test; fixproof refuses or reports, rather than hangs or
   runs out of memory on, hostile or broken inputs; a user can `pip install fixproof`.
+- **Amendment 1 (2026-10-04, from the M6 spec and scope reviews; to confirm with the owner):**
+  1. *Release safety.* The release workflow refuses a tag that is not the project's canonical
+     PEP 440 version, refuses a tagged commit that is not on `main` or whose CI run on `main` did
+     not pass, sends every pre-release (a, b, rc or dev) to TestPyPI, and never runs two releases
+     of one tag at once.
+  2. *Rehearsal.* The rehearsal is a release candidate: a commit sets the version to `0.1.0rc1`,
+     the tag `v0.1.0rc1` publishes it to TestPyPI, fixproof is installed from there and run on a
+     real image, and a second commit sets `0.1.0` for the final tag.
+  3. *TestPyPI first, enforced.* The owner adds the PyPI pending publisher only after the
+     rehearsal has passed, and gives the `pypi` environment a required reviewer.
+  4. *The PyPI page.* The package description is the README, so its links are absolute and the
+     install section changes to `pip install fixproof` in the final release commit, not before.
+  5. *Details:* standard error is kept to its last 64 KiB; "1 MB" and "512 MB" are 1 MiB and
+     512 MiB; vers has no writer in fixproof, so item 3's round-trip covers purls (every type) and
+     both parsers are fuzzed for "ValueError only"; `make demo` takes `FIXPROOF_DEMO_DIR`; CI also
+     runs `make demo-down`; `make release-dry` builds exactly what the release does.

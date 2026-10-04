@@ -41,9 +41,10 @@ def run_verify(
     *flags: str,
     images: tuple[str, ...] = (),
     docker_config: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """`fixproof verify` on one cluster context, with the reader's kubeconfig and, unless given,
-    no registry credentials at all."""
+    no registry credentials at all; `env` adds to the environment (a PATH, say)."""
     scope = f'schema_version: "1.0.0"\nregistries: [{", ".join(registries)}]\n'
     if images:
         scope += "images:\n" + "".join(f"  - {image}\n" for image in images)
@@ -62,7 +63,12 @@ def run_verify(
         ],
         capture_output=True,
         text=True,
-        env={**os.environ, "DOCKER_CONFIG": str(docker_config), "KUBECONFIG": kubeconfig},
+        env={
+            **os.environ,
+            "DOCKER_CONFIG": str(docker_config),
+            "KUBECONFIG": kubeconfig,
+            **(env or {}),
+        },
         check=False,
         timeout=3600,
     )  # fmt: skip

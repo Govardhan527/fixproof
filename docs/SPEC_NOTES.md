@@ -1213,6 +1213,11 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     `https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh`,
     serves the same bytes as `git show v0.1.0:scripts/install_scanners.sh` (SHA-256
     `ab711931ed3e6715a5e9c2f15e2235fc6f3926f17871c416a5306d7ef9086f29`). OBSERVED.
+  - GitHub's Ubuntu 24.04 runner image (`actions/runner-images`,
+    `images/ubuntu/Ubuntu2404-Readme.md`, image version 20260927.320.1, SHA-256
+    `1d144c7fb063ac2fb905133160d96b18c2ce99a7de120242540e14f6c5ca31cd`, read 2026-10-04) lists
+    "Python 3.12.3" and "Pipx 1.16.7" and no uv, which is why the README's CI example installs
+    fixproof with `pipx`. VERIFIED.
   - The name `fixproof` was still free on pypi.org and test.pypi.org on 2026-10-04 (404 from
     `/pypi/fixproof/json` on both, before the first upload). OBSERVED.
 

@@ -12,16 +12,18 @@ ship. For each image it answers one question: **is the vulnerable component stil
 - `still_affected`: at least one check finds it, and nothing contradicts that.
 - `unknown`: the checks disagree or could not run. fixproof never turns `unknown` into `fixed`.
 
-It writes the answer as an [OpenVEX](https://github.com/openvex/spec) document plus an evidence
-bundle (every tool output, hashed), and exits with a code your CI can act on.
+It writes the answer as an [OpenVEX](https://github.com/openvex/spec) document and as CycloneDX
+VEX, with an HTML summary and an evidence bundle (every tool output, hashed), and exits with a
+code your CI can act on.
 
-> **Status: early development.** Image verification works today and is exercised weekly against
-> real public images (see [Live demo](#live-demo-a-real-run)). Kubernetes workloads are checked
-> in CI on real nodes with all three common container runtimes: kind (containerd), with the six
-> SUCCESS TEST workloads, real certbot releases and every edge case, and minikube with Docker
-> Engine and with CRI-O. The release gate (`fixproof gate`) is checked in CI on real built
-> images (Docker daemon, `docker save` and OCI archives, registry), and every run reports the
-> CVE's CISA KEV status and writes an HTML summary and CycloneDX VEX; see [Roadmap](#roadmap).
+> **Status: 0.1.0, alpha** ([PyPI](https://pypi.org/project/fixproof/)). Image verification is
+> exercised weekly against real public images (see [Live demo](#live-demo-a-real-run)).
+> Kubernetes workloads are checked in CI on real nodes with all three common container runtimes:
+> kind (containerd), with the six SUCCESS TEST workloads, real certbot releases and every edge
+> case, and minikube with Docker Engine and with CRI-O. The release gate (`fixproof gate`) is
+> checked in CI on real built images (Docker daemon, `docker save` and OCI archives, registry),
+> and every run reports the CVE's CISA KEV status and writes an HTML summary and CycloneDX VEX;
+> see [Roadmap](#roadmap).
 > fixproof produces evidence for your own review. It is not a certification.
 
 ---
@@ -174,7 +176,8 @@ flowchart LR
 
 ## Live demo: a real run
 
-This is an unedited run from 2026-10-02 against three public images that fixproof did not build.
+This is an unedited run from 2026-10-04, with fixproof 0.1.0 installed from PyPI, against three
+public images that fixproof did not build.
 
 **The question:** is [CVE-2023-32681](https://github.com/advisories/GHSA-j8r2-6x86-q33q) (Python
 `requests` leaks `Proxy-Authorization` headers; affects `>= 2.3.0, < 2.31.0`, fixed in `2.31.0`)
@@ -211,8 +214,8 @@ images:
   - docker.io/certbot/certbot@sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20  # v5.8.0
 ```
 
-The run (Syft 1.54.0, Grype 0.119.0, Grype DB v6.1.9 built that morning, no registry
-credentials; about two minutes):
+The run (Syft 1.54.0, Grype 0.119.0, Grype DB v6.1.10 built that morning, no registry
+credentials; 100 seconds):
 
 ```console
 $ fixproof verify --cve CVE-2023-32681 --fix fix.yaml --scope scope.yaml \
@@ -220,9 +223,10 @@ $ fixproof verify --cve CVE-2023-32681 --fix fix.yaml --scope scope.yaml \
 still_affected  docker.io/certbot/certbot@sha256:92092d214a4eb75d049720d04f7acc50b40ea226d77736bce6a6bf43981b6e86
                 both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.28.2 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.28.2 at /usr/local/lib/python3.10/site-packages/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0).
 fixed           docker.io/certbot/certbot@sha256:68e0f51ce9037d3b022d446772277beb1e9c0fe801e75fbf87db105ab165ad54
-                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 246 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.10/site-packages/requests-2.31.0.dist-info/METADATA is fixed.
+                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 247 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.10/site-packages/requests-2.31.0.dist-info/METADATA is fixed.
 fixed           docker.io/certbot/certbot@sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20
-                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 32 matches. sbom_version: requests 2.34.2 at /usr/local/lib/python3.14/site-packages/requests-2.34.2.dist-info/METADATA is fixed.
+                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 33 matches. sbom_version: requests 2.34.2 at /usr/local/lib/python3.14/site-packages/requests-2.34.2.dist-info/METADATA is fixed.
+KEV: CVE-2023-32681 is not in the CISA KEV catalogue (feed 2026.10.02, released 2026-10-02T15:19:38.2945Z)
 2 fixed, 1 still_affected, 0 unknown; evidence in evidence
 $ echo $?
 1
@@ -233,6 +237,8 @@ All three verdicts match the expected answers. Note what the output shows:
 - Grype reports the PyPI match under its GitHub advisory id (`GHSA-j8r2-…`); fixproof follows the
   advisory's related ids to the CVE, so the match is not missed.
 - The SBOM check names the exact file the version came from.
+- The `KEV:` line reports whether the CVE is known to be exploited, from CISA's feed downloaded
+  for this run; it never changes a verdict.
 - The exit code is `1` because one image is still affected.
 
 What was written:
@@ -240,6 +246,7 @@ What was written:
 ```console
 $ find evidence -type f | sort
 evidence/bundle.json
+evidence/cyclonedx.json
 evidence/manifest.json
 evidence/openvex.json
 evidence/raw/001-grype.json
@@ -248,6 +255,7 @@ evidence/raw/002-grype.json
 evidence/raw/002-sbom_version.json
 evidence/raw/003-grype.json
 evidence/raw/003-sbom_version.json
+evidence/report.html
 ```
 
 The VEX statement for the still-affected image (from `openvex.json`, long notes abridged with `…`):
@@ -270,15 +278,18 @@ The VEX statement for the still-affected image (from `openvex.json`, long notes 
 }
 ```
 
-The tool and data versions recorded in `bundle.json` (the DB URL abridged), so the run can be
-judged later:
+The tool and data versions recorded in `bundle.json` (URLs and hashes abridged), so the run can
+be judged later:
 
 ```json
 "tools": [
   { "name": "grype", "version": "0.119.0",
-    "db": { "schemaVersion": "v6.1.9", "built": "2026-10-02T06:31:53Z", "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_…tar.zst?checksum=sha256%3A3c368d…" } },
+    "db": { "schemaVersion": "v6.1.10", "built": "2026-10-04T08:11:47Z", "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_…tar.zst?checksum=sha256%3A2bd874…" } },
   { "name": "syft", "version": "1.54.0", "schema": "16.1.11" }
-]
+],
+"kev": { "status": "not_listed", "entry": null, "reason": null,
+  "feed": { "catalog_version": "2026.10.02", "count": 1733, "date_released": "2026-10-02T15:19:38.2945Z",
+            "retrieved": "2026-10-04T13:13:50Z", "sha256": "d2c8c6…", "url": "https://www.cisa.gov/…/known_exploited_vulnerabilities.json" } }
 ```
 
 Anyone holding the bundle can check that nothing was changed after the run:
@@ -302,7 +313,9 @@ Deployments in namespace `fixproof-demo`, five from an open local registry and o
 (`partner-gateway`) from a registry that needs a password. The cluster pulls `partner-gateway`
 with an image pull secret; fixproof gets only the read-only `fixproof-reader` token and no
 registry credentials. Scope: [`examples/scope/kind-demo.yaml`](https://github.com/Govardhan527/fixproof/blob/main/examples/scope/kind-demo.yaml).
-Long reasons are abridged with `…`; everything else is as printed.
+Long reasons are abridged with `…`; everything else is as printed. That run predates the KEV
+check, so fixproof 0.1.0 prints one more line, `KEV: …`, before the summary (as in the live demo
+above).
 
 ```console
 $ export KUBECONFIG=reader.kubeconfig DOCKER_CONFIG=no-credentials
@@ -635,7 +648,7 @@ GitHub Actions:
 ```yaml
 - name: Install fixproof and the scanners
   run: |
-    uv tool install fixproof==0.1.0
+    pipx install fixproof==0.1.0     # GitHub's Ubuntu runners have pipx and Python 3.12
     curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh
     bash install_scanners.sh "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
     grype db update
@@ -649,8 +662,8 @@ GitHub Actions:
   with: { name: fixproof-evidence, path: evidence }
 ```
 
-Exit code `1` or `2` fails the step. If `unknown` should not block a release, check the code
-yourself and fail only on `1`.
+Any non-zero exit code fails the step: `1` still affected, `2` unknown, `3` bad input. If
+`unknown` should not block a release, check the code yourself and fail only on `1` and `3`.
 
 ### The release gate: never ship a closed CVE again
 
@@ -779,7 +792,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M1 | Data model, `fix.yaml`/`scope.yaml`, OpenVEX writer with schema validation | done |
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
-| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
+| M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine and CRI-O nodes, and several images scanned at once (`--jobs`) | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
 | M6 | Packaging, docs, end-to-end demo, hardening; 0.1.0 released on PyPI and GitHub | done |
 
@@ -787,7 +800,8 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 
 ## Run the SUCCESS TEST yourself: `make demo`
 
-One command proves the whole tool on your machine. With Docker, curl, openssl and
+One command proves the whole tool on your machine. On Linux x86-64 (it downloads the Linux
+x86-64 builds of kind, kubectl, Syft and Grype), with Docker, curl, openssl and
 [uv](https://docs.astral.sh/uv/) installed:
 
 ```console
@@ -826,12 +840,12 @@ $ make live           # real public images (needs Syft, Grype and a current DB)
 $ make demo           # the SUCCESS TEST end to end (see above); make demo-down to clean up
 ```
 
-Three test tiers, each saying plainly what it uses:
+Five test tiers, each saying plainly what it uses:
 
 | Tier | Runs | Data |
 |---|---|---|
-| Unit (`make check`) | every commit, no network | synthetic inputs and trimmed real tool output |
-| Integration | every push to `main` | 8 fixture images built in CI; a kind cluster running the 6 SUCCESS TEST workloads, real certbot releases and every edge case (`fixproof-edge`); minikube nodes with Docker Engine and with CRI-O; real Syft and Grype, a fresh DB; fixproof installed with the README's command |
+| Unit (`make check`) | every push, no network | synthetic inputs and trimmed real tool output |
+| Integration | every push to `main` | 8 fixture images built in CI; a kind cluster running the 6 SUCCESS TEST workloads, real certbot releases and every edge case (`fixproof-edge`); minikube nodes with Docker Engine and with CRI-O; real Syft and Grype, a fresh DB; fixproof installed as a tool (`uv tool install`) from the commit under test |
 | Live | weekly and on demand | real public images, real tools, the DB as published that day |
 | Package | every push | the built wheel installed in a fresh environment: version, command, packaged schemas |
 | Demo | every push to `main` | `make demo` from a fresh runner: the whole SUCCESS TEST, then `make demo-down` |

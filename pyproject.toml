@@ -5,7 +5,7 @@ description = "Per-asset proof that a remediated CVE is gone from container imag
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{ name = "Govardhan" }]
+authors = [{ name = "Govardhan Yadava", email = "govardhan@seccrypto.dev" }]
 requires-python = ">=3.12"
 keywords = ["vulnerability", "vex", "openvex", "cyclonedx", "sbom", "kubernetes", "cve", "kev"]
 classifiers = [

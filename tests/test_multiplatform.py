@@ -51,7 +51,7 @@ def as_platform(document: dict[str, Any], name: str) -> dict[str, Any]:
     metadata = changed["source"]["metadata" if "artifacts" in changed else "target"]
     metadata.update(os=os_name, architecture=arch, manifestDigest=CHILD[name])
     if variant:
-        metadata["variant"] = variant[0]
+        metadata["architectureVariant"] = variant[0]  # Syft's key (SPEC_NOTES §20)
     return changed
 
 
@@ -160,6 +160,7 @@ def test_the_bundle_records_each_platform_and_names_its_raw_files(tmp_path: Path
     ]
     arm64 = record["platforms"][1]
     assert arm64["scanned"]["grype"]["platform"] == "linux/arm64"
+    assert record["platforms"][2]["scanned"]["sbom_version"]["platform"] == "linux/arm/v6"
     assert arm64["scanned"]["sbom_version"]["manifest_digest"] == CHILD["linux/arm64"]
     assert sorted(p.name for p in (tmp_path / "raw").iterdir()) == [
         "001-linux-amd64-grype.json",

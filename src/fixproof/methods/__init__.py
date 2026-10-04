@@ -79,5 +79,6 @@ def scanned_image(name: str, metadata: Any, image: ImageRef | None) -> dict[str,
         "image_id": str(metadata.get("imageID", "")),
         "manifest_digest": manifest,
         "platform": f"{metadata.get('os', '?')}/{metadata.get('architecture', '?')}"
-        + (f"/{metadata['variant']}" if metadata.get("variant") else ""),
+        # Syft's image metadata names the variant `architectureVariant` (SPEC_NOTES §17, §20)
+        + (f"/{metadata['architectureVariant']}" if metadata.get("architectureVariant") else ""),
     }

@@ -270,8 +270,13 @@ Packaging, docs, demo, hardening only.
       (ADR-0013 item 5, Amendments 1 and 2): `.github/workflows/release.yml` written (86428d3)
       and hardened after the reviews. On the owner's instruction (2026-10-04) PyPI upload is the
       owner's step with `scripts/publish.sh` and their `~/.pypirc`, not trusted publishing; the
-      workflow no longer publishes. Next: the rehearsal tag `v0.1.0rc1` (a GitHub pre-release
-      only), then `v0.1.0` and the owner's upload.
+      workflow no longer publishes. Rehearsal passed 2026-10-04: tag `v0.1.0rc1` on a5df745
+      (`main` CI 37188148312 green), release run 37188611616 made the GitHub pre-release; its
+      wheel, installed in a fresh environment with the scanners from `install_scanners.sh`,
+      repeated the README live demo on the three Certbot images (`still_affected`, `fixed`,
+      `fixed`, exit 1, 76 s, Grype DB v6.1.10), wrote valid OpenVEX and CycloneDX, and gated
+      v2.6.0 with exit 1 and v5.8.0 with exit 0; `scripts/publish.sh v0.1.0rc1` checked the sums
+      and `twine check` and stopped (pre-release). Next: `v0.1.0` and the owner's upload.
 - [x] M6 spec and scope reviews (2026-10-04): nothing out of scope. Fixed: pre-releases detected
       with `packaging` (dev releases were missed); the release checks the commit is on a green
       `main`; README links absolute for the PyPI page; limits documented; test gaps closed (make
@@ -282,24 +287,20 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M6, done-criterion met; the first release is next.
-- **`main` = 0ecd07b, green** (CI 37172771442: all 10 jobs, "SUCCESS TEST: PASS (3/3 steps)").
-  The work branch `m6` is merged and deleted.
-- **Release route changed (ADR-0013 Amendment 2, owner's instruction 2026-10-04):** PyPI upload
-  is the owner's step with `scripts/publish.sh` and their `~/.pypirc` (twine 7.0.0), as for
-  their other package. No trusted publishing, no TestPyPI, no GitHub environments. The tag
-  workflow builds, checks and makes the GitHub release only. The package author is Govardhan
-  Yadava <govardhan@seccrypto.dev>.
-- **Work branch `release`:** the author, `twine check --strict` in `check_package.sh`, the
-  GitHub-only workflow with `publish.sh` and its tests, Amendment 2, and version `0.1.0rc1`.
-  Push run 37173742059 green (package job: both rc1 files pass `twine check --strict`); full
-  runs 37179164996 and 37179575011 green (all 10 jobs, "SUCCESS TEST: PASS (3/3 steps)").
-- **The owner confirmed Amendment 2 and said go for `main` and `v0.1.0rc1`** (2026-10-04, "Yes
-  Approved"). **Waiting on the owner later:** the upload `scripts/publish.sh v0.1.0` (or say to
-  run it).
-- **Next steps, in order:** `main` and its CI; tag `v0.1.0rc1` (GitHub
-  pre-release); install its wheel in a fresh environment and run it on a real image;
-  `scripts/publish.sh v0.1.0rc1` (checks, no upload); the final commit (`0.1.0`, README install
-  from PyPI) through branch CI to `main`; tag `v0.1.0`; the owner's upload; check the GitHub
-  release, the tags on `origin` and PyPI's JSON API sha256 values against `SHA256SUMS`;
-  `pip install fixproof` in a fresh environment and run it; close M6.
+- **Date:** 2026-10-04. **Current milestone:** M6, done-criterion met; the first release is in
+  progress.
+- **`main` = a5df745, green** (CI 37188148312: all 10 jobs, "SUCCESS TEST: PASS (3/3 steps)").
+  It holds ADR-0013 Amendment 2 (confirmed by the owner): PyPI upload is the owner's step with
+  `scripts/publish.sh` and their `~/.pypirc`; the tag workflow makes the GitHub release only;
+  the package author is Govardhan Yadava <govardhan@seccrypto.dev>.
+- **Rehearsal passed:** `v0.1.0rc1` is a GitHub pre-release (release run 37188611616); its wheel
+  repeated the README live demo and the gate on real images (see the release item above).
+- **Work branch `release`:** the final release commit (`0.1.0`, the README installs from PyPI
+  and fetches the scanner script from the `v0.1.0` tag).
+- **Waiting on the owner:** after the tag `v0.1.0`, the upload: `scripts/publish.sh v0.1.0`
+  (or say to run it). If PyPI refuses it with 403, the token in `~/.pypirc` is limited to
+  another project and the first upload needs an account-wide token.
+- **Next steps, in order:** two full green branch runs; `main` and its CI; tag `v0.1.0`; the
+  owner's upload; check the GitHub release, the tags on `origin` and PyPI's JSON API sha256
+  values against `SHA256SUMS`; `uv tool install fixproof` in a fresh environment and run it;
+  close M6 (tick the release item, the milestone table, the resume block).

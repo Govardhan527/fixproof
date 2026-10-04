@@ -128,3 +128,20 @@ def test_only_the_end_of_standard_error_is_kept(
     assert run.exit_code == 1
     assert len(run.stderr) == 64 * 1024
     assert run.stderr.endswith("END\n")
+
+
+def test_an_oversized_output_gives_unknown_never_fixed() -> None:
+    """End to end through a method and the verdict rule (ADR-0013 item 3)."""
+    from fixproof.methods import grype, sbom_version
+    from fixproof.model import MethodStatus, Verdict
+    from fixproof.tools import ToolRun
+    from fixproof.verdict import combine
+    from tool_outputs import ASSET, CVE, output, requests_fix, runner
+
+    too_big = ToolRun(None, b"", "", "grype wrote more than 536870912 bytes of output")
+    by_grype = grype.assess(ASSET, CVE, runner({"grype": too_big}))
+    by_sbom = sbom_version.assess(ASSET, requests_fix(), runner({"syft": output("syft", "fixed")}))
+    assert by_grype.result.status is MethodStatus.ERROR
+    verdict = combine(ASSET, by_grype.result, by_sbom.result)
+    assert verdict.verdict is Verdict.UNKNOWN
+    assert "grype wrote more than 536870912 bytes of output" in verdict.reason

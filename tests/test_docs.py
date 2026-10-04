@@ -75,10 +75,26 @@ def test_every_command_the_readme_runs_exists() -> None:
     assert {"verify", "gate"} <= used
 
 
-def test_every_make_target_the_readme_names_exists() -> None:
+# Makefile targets a user runs (the README must show each) and the ones only the project's own
+# checks use; a new target must be put in one of the two.
+USER_TARGETS = {
+    "setup",
+    "check",
+    "integration",
+    "integration-minikube",
+    "live",
+    "demo",
+    "demo-down",
+}
+INTERNAL_TARGETS = {"lint", "type", "test", "schemas", "release-dry"}
+
+
+def test_make_targets_and_the_readme_agree_both_ways() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     phony = set(re.search(r"^\.PHONY: (.+)$", makefile, re.MULTILINE).group(1).split())  # type: ignore[union-attr]
-    named = set(re.findall(r"`make ([a-z-]+)`|^\$ make ([a-z-]+)", README, re.MULTILINE))
-    targets = {a or b for a, b in named}
-    assert targets <= phony, targets - phony
-    assert {"demo", "check"} <= targets
+    named = {
+        a or b for a, b in re.findall(r"`make ([a-z-]+)`|^\$ make ([a-z-]+)", README, re.MULTILINE)
+    }
+    assert named <= phony, named - phony
+    assert phony == USER_TARGETS | INTERNAL_TARGETS, phony ^ (USER_TARGETS | INTERNAL_TARGETS)
+    assert named >= USER_TARGETS, USER_TARGETS - named

@@ -3,7 +3,8 @@
 The six comparators must be a total order on valid versions: every version equals itself,
 swapping the arguments flips the sign, and the order is transitive. Valid versions come from each
 ecosystem's grammar (SPEC_NOTES §6 to §11). The purl builder and parser must round-trip, and the
-vers parser must reject bad input with ValueError only, never crash.
+vers and purl parsers must reject bad input with ValueError only, never crash (vers has no
+writer in fixproof, so it has no round-trip to test).
 """
 
 import contextlib
@@ -12,7 +13,7 @@ import string
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from fixproof.purl import build, identity
+from fixproof.purl import NAMESPACE_RULES, PurlType, _normal, build, identity
 from fixproof.vers import check_vers
 from fixproof.versions import VersionError, comparator_for
 
@@ -157,18 +158,49 @@ def test_comparators_reject_arbitrary_text_cleanly(ecosystem: str, text: str) ->
 
 
 name_text = st.text(
-    alphabet=string.ascii_lowercase + string.digits + "-._~@:/% +", min_size=1, max_size=20
+    alphabet=string.ascii_letters + string.digits + "-._~@:/% +", min_size=1, max_size=20
 ).filter(lambda s: s.strip("/") == s and "//" not in s)
 
 
+@st.composite
+def purl_parts(draw: st.DrawFn) -> tuple[PurlType, str, str | None, str | None]:
+    purl_type: PurlType = draw(st.sampled_from(sorted(NAMESPACE_RULES)))
+    rule = NAMESPACE_RULES[purl_type]
+    if rule == "required":
+        namespace: str | None = draw(name_text)
+    elif rule == "optional":
+        namespace = draw(st.one_of(st.none(), name_text))
+    else:
+        namespace = None
+    return purl_type, draw(name_text), namespace, draw(st.one_of(st.none(), name_text))
+
+
 @PROFILE
-@given(name_text, st.one_of(st.none(), name_text), st.one_of(st.none(), name_text))
-def test_purls_round_trip(name: str, namespace: str | None, version: str | None) -> None:
-    """npm: a type with an optional namespace and no case folding on lowercase input."""
-    purl = build("npm", name, namespace=namespace, version=version)
-    parsed = identity(purl)
-    assert (parsed.type, parsed.name, parsed.version) == ("npm", name, version)
-    assert parsed.namespace == namespace
+@given(purl_parts())
+def test_purls_round_trip_for_every_type(
+    parts: tuple[PurlType, str, str | None, str | None],
+) -> None:
+    """Every type fixproof writes reads back as written, after the type's own normalisation."""
+    purl_type, name, namespace, version = parts
+    parsed = identity(build(purl_type, name, namespace=namespace, version=version))
+    assert (parsed.type, parsed.name, parsed.version) == (
+        purl_type,
+        _normal(purl_type, "name", name),
+        _normal(purl_type, "version", version) if version is not None else None,
+    )
+    expected = (
+        "/".join(_normal(purl_type, "namespace", s) for s in namespace.split("/") if s)
+        if namespace
+        else None
+    )
+    assert parsed.namespace == (expected or None)
+
+
+@PROFILE
+@given(st.text(max_size=80))
+def test_the_purl_parser_rejects_bad_input_with_value_error_only(text: str) -> None:
+    with contextlib.suppress(ValueError):
+        identity(text)
 
 
 @PROFILE

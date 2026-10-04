@@ -277,3 +277,13 @@ def test_a_silent_api_server_is_an_inventory_error(monkeypatch: pytest.MonkeyPat
     patch_client(monkeypatch, FakeCore([], timeout))
     with pytest.raises(InventoryError, match=r"ctx: list pods in demo: .*Read timed out"):
         inventory(Cluster(context="ctx", namespaces=("demo",)))
+
+
+def test_an_api_server_that_never_accepts_is_an_inventory_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from urllib3.exceptions import ConnectTimeoutError
+
+    patch_client(monkeypatch, FakeCore([], ConnectTimeoutError("connect timeout=10")))
+    with pytest.raises(InventoryError, match="ctx: list pods in demo: connect timeout=10"):
+        inventory(Cluster(context="ctx", namespaces=("demo",)))

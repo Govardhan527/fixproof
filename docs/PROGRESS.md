@@ -305,24 +305,31 @@ Packaging, docs, demo, hardening only.
       closed 2026-10-04** (owner: "Approved", to "confirm and close M6"). Every milestone of the
       project plan is done, and the SUCCESS TEST passes via `make demo` in CI on `main`.
 
+## M7 (after the first release; owner's priorities, 2026-10-04)
+
+Asked which parked item comes first, the owner chose arm64 and approved the recommended options
+for all three items (2026-10-04). The recommended order:
+every platform of a multi-platform image; managed-cluster sign-in proven without a cloud account;
+an evidence bundle for `gate`. Not covered by that approval: releases and PyPI uploads, real
+cloud accounts, and the other parked items.
+- [ ] Every platform of a multi-platform image is checked (ADR-0014): `crane manifest` lists the
+      platforms (crane 0.22.1, installed and checksum-checked by `install_scanners.sh`); each Linux
+      platform is checked through its own manifest digest; one verdict from all platforms (any
+      `still_affected` wins, all `fixed` needed for `fixed`); `platforms` in `scope.yaml` and
+      `closed.yaml` 1.1.0; `bundle` 2.0.0, `verify-summary` 1.3.0, `gate-result` 2.0.0; console,
+      HTML and README. Unit tests: 934 passed, 100% coverage. Real-tool proof: the minikube test
+      asserts every platform of the index a pod names is checked, and the live suite checks
+      linux/amd64 and linux/arm64 of real images against the same ground truth.
+- [ ] Managed-cluster sign-in, proven on kind without a cloud account (ADR-0015).
+- [ ] An evidence bundle for `gate` (ADR-0016).
+- [ ] M7 spec and scope reviews.
+
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** none. M0 to M6 are closed (M6 on the owner's
-  "Approved", 2026-10-04); the SUCCESS TEST passes via `make demo` in CI on `main`.
-- **fixproof is released:** 0.1.0 and the docs-only 0.1.0.post1 (Latest) on
-  https://pypi.org/project/fixproof/ and as GitHub releases, the same bytes on both (sha256
-  checked); installs with `uv tool install fixproof` or `pipx install fixproof`. Details in the
-  M6 release item.
-- **Release route (ADR-0013 Amendment 2, confirmed):** bump the version on a branch, prove it in
-  CI, move `main`, tag `vX.Y.Z` (the workflow makes the GitHub release), then the owner runs,
-  or asks for, `scripts/publish.sh vX.Y.Z`; check the PyPI sha256 values against `SHA256SUMS`.
-- **Last work:** the release review fixes and the M6 close went through the work branch
-  `m6-close` (two full green runs) to `main`. Then a README review (owner's request) fixed eight
-  stale statements, among them a CI example that used `uv`, which GitHub's Ubuntu runners lack
-  (now `pipx`), and a live demo printed by an older build (re-run with 0.1.0 from PyPI): 7c90d90,
-  `main` CI 37205274796 green.
-- **0.1.0.post1 is the latest release** (docs-only, on the owner's "release post1"): PyPI and the
-  GitHub release carry the corrected README; details in the M6 release item.
-- **Waiting on the owner:** what comes next. Candidates are in `docs/PARKED.md` (the plan's V2
-  items, managed clusters and cloud credential helpers, arm64 nodes, a KEV cache for air-gapped
-  use, a gate evidence bundle, more gate sources). Nothing is planned until the owner picks.
+- **Date:** 2026-10-04. **Current milestone:** M7 (the owner's approval is recorded in the M7
+  section; it does not cover releases or uploads).
+- **Released:** 0.1.0 and 0.1.0.post1 (Latest) on PyPI and GitHub; `main` = 49f208b, green.
+- **In progress:** M7 item 1 (ADR-0014, every platform) on the work branch `m7-platforms`.
+- **Next steps, in order:** branch CI (two full runs) and the live suite on the branch; `main`;
+  then ADR-0015 (sign-in on kind) and ADR-0016 (`gate` evidence), each through branch CI; the M7
+  reviews. A release of this work is the owner's call.

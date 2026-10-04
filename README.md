@@ -340,15 +340,16 @@ gets `403 Forbidden` outside its namespaces.
 
 ## Install
 
-**Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/), network access to your
-registries, and Syft 1.54.0 and Grype 0.119.0 on `PATH`. fixproof itself is pure Python; the
-scanner install script below fetches the Linux x86-64 builds (on other platforms, install those
-two versions from their release pages). fixproof is not on PyPI yet.
+**Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/) or
+[pipx](https://pipx.pypa.io/), network access to your registries, and Syft 1.54.0 and Grype
+0.119.0 on `PATH`. fixproof itself is pure Python; the scanner install script below fetches the
+Linux x86-64 builds (on other platforms, install those two versions from their release pages).
 
-**1. Install fixproof**
+**1. Install fixproof** from [PyPI](https://pypi.org/project/fixproof/), in an environment of its
+own:
 
 ```console
-$ uv tool install git+https://github.com/Govardhan527/fixproof
+$ uv tool install fixproof        # or: pipx install fixproof
 $ fixproof --version
 fixproof 0.1.0
 ```
@@ -357,7 +358,7 @@ fixproof 0.1.0
 against its SHA-256 before it is unpacked). Download the script, read it, then run it:
 
 ```console
-$ curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/main/scripts/install_scanners.sh
+$ curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh
 $ less install_scanners.sh
 $ bash install_scanners.sh "$HOME/.local/bin"      # any directory on your PATH
 ```
@@ -634,8 +635,8 @@ GitHub Actions:
 ```yaml
 - name: Install fixproof and the scanners
   run: |
-    uv tool install git+https://github.com/Govardhan527/fixproof
-    curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/main/scripts/install_scanners.sh
+    uv tool install fixproof==0.1.0
+    curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh
     bash install_scanners.sh "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
     grype db update
 - name: Prove the fix

@@ -22,3 +22,4 @@ htmlcov/
 # Editors
 .idea/
 .vscode/
+.demo/

@@ -3,7 +3,7 @@
 
 UV_RUN := uv run --frozen
 
-.PHONY: setup check lint type test schemas integration integration-minikube live demo release-dry
+.PHONY: setup check lint type test schemas integration integration-minikube live demo demo-down release-dry
 
 setup:
 	uv sync --locked
@@ -43,9 +43,13 @@ integration-minikube:
 live:
 	$(UV_RUN) pytest -m live --force-enable-socket -v
 
+# The SUCCESS TEST end to end on a local kind cluster (ADR-0013 item 1): needs Docker, curl,
+# openssl and uv; about 10 minutes the first time. `make demo-down` removes the cluster.
 demo:
-	@echo "make demo: the SUCCESS TEST demo lands in M6 (step 3 needs the M5 gate; see docs/PROGRESS.md); nothing ran" >&2
-	@exit 1
+	scripts/demo.sh up
+
+demo-down:
+	scripts/demo.sh down
 
 release-dry:
 	rm -rf dist

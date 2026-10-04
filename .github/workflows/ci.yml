@@ -235,4 +235,27 @@ jobs:
           "${kubectl[@]}" describe pods -n "fixproof-${RUNTIME//-/}" || true
           "${kubectl[@]}" get events -A --sort-by=.lastTimestamp || true
 
+  # ADR-0013 item 1: the SUCCESS TEST end to end, exactly as `make demo` runs it on a laptop
+  # (scanners, Grype DB, kind cluster, steps 1 to 3), from a fresh runner.
+  demo:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [lint-type, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - run: uv sync --locked
+      - name: make demo
+        run: make demo
+      - name: Show the demo cluster's pods
+        if: failure()
+        run: |
+          kubectl=(".demo/bin/kubectl" --kubeconfig ".demo/admin.kubeconfig")
+          "${kubectl[@]}" get pods -A -o wide || true
+          "${kubectl[@]}" describe pods -n fixproof-demo || true
+
   # The `release` job (tag v*: build, SBOM, PyPI trusted publishing) is added only after M6.

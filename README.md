@@ -34,6 +34,7 @@ bundle (every tool output, hashed), and exits with a code your CI can act on.
 - [Using fixproof](#using-fixproof)
 - [Reading the results](#reading-the-results)
 - [Use in CI](#use-in-ci)
+- [Run the SUCCESS TEST yourself: `make demo`](#run-the-success-test-yourself-make-demo)
 - [Supported package ecosystems](#supported-package-ecosystems)
 - [Credentials, privacy and what is stored](#credentials-privacy-and-what-is-stored)
 - [Limitations](#limitations)
@@ -766,6 +767,32 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 
 ---
 
+## Run the SUCCESS TEST yourself: `make demo`
+
+One command proves the whole tool on your machine. With Docker, curl, openssl and
+[uv](https://docs.astral.sh/uv/) installed:
+
+```console
+$ git clone https://github.com/Govardhan527/fixproof && cd fixproof
+$ make demo
+```
+
+It installs the pinned Syft and Grype (checksum-verified) into `.demo/`, updates the Grype
+database (about 3 GB, in Grype's own cache, reused next time), starts a kind cluster with two
+local registries and six workloads (2 fixed, 3 still vulnerable, 1 in a registry fixproof has no
+password for), and then runs, as a user would:
+
+1. `fixproof verify` on the six workloads: exactly 2 `fixed`, 3 `still_affected` (with image
+   digests and pod names) and 1 `unknown` with the reason;
+2. a check that the OpenVEX it wrote validates against the pinned schema, with no `not_affected`;
+3. `fixproof gate` on a freshly built image that brings the closed CVE back (non-zero exit) and on
+   one that does not (exit 0).
+
+It prints `PASS` or `FAIL` for each step and `SUCCESS TEST: PASS (3/3 steps)` at the end, exiting
+non-zero if any step fails; the evidence stays under `.demo/runs/`. The first run takes about 10
+minutes, later runs reuse the cluster. `make demo-down` removes the cluster and the registries.
+CI runs exactly `make demo` on every change to `main`.
+
 ## Development
 
 ```console
@@ -777,6 +804,7 @@ $ make integration    # fixture images and the kind demo cluster (needs Docker a
 $ make integration-minikube  # a minikube node with Docker Engine or CRI-O (needs Docker
                              # and scripts/demo_minikube.sh up; CI runs both)
 $ make live           # real public images (needs Syft, Grype and a current DB)
+$ make demo           # the SUCCESS TEST end to end (see above); make demo-down to clean up
 ```
 
 Three test tiers, each saying plainly what it uses:

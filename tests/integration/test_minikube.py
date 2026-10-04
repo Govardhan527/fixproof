@@ -89,8 +89,16 @@ def test_workloads_get_the_expected_verdicts(tmp_path: Path, node: tuple[str, st
             # manifest of the index the pod named instead of the index (SPEC_NOTES §12): accept
             # that one only, as Docker Hub lists it for that index.
             repository, digest = reported.removeprefix("docker.io/").split("@")
-            platform = docker_hub_platforms(repository, digest)["linux/amd64"]
+            listed = docker_hub_platforms(repository, digest)
+            platform = listed["linux/amd64"]
             assert item["asset"] in {reported, f"docker.io/{repository}@{platform}"}, item
+            # ADR-0014: the index the pod named is checked on every platform it has; the one
+            # platform manifest CRI-O may report is checked as exactly that platform
+            checked = {p["platform"]: p["digest"] for p in item["platforms"]}
+            if item["asset"] == reported:
+                assert set(checked) == set(listed), (name, checked)
+            else:
+                assert checked == {"linux/amd64": platform}, (name, checked)
         assert item["workload"].startswith(f"{namespace}/{namespace}/{name}-")
     # The image loaded into the node is never read: it has no registry digest, or (CRI-O may name
     # it localhost/...@sha256 from its own manifest) its registry is outside the allowlist.

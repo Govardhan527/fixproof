@@ -2,6 +2,8 @@
 
 Each case pins an image by digest and states its expected verdict with an independent source for
 it (SPEC_NOTES §19), so a changed verdict means the tools, the advisory data or fixproof changed.
+Each image is checked on linux/amd64 and linux/arm64 (ADR-0014): a distribution or a pinned
+build ships the same package versions on both, so each platform must get the expected verdict.
 They read Docker Hub anonymously and run weekly in CI (`.github/workflows/live.yml`) and on demand
 (`make live`). Without syft and grype on PATH they skip locally and fail in CI.
 """
@@ -52,6 +54,8 @@ LOG4SHELL_APP = (  # its build pins spring-boot-starter-log4j2 2.6.1, which pins
     "ghcr.io/christophetd/log4shell-vulnerable-app"
     "@sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929"
 )
+
+SINGLE_PLATFORM = {LOG4SHELL_APP}  # one linux/amd64 manifest, no index (SPEC_NOTES §20)
 
 OPENSSL_ALPINE_FIX = f"""\
 schema_version: "1.0.0"
@@ -126,12 +130,16 @@ def _scanners() -> None:
         pytest.skip(f"{', '.join(missing)} not on PATH (see .github/workflows/live.yml)")
 
 
+PLATFORMS = ("linux/amd64", "linux/arm64")
+
+
 def verify(
     tmp_path: Path, fix: str, cve: str, images: list[str], registries: str = "docker.io"
 ) -> tuple[int, dict[str, Any], Path]:
     (tmp_path / "fix.yaml").write_text(fix, encoding="utf-8")
     (tmp_path / "scope.yaml").write_text(
-        f'schema_version: "1.0.0"\nregistries: [{registries}]\nimages:\n'
+        f'schema_version: "1.1.0"\nregistries: [{registries}]\n'
+        f"platforms: [{', '.join(PLATFORMS)}]\nimages:\n"
         + "".join(f"  - {image}\n" for image in images),
         encoding="utf-8",
     )
@@ -156,6 +164,17 @@ def verify(
 
 
 def verdicts(report: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    """Each image's verdict and reason, after checking every platform got that same verdict.
+
+    An index is checked on linux/amd64 and linux/arm64 (Docker Hub names the latter
+    linux/arm64/v8 for some images); a single-platform image is checked as the one it is.
+    """
+    both = ({"linux/amd64", "linux/arm64"}, {"linux/amd64", "linux/arm64/v8"})
+    for item in report["assets"]:
+        checked = {p["platform"]: p["verdict"] for p in item["platforms"]}
+        expected = ({"linux/amd64"},) if item["asset"] in SINGLE_PLATFORM else both
+        assert set(checked) in expected, (item["asset"], checked, item["not_checked"])
+        assert set(checked.values()) == {item["verdict"]}, (item["asset"], item["reason"])
     return {item["asset"]: (item["verdict"], item["reason"]) for item in report["assets"]}
 
 
@@ -178,7 +197,7 @@ def test_glibc_kev_cve_on_debian_images(tmp_path: Path) -> None:
     found = verdicts(report)
     old_verdict, old_reason = found[DEBIAN_12_0]
     assert old_verdict == "still_affected", old_reason
-    assert old_reason.startswith("both methods find the vulnerable component")
+    assert "linux/amd64: both methods find the vulnerable component" in old_reason
     assert "libc6 2.36-9 at" in old_reason
     new_verdict, new_reason = found[PYTHON_SLIM]
     assert new_verdict == "fixed", new_reason

@@ -112,7 +112,8 @@ def assert_nowhere(done: subprocess.CompletedProcess[str], out: Path, *secrets: 
 
 
 def docker_hub_platforms(repository: str, digest: str) -> dict[str, str]:
-    """`os/architecture` -> manifest digest for a Docker Hub image index, read anonymously."""
+    """`os/architecture[/variant]` -> manifest digest for a Docker Hub image index, read
+    anonymously; attestation entries (platform unknown/unknown) are not platforms."""
     token_url = (
         "https://auth.docker.io/token?service=registry.docker.io"
         f"&scope=repository:{repository}:pull"
@@ -129,11 +130,16 @@ def docker_hub_platforms(repository: str, digest: str) -> dict[str, str]:
     )
     with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310 (fixed https)
         index = json.load(response)
-    return {
-        f"{m['platform']['os']}/{m['platform']['architecture']}": m["digest"]
-        for m in index["manifests"]
-        if "platform" in m
-    }
+    platforms = {}
+    for entry in index["manifests"]:
+        platform = entry.get("platform") or {}
+        if platform.get("os", "unknown") == "unknown":
+            continue
+        name = f"{platform['os']}/{platform['architecture']}"
+        platforms[f"{name}/{platform['variant']}" if platform.get("variant") else name] = entry[
+            "digest"
+        ]
+    return platforms
 
 
 def kubectl(kubeconfig: str, *args: str) -> subprocess.CompletedProcess[str]:

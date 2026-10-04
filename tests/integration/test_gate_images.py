@@ -126,7 +126,8 @@ def test_a_docker_save_archive_is_gated_and_identified(
     result = result_of(done)
     assert verdicts(result)[CVE] == "still_affected"
     image_id = docker_image_id(tag)
-    assert {s["image_id"] for s in result["scanned"].values()} == {image_id}
+    (read,) = result["platforms"]  # a local build is one platform
+    assert {s["image_id"] for s in read["scanned"].values()} == {image_id}
 
 
 def oci_archive_from_registry(reference: str, dest: Path) -> str:
@@ -174,7 +175,8 @@ def test_an_oci_archive_is_gated_and_names_its_manifest_digest(
     assert done.returncode == 1, done.stderr
     result = result_of(done)
     assert verdicts(result)[CVE] == "still_affected"
-    assert {s["manifest_digest"] for s in result["scanned"].values()} == {digest}
+    (read,) = result["platforms"]
+    assert {s["manifest_digest"] for s in read["scanned"].values()} == {digest}
 
 
 def test_registry_images_by_digest(tmp_path: Path, images: dict[str, str]) -> None:

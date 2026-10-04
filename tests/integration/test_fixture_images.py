@@ -93,9 +93,11 @@ def test_eight_fixture_images(tmp_path: Path, images: dict[str, str]) -> None:
     assert tools["syft"]["version"] == "1.54.0"
     assert tools["grype"]["version"] == "0.119.0"
     assert tools["grype"]["db"]["schemaVersion"].startswith("v6.")
-    for record in bundle["assets"]:
-        for scanned in record["scanned"].values():
-            assert scanned["platform"] == "linux/amd64"
+    for record in bundle["assets"]:  # each fixture is built for one platform (ADR-0014)
+        for platform in record["platforms"]:
+            assert platform["platform"] == "linux/amd64", record["reason"]
+            for scanned in platform["scanned"].values():
+                assert scanned["platform"] == "linux/amd64"
 
 
 def test_a_fix_claim_above_the_real_fix_is_a_disagreement(

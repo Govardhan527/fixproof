@@ -77,8 +77,8 @@ def test_success_test_six_workloads(tmp_path: Path, setup: tuple[dict[str, str],
         assert re.fullmatch(
             rf"{CONTEXT}/fixproof-demo/{name}-[a-z0-9]+-[a-z0-9]+/app", item["workload"]
         )
-    unknown = found["partner-gateway"]["reason"]
-    assert unknown.startswith("both methods failed"), unknown
+    unknown = found["partner-gateway"]["reason"]  # no password: crane cannot read it (ADR-0014)
+    assert unknown.startswith("the image's platforms could not be listed: crane exited 1"), unknown
     assert "UNAUTHORIZED" in unknown
     assert done.returncode == 1
     check_bundle(tmp_path / "out")
@@ -148,7 +148,9 @@ def test_a_registry_outside_the_allowlist_is_never_read(
     found = by_owner(report)
     for name in demo_workloads.DEMO:
         if name == "partner-gateway":
-            assert found[name]["reason"].startswith("both methods failed")
+            assert found[name]["reason"].startswith(
+                "the image's platforms could not be listed: crane exited 1"
+            )
         else:
             assert found[name]["reason"] == (
                 f"registry not in scope: {OPEN}; fixproof did not read the image"
@@ -157,7 +159,7 @@ def test_a_registry_outside_the_allowlist_is_never_read(
     bundle = check_bundle(tmp_path / "out")
     for record in bundle["assets"]:
         if record["asset"]["image"]["registry"] == OPEN:
-            assert record["results"] == []  # no method ran
+            assert record["platforms"] == []  # no method ran
     assert not any((tmp_path / "out" / "raw").iterdir())  # nothing was read successfully
 
 
@@ -221,8 +223,9 @@ def test_edge_cases_on_a_real_node(tmp_path: Path, setup: tuple[dict[str, str], 
     by_digest: dict[str, set[tuple[str | None, ...]]] = {}
     for record in bundle["assets"]:
         image = record["asset"]["image"]
-        refs = tuple(result["raw_ref"] for result in record["results"])
-        if image is not None and record["results"]:
+        results = [result for platform in record["platforms"] for result in platform["results"]]
+        refs = tuple(result["raw_ref"] for result in results)
+        if image is not None and results:
             by_digest.setdefault(image["digest"], set()).add(refs)
     assert all(len(refs) == 1 for refs in by_digest.values())  # replicas share evidence
     scanned = {images[n] for n in ("requests-2.30.0", "requests-2.32.3", "no-requests")}
@@ -248,7 +251,9 @@ def test_a_side_loaded_image_is_unknown_even_when_docker_hub_is_allowed(
     (item,) = items
     assert re.fullmatch(r"docker\.io/library/import-[0-9-]+@sha256:[0-9a-f]{64}", item["asset"])
     assert item["verdict"] == "unknown"
-    assert item["reason"].startswith("both methods failed"), item["reason"]
+    assert item["reason"].startswith("the image's platforms could not be listed: crane exited 1"), (
+        item["reason"]
+    )
 
 
 def kubectl_can_i(kubeconfig: str, *args: str) -> bool:

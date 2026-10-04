@@ -760,3 +760,25 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequences:** the two mechanisms every managed cluster and cloud registry relies on are
   tested on every push to `main`; what stays unproven is each cloud's own plugin and identity
   mapping, which needs a real account.
+
+## ADR-0016: M7 item 3: an evidence bundle for `gate`
+
+- **Date:** 2026-10-04. **Status:** Accepted (the owner's approval of the recommended options,
+  recorded in ADR-0014; the recommendation was an evidence bundle for `gate`, parked 2026-10-04).
+- **Context:** `gate` decides whether a release ships, but kept nothing: its console text or
+  `--json` scrolled away with the CI log, and the tool output it decided on was gone.
+- **Decision:**
+  1. `fixproof gate --out DIR` (optional) writes, to a new or empty directory (checked before
+     anything is read, exit 3 otherwise; evidence is never overwritten):
+     - `gate.json`, format `gate-bundle` 1.0.0: the fixproof version, start and finish times, the
+       SHA-256 of `closed.yaml`, the result exactly as `--json` prints it (`gate-result` 2.0.0),
+       and an index of the raw files (platform, manifest digest, method, path);
+     - `raw/<method>.json`, or `raw/<os>-<arch>[-<variant>]-<method>.json` for an image with
+       several platforms: each tool's sanitised output, once per platform and tool however many
+       CVEs are closed (the tools ran once);
+     - `manifest.json` (`manifest` 1.0.0): the SHA-256 and size of every other file.
+  2. The console output and exit codes do not change; without `--out` nothing is written.
+  3. No VEX document: a local build has no registry digest to name it by, and the decision is
+     the record.
+- **Consequences:** a CI job can keep the gate's evidence as a build artifact and check later,
+  with the manifest, that it is unchanged.

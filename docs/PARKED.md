@@ -22,7 +22,8 @@ waits.
   fixproof (recorded in the bundle's `scanned`). A pod on an arm64 node running an amd64-scanned
   index is therefore checked on the wrong platform. Reading the node's architecture needs `get`
   on nodes, a cluster-wide permission ADR-0010 does not grant; revisit if mixed-architecture
-  clusters matter.
+  clusters matter. **Resolved in M7** (ADR-0014): every platform of an index is checked, with
+  no new permission.
 - **2026-10-03, M4 build: a cluster where no workload resolves.** If every workload in scope
   has no image digest (all pending), there is no product for an OpenVEX statement, the schema
   needs at least one, and `verify` exits 3. Exit 2 with no VEX file would be more accurate;
@@ -36,7 +37,9 @@ waits.
   owner decision. **Resolved 2026-10-03** (ADR-0011): `verify --jobs`, default 4.
 - **2026-10-03, M4 value test: managed clusters and cloud registries.** EKS, GKE and AKS (with
   their exec credential plugins) and cloud registry credential helpers (ECR, Artifact Registry,
-  ACR) are untested. Needs a cloud test account from the owner.
+  ACR) are untested. Needs a cloud test account from the owner. **Partly resolved in M7**
+  (ADR-0015): exec plugins and credential helpers are proven on kind; each cloud's own plugin
+  and identity mapping still needs that account.
 - **2026-10-03, M4 final spec review: CRI-O nodes.** minikube offers `--container-runtime=cri-o`;
   CRI-O's image ID form is not verified and not tested. The same CI pattern as the Docker
   Engine job would prove it; waits for an owner decision. **Resolved 2026-10-03** (ADR-0011): proven on a real
@@ -45,4 +48,5 @@ waits.
   downloads the feed on every run; offline runs record `unavailable`. Waits for an owner decision.
 - **2026-10-04, M5 scope review: an evidence bundle for `gate` decisions.** Today `gate` prints
   its result or `--json`; a bundle like `verify`'s would keep the raw tool output too.
+  **Resolved in M7** (ADR-0016): `gate --out`.
 - **2026-10-04, M5 scope review: more `gate` sources** (`podman:`, `oci-dir:`), refused today.

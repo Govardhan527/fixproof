@@ -8,6 +8,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 work="${1:?usage: check_package.sh WORKDIR}"
 rm -rf "$work" && mkdir -p "$work"
+work="$(cd "$work" && pwd)"  # absolute: the checks below run from another directory
 uv build --no-sources --out-dir "$work/dist" "$repo"
 uv venv --quiet --python 3.12 "$work/venv"
 uv pip install --quiet --python "$work/venv/bin/python" "$work"/dist/*.whl

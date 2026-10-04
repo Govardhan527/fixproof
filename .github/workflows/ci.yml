@@ -265,6 +265,8 @@ jobs:
       - run: uv sync --locked
       - name: make demo
         run: make demo
+      - name: make demo-down
+        run: make demo-down
       - name: Show the demo cluster's pods
         if: failure()
         run: |
@@ -272,4 +274,4 @@ jobs:
           "${kubectl[@]}" get pods -A -o wide || true
           "${kubectl[@]}" describe pods -n fixproof-demo || true
 
-  # The `release` job (tag v*: build, SBOM, PyPI trusted publishing) is added only after M6.
+  # Releases are built and published by .github/workflows/release.yml on version tags (ADR-0013).

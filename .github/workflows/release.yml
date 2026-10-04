@@ -11,26 +11,53 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read  # to find the tagged commit's CI run on main
     outputs:
       prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.12.9"
-      - name: Check the tag is the project's version
+      - run: uv sync --locked
+      - name: Check the tag is the project's canonical version
         id: version
         run: |
           version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
           test "${GITHUB_REF_NAME}" = "v${version}" || {
             echo "tag ${GITHUB_REF_NAME} does not match version ${version}" >&2; exit 1; }
-          if [[ "$version" =~ (a|b|rc)[0-9]+$ ]]; then prerelease=true; else prerelease=false; fi
-          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          # PEP 440 (SPEC_NOTES §9): refuse non-canonical spellings; any pre- or dev release is a
+          # rehearsal for TestPyPI
+          uv run --frozen python - "$version" >> "$GITHUB_OUTPUT" <<'PY'
+          import sys
+          from packaging.version import Version
+          version = Version(sys.argv[1])
+          if str(version) != sys.argv[1]:
+              sys.exit(f"version {sys.argv[1]} is not canonical; write {version}")
+          print(f"prerelease={'true' if version.is_prerelease else 'false'}")
+          PY
+      - name: Check the tagged commit is on main and its CI run there passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "the tagged commit is not on main" >&2; exit 1; }
+          conclusion="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch main \
+            --commit "$GITHUB_SHA" --event push --json conclusion --jq '.[0].conclusion')"
+          test "$conclusion" = "success" || {
+            echo "CI on main for $GITHUB_SHA is '${conclusion:-missing}', not success" >&2; exit 1; }
       - name: Build, install in a fresh environment and check the wheel
         run: scripts/check_package.sh "$RUNNER_TEMP/package"
       - name: SBOM and checksums

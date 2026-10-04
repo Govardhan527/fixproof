@@ -44,15 +44,19 @@ live:
 	$(UV_RUN) pytest -m live --force-enable-socket -v
 
 # The SUCCESS TEST end to end on a local kind cluster (ADR-0013 item 1): needs Docker, curl,
-# openssl and uv; about 10 minutes the first time. `make demo-down` removes the cluster.
+# openssl and uv; about 4 minutes on a CI runner. `make demo-down` removes the cluster.
 demo:
 	scripts/demo.sh up
 
 demo-down:
 	scripts/demo.sh down
 
+# What the release workflow builds (.github/workflows/release.yml), without publishing: the
+# wheel and sdist, checked by installing the wheel into a fresh environment, and the SBOM.
 release-dry:
 	rm -rf dist
-	uv build --no-sources
-	uv export --frozen --no-dev --format cyclonedx1.5 --output-file dist/fixproof.cdx.json > /dev/null
+	scripts/check_package.sh dist/check
+	mv dist/check/dist/* dist/ && rm -rf dist/check
+	uv export --frozen --no-dev --no-emit-project --format cyclonedx1.5 \
+		--preview-features sbom-export --output-file dist/fixproof.cdx.json > /dev/null
 	ls -l dist

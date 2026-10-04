@@ -1100,6 +1100,22 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `UsageError.exit_code = 2`, which is why `fixproof` maps usage errors to its own exit code 3.
   VERIFIED.
 
+- **Release plumbing (M6, ADR-0013 item 5, read 2026-10-04):**
+  - PyPI trusted publishing (`pypi/warehouse` docs, `docs/user/trusted-publishers/`): a "pending"
+    publisher becomes a normal publisher on first use and "does **not** create a project or
+    reserve a name"; the publishing job "must" have `id-token: write`; the docs' example uses an
+    environment named `pypi`. VERIFIED. The name `fixproof` was free on pypi.org and
+    test.pypi.org (`/pypi/fixproof/json` returned 404 on both). OBSERVED.
+  - Pinned actions: `pypa/gh-action-pypi-publish` v1.14.2 (released 2026-07-29), commit
+    `dc37677b2e1c63e2034f94d8a5b11f265b73ba33`; `actions/upload-artifact` v7.0.1, commit
+    `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`; `actions/download-artifact` v8.0.1, commit
+    `3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c` (GitHub API and `git ls-remote`). VERIFIED.
+  - `uv export --format cyclonedx1.5` (uv 0.12.9) writes the release SBOM; uv warns it "is
+    experimental and may change without warning" unless `--preview-features sbom-export` is
+    given, which the workflow does. VERIFIED (`uv export --help` and a local run).
+  - PEP 440 pre-release spelling `0.1.0rc1`: the workflow treats a version ending in `aN`, `bN`
+    or `rcN` as a rehearsal for TestPyPI (§9).
+
 ## 19. Live-check ground truth (ADR-0008)
 
 All retrieved 2026-10-02.

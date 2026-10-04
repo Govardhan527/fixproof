@@ -251,21 +251,24 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
 ## M6 (weeks 9-10)
 
 Packaging, docs, demo, hardening only.
-- [ ] Done: `make demo` runs the SUCCESS TEST end to end; docs match the CLI.
+- [x] Done: `make demo` runs the SUCCESS TEST end to end; docs match the CLI. Evidence: branch
+      CI 37165585399, job `demo` ran exactly `make demo` from a fresh runner: "SUCCESS TEST: PASS
+      (3/3 steps)"; the README-to-CLI test passes in `make check`.
 - [x] README with diagrams, a live demo and a user guide (owner request, 2026-10-02; written
       early, to be kept true as M4 to M6 land).
 - [x] M6 design accepted: ADR-0013 (owner answered the four questions 2026-10-04).
 - [x] Hardening: safe YAML inputs (1 MB, no anchors or aliases); Kubernetes API timeouts; tool
       output read up to 512 MB; property-based tests of the comparators and parsers (e7ad5c3,
       377f46a, bf9af2e, 82b41eb).
-- [ ] `make demo` (`scripts/demo.sh`, `scripts/success_test.py`) and the CI `demo` job:
-      written (c4f03a7); its first CI run is pending.
+- [x] `make demo` (`scripts/demo.sh`, `scripts/success_test.py`) and the CI `demo` job (c4f03a7);
+      green on its first CI run (37165585399).
 - [x] A test that holds the README to the CLI (options, exit codes, make targets) (10fce03); it
       found the gate section had no options table or console example.
-- [ ] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs:
-      written; passes locally (the installed wheel validates the examples); CI pending.
+- [x] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs
+      (7d28898); green in CI 37165585399 (job `package`).
 - [ ] Add the CI `release` job (tag `v*`: build, SBOM, PyPI trusted publishing), only after M6;
-      TestPyPI rehearsal first (ADR-0013 item 5).
+      TestPyPI rehearsal first (ADR-0013 item 5): `.github/workflows/release.yml` written; needs
+      the owner's pending publishers and environments, then a rehearsal tag.
 
 ## Last session (resume here)
 

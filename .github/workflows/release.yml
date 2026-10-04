@@ -1,0 +1,107 @@
+# Release on a version tag (ADR-0013 item 5). A tag like v0.1.0rc1 is a rehearsal that goes to
+# TestPyPI; a tag like v0.1.0 goes to PyPI. Publishing uses PyPI trusted publishing (OIDC, no
+# stored token) from a protected environment. The tag must match the version in pyproject.toml.
+# Third-party actions are pinned to full commit SHAs (looked up 2026-10-04).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - name: Check the tag is the project's version
+        id: version
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          test "${GITHUB_REF_NAME}" = "v${version}" || {
+            echo "tag ${GITHUB_REF_NAME} does not match version ${version}" >&2; exit 1; }
+          if [[ "$version" =~ (a|b|rc)[0-9]+$ ]]; then prerelease=true; else prerelease=false; fi
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+      - name: Build, install in a fresh environment and check the wheel
+        run: scripts/check_package.sh "$RUNNER_TEMP/package"
+      - name: SBOM and checksums
+        run: |
+          mkdir -p dist release
+          cp "$RUNNER_TEMP"/package/dist/* dist/
+          uv export --frozen --no-dev --no-emit-project --format cyclonedx1.5 --preview-features sbom-export \
+            --output-file "release/fixproof-${GITHUB_REF_NAME#v}.cdx.json" > /dev/null
+          (cd dist && sha256sum ./* > ../release/SHA256SUMS)
+          cat release/SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: |
+            dist/
+            release/
+          if-no-files-found: error
+
+  publish-testpypi:
+    if: needs.build.outputs.prerelease == 'true'
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/fixproof/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+
+  publish-pypi:
+    if: needs.build.outputs.prerelease == 'false'
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/fixproof/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
+
+  github-release:
+    needs: [build, publish-testpypi, publish-pypi]
+    if: always() && needs.build.result == 'success' && (needs.publish-testpypi.result == 'success' || needs.publish-pypi.result == 'success')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+      - name: Create the GitHub release with the packages, SBOM and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          flag=""
+          if [ "$PRERELEASE" = "true" ]; then flag="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" $flag \
+            --title "fixproof ${GITHUB_REF_NAME#v}" \
+            --notes "Built and published by the release workflow. Install: pip install fixproof==${GITHUB_REF_NAME#v} (TestPyPI for release candidates). The SBOM and SHA-256 sums of the packages are attached." \
+            dist/* release/*

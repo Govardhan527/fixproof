@@ -867,7 +867,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine and CRI-O nodes, and several images scanned at once (`--jobs`) | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
 | M6 | Packaging, docs, end-to-end demo, hardening; 0.1.0 released on PyPI and GitHub | done |
-| M7 | Every platform of a multi-platform image; managed-cluster sign-in (exec plugins, credential helpers) proven on kind; an evidence bundle for `gate` | in progress |
+| M7 | Every platform of a multi-platform image; managed-cluster sign-in (exec plugins, credential helpers) proven on kind; an evidence bundle for `gate` | built, not in 0.1.0.post1 |
 
 ---
 

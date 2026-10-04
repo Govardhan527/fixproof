@@ -312,29 +312,39 @@ for all three items (2026-10-04). The recommended order:
 every platform of a multi-platform image; managed-cluster sign-in proven without a cloud account;
 an evidence bundle for `gate`. Not covered by that approval: releases and PyPI uploads, real
 cloud accounts, and the other parked items.
-- [ ] Every platform of a multi-platform image is checked (ADR-0014): `crane manifest` lists the
-      platforms (crane 0.22.1, installed and checksum-checked by `install_scanners.sh`); each Linux
-      platform is checked through its own manifest digest; one verdict from all platforms (any
-      `still_affected` wins, all `fixed` needed for `fixed`); `platforms` in `scope.yaml` and
-      `closed.yaml` 1.1.0; `bundle` 2.0.0, `verify-summary` 1.3.0, `gate-result` 2.0.0; console,
-      HTML and README. Unit tests: 934 passed, 100% coverage. Real-tool proof: the minikube test
-      asserts every platform of the index a pod names is checked, and the live suite checks
-      linux/amd64 and linux/arm64 of real images against the same ground truth.
-- [ ] Managed-cluster sign-in, proven on kind without a cloud account (ADR-0015).
-- [ ] An evidence bundle for `gate` (ADR-0016): `gate --out DIR` writes `gate.json`
-      (`gate-bundle` 1.0.0), the raw tool output once per platform, and `manifest.json`.
-- [ ] M7 spec and scope reviews.
+- [x] Every platform of a multi-platform image is checked (ADR-0014 and Amendment 1): `crane
+      manifest` lists the platforms (crane 0.22.1, installed and checksum-checked by
+      `install_scanners.sh`); each Linux platform is checked through its own manifest digest; one
+      verdict from all platforms (any `still_affected` wins, all `fixed` needed for `fixed`);
+      `platforms` in `scope.yaml` and `closed.yaml` 1.1.0; `bundle` 2.0.0, `verify-summary`
+      1.3.0, `gate-result` 2.0.0; console, HTML and README. Evidence: unit tests (every index
+      shape and failure, every mix of up to four platform verdicts) at 100% coverage; the live
+      suite on real images checked linux/amd64 and linux/arm64, every case as expected (run
+      37214111809); on real minikube nodes the index a pod names is checked on every platform and
+      CRI-O's platform manifest on that one (runs 37216834030, 37217609032).
+- [x] Managed-cluster sign-in, proven on kind without a cloud account (ADR-0015): a failing exec
+      plugin stops the run with exit 3 and its own message. On kind, an exec plugin
+      (`client.authentication.k8s.io/v1beta1` and `v1`) gives the SUCCESS TEST result, a failing
+      one gives exit 3 and its message, and a credential helper (`credHelpers` and `credsStore`)
+      is asked by crane, Syft and Grype and opens the private registry; no token or password in
+      any output (runs 37216834030, 37217609032: 47 integration tests passed in each).
+- [x] An evidence bundle for `gate` (ADR-0016): `gate --out DIR` writes `gate.json`
+      (`gate-bundle` 1.0.0), the raw tool output once per platform, and `manifest.json`; tested
+      in unit tests and the golden files.
+- [x] M7 spec and scope reviews (2026-10-04): nothing out of scope. Fixed: Syft's variant key is
+      `architectureVariant` (a single-platform arm image was recorded without its variant); a
+      failed sign-in gives 401 or 403, not always 401; the README no longer promises a release;
+      the owner's approval is paraphrased, not quoted, in the decision record; 15 facts sourced in
+      SPEC_NOTES §20 and §21; ADR-0014 Amendment 1 (crane as a new pinned tool, `--jobs`, the
+      one-image rule in `verify`) for the owner to confirm. Two full runs on the work branch
+      `m7` green (37216834030, 37217609032).
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M7 (the owner's approval is recorded in the M7
-  section; it does not cover releases or uploads).
-- **Released:** 0.1.0 and 0.1.0.post1 (Latest) on PyPI and GitHub; `main` = 49f208b, green.
-- **M7 built** on the work branch `m7`: every platform (ADR-0014 and its Amendment 1), sign-in
-  on kind (ADR-0015), `gate --out` (ADR-0016), and the fixes from the M7 spec and scope reviews.
-  Earlier branch runs: live suite 37214111809 green on linux/amd64 and linux/arm64; full run
-  37215066416 green for the platforms work.
+- **Date:** 2026-10-04. **Current milestone:** M7, every item done (the owner's approval is
+  recorded in the M7 section; it does not cover releases or uploads).
+- **Released:** 0.1.0 and 0.1.0.post1 (Latest) on PyPI and GitHub. M7 is on `main`, not released.
 - **Waiting on the owner:** confirm ADR-0014 Amendment 1 (crane as a new pinned tool); close M7;
-  decide whether to release.
-- **Next steps, in order:** two full green runs on `m7`; `main`; tick the M7 items with their
-  evidence.
+  decide whether to release this work.
+- **Next steps:** none planned until the owner decides; the remaining candidates are in
+  `docs/PARKED.md`.

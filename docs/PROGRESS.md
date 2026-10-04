@@ -310,8 +310,14 @@ Packaging, docs, demo, hardening only.
 - **Release route (ADR-0013 Amendment 2, confirmed):** bump the version on a branch, prove it in
   CI, move `main`, tag `vX.Y.Z` (the workflow makes the GitHub release), then the owner runs,
   or asks for, `scripts/publish.sh vX.Y.Z`; check the PyPI sha256 values against `SHA256SUMS`.
-- **Last work:** the release review fixes and this record went through the work branch
-  `m6-close` (two full green runs) to `main`; the run ids are in the M6 items above and in git.
+- **Last work:** the release review fixes and the M6 close went through the work branch
+  `m6-close` (two full green runs) to `main`. Then a README review (owner's request) fixed eight
+  stale statements, among them a CI example that used `uv`, which GitHub's Ubuntu runners lack
+  (now `pipx`), and a live demo printed by an older build (re-run with 0.1.0 from PyPI): 7c90d90,
+  `main` CI 37205274796 green.
+- **Open decision for the owner:** PyPI shows the README as uploaded with 0.1.0, so those eight
+  statements stay stale there until a new upload; a docs-only post-release `0.1.0.post1`
+  (PEP 440) through the same release steps would update it.
 - **Waiting on the owner:** what comes next. Candidates are in `docs/PARKED.md` (the plan's V2
   items, managed clusters and cloud credential helpers, arm64 nodes, a KEV cache for air-gapped
   use, a gate evidence bundle, more gate sources). Nothing is planned until the owner picks.

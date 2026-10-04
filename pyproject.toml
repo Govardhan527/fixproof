@@ -32,6 +32,7 @@ fixproof = "fixproof.cli:main"
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.168.3,<7",
     "mypy>=1.18",
     "pip-audit>=2.9",
     "pytest>=8.4",

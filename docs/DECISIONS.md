@@ -669,3 +669,63 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      be refused and to need a token for the whole account; a token limited to `fixproof` can
      replace it afterwards. *Outcome (2026-10-04):* it did not arise; the token uploaded
      fixproof's first release (SPEC_NOTES §18).
+
+## ADR-0014: M7 item 1: every platform of a multi-platform image is checked
+
+- **Date:** 2026-10-04. **Status:** Accepted (2026-10-04: asked which parked item comes first,
+  the owner chose this one and approved the recommended options for all three M7 items; the
+  recommendation was to check every platform with no new cluster permission, and to settle the
+  details here).
+- **Context:** for an image index, Syft and Grype scan the platform of the machine running
+  fixproof (SPEC_NOTES §20: the alpine 3.22 index read on a linux/amd64 host gave its amd64
+  manifest). A pod on an arm64 node, or fixproof run on an Apple Silicon laptop against an amd64
+  cluster, therefore got a verdict about another image than the one in question, and nothing on
+  the verdict line said so (the platform was only in the bundle). Reading a node's architecture
+  needs `get` on nodes, cluster-wide, which ADR-0010 does not grant.
+- **Decision:**
+  1. **Listing the platforms.** For an image read from a registry (`verify`'s images and
+     workloads, `gate`'s registry images) fixproof first reads the manifest at the digest with
+     `crane manifest` (go-containerregistry, pinned v0.22.1): the library Syft and Grype read
+     registries with, so the same Docker config, credential helpers and plain HTTP for
+     `localhost` apply, and fixproof itself still never reads a registry credential. The bytes
+     must hash to the digest. An image manifest is one platform and is checked as before. In an
+     image index, every entry whose platform `os` is `linux` is checked through its own manifest
+     digest (`registry:REPOSITORY@<entry digest>`), so each tool reads exactly that platform and
+     the scanned-digest check (ADR-0007 item 6) holds per platform. BuildKit attestation entries
+     (`vnd.docker.reference.type: attestation-manifest`, platform `unknown/unknown`) are not
+     platforms and are ignored. Entries for another operating system are named as not checked
+     ("fixproof checks Linux platforms only"). An entry that is itself an index, a manifest that
+     cannot be read, or one that does not hash to its digest makes the image `unknown` with the
+     reason. Without `crane` on `PATH`, a registry image is `unknown` with the reason.
+  2. **Choosing platforms.** `scope.yaml` and `closed.yaml` 1.1.0 may list `platforms`
+     (`os/arch[/variant]`). Then only the entries of an index matching one of them are checked,
+     and the others are named as not in scope; without the list, every Linux entry is checked.
+     Matching normalises variants as containerd does (SPEC_NOTES §20: `amd64/v1` is `amd64`,
+     `arm64/v8` is `arm64`, `arm` is `arm/v7`). A single-platform image is checked whatever its
+     platform. An index with no entry in `platforms` is `unknown` with the reason. Version
+     1.0.0 files keep working unchanged.
+  3. **One verdict from several platforms** (`verdict.py`, tested exhaustively): each platform
+     gets the verdict rule; then any `still_affected` platform makes the image `still_affected`;
+     every platform `fixed` makes it `fixed`; anything else is `unknown`. `unknown` on one
+     platform is never outweighed by `fixed` on others. The reason starts with each platform's
+     verdict, then gives each platform's own reason, then names the platforms not checked. With
+     one platform and nothing left out, the reason is exactly as before.
+  4. **Output.** `bundle` 2.0.0: each asset has `platforms` (platform, manifest digest, verdict,
+     reason, the method results with their raw files, what each tool scanned) and `not_checked`
+     (platform, digest, why), in place of 1.x's per-asset `results` and `scanned`. Raw files of
+     an image with more than one platform are named `raw/NNN-<os>-<arch>[-<variant>]-<method>.json`.
+     `verify-summary` 1.3.0 and `gate-result` 2.0.0 gain each platform's verdict. On the console
+     each platform gets its own line under the verdict. The VEX documents keep one statement per
+     image, with the combined reason.
+  5. **`gate`** lists platforms the same way for a registry image. A local build
+     (`docker:`, `docker-archive:`, `oci-archive:`) stays one platform, the one the tools read,
+     recorded as before; a multi-platform OCI archive is checked for that platform only, and the
+     README says so.
+  6. **Install.** `scripts/install_scanners.sh` installs crane next to Syft and Grype, checked
+     against the SHA-256 in its release's checksums file.
+- **Consequences:** a verdict now covers every Linux platform of the image, or names the ones it
+  does not. A typical three-platform image costs one manifest read and six scans instead of two;
+  Docker Hub counts manifest reads toward its pull limits, so the README recommends `platforms`
+  and a Docker Hub login for large scopes. The README's "One platform per image" limitation is
+  replaced. Expected results in the live and integration tests change wherever an image has
+  several platforms.

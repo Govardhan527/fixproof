@@ -1283,3 +1283,67 @@ All retrieved 2026-10-02.
     `sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929` (single-platform):
     its `build.gradle` uses `spring-boot-starter-log4j2:2.6.1`, and Spring Boot v2.6.1's
     `spring-boot-dependencies/build.gradle` pins `library("Log4j2", "2.14.1")`.
+
+## 20. Multi-platform images (M7, ADR-0014, read 2026-10-04)
+
+- **OCI image index** (`opencontainers/image-spec` v1.1.1, `image-index.md`, SHA-256
+  `abbd4ecefe1d85588ae98393600a20b618cc190d630bb534d596c9a642584bf9`): `mediaType` "SHOULD be
+  used" and "When used, this field MUST contain the media type
+  `application/vnd.oci.image.index.v1+json`"; `manifests` is "REQUIRED"; each entry's
+  `platform` "SHOULD be present if its target is platform-specific", with `architecture`
+  ("This REQUIRED property specifies the CPU architecture"), `os` ("This REQUIRED property
+  specifies the operating system") and the optional `variant`; the Platform Variants table lists
+  `arm` `v6, v7, v8`, `arm64` `v8, v8.1, …`, `amd64` `v1, v2, v3, …`. VERIFIED.
+- **Media types** (`image-spec` v1.1.1, `media-types.md`, SHA-256
+  `5addd6ce3a7e0d9c7255a44ed469f5ebf40a1e611945c65202e6e3cdd75f951a`): the index is
+  `application/vnd.oci.image.index.v1+json`, compatible with Docker's
+  `application/vnd.docker.distribution.manifest.list.v2+json`; the image manifest is
+  `application/vnd.oci.image.manifest.v1+json`, compatible with
+  `application/vnd.docker.distribution.manifest.v2+json`. Docker's own spec
+  (`distribution/distribution` v2.8.3, `docs/spec/manifest-v2-2.md`, SHA-256
+  `7fe9cc686588d152ab68a3715b34dd212dd092aade98f327722294d421ed3293`) names the two Docker types
+  "New image manifest format (schemaVersion = 2)" and "Manifest list, aka "fat manifest"".
+  VERIFIED.
+- **Attestation entries** (`moby/buildkit` v0.33.1, `docs/attestations/attestation-storage.md`,
+  SHA-256 `9103a45463fbfdacfc34ccf365f8036179b628ccd4762ffc8cdd1125cdbeee9d`): an attestation
+  manifest's descriptor in the index has platform `architecture` and `os` "unknown" and the
+  annotation `vnd.docker.reference.type` set "to `attestation-manifest`". VERIFIED. Docker Hub's
+  `alpine:3.22` index carries one such entry per platform (observed 2026-10-04). OBSERVED.
+- **Variant normalisation** (`containerd/platforms` v0.2.1, `database.go`, `normalizeArch`,
+  SHA-256 `1ae641a9c9982c18aebe3fd30a36f916448d583c11787d9aed9a444549367949`): `amd64` with
+  variant `v1` becomes no variant; `arm64` with `8` or `v8` becomes no variant; `arm` with no
+  variant or `7` becomes `v7`, and `5`, `6`, `8` become `v5`, `v6`, `v8`; `i386` is `386`.
+  VERIFIED. fixproof matches `platforms` with these rules, for lower-case input.
+- **crane** (`google/go-containerregistry` v0.22.1, released 2026-09-04, tag commit
+  `8a72a424fdecb4caa14f2d525e5d2503331442b5`; asset `go-containerregistry_Linux_x86_64.tar.gz`,
+  SHA-256 `0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0`, as in the
+  release's `checksums.txt`, which fixproof checks the download against): `crane manifest IMAGE`
+  "Get the manifest of an image"; the archive also holds `gcrane` and `krane`, and only `crane` is
+  installed. VERIFIED (help and `checksums.txt`). `crane manifest` on the alpine 3.22 index
+  printed bytes whose SHA-256 is the index digest, with no trailing newline; on a missing or
+  private manifest it exits 1 with one `Error: fetching manifest …` line on stderr (for example
+  `MANIFEST_UNKNOWN` or `UNAUTHORIZED: authentication required`); it honours `DOCKER_CONFIG`.
+  OBSERVED (2026-10-04).
+- **Plain HTTP for local registries** (`go-containerregistry` v0.22.1, `pkg/name/registry.go`,
+  SHA-256 `88618463d047e23a991fcc6f3b5304ac0a56fce5a7c5b22660f137d6e89999ef`): `Scheme()`
+  "returns https scheme for all the endpoints except localhost or when explicitly defined", and
+  also returns `http` for RFC 1918 addresses and loopback names. VERIFIED. This is why Syft,
+  Grype and crane read the demo's `localhost:5001` and `localhost:5002` registries over HTTP
+  with no setting.
+- **Which platform the tools scan** (Syft 1.54.0, 2026-10-04, on linux/amd64): `syft
+  registry:docker.io/library/alpine@sha256:5291449c…` (the 3.22 index) scanned its `linux/amd64`
+  manifest (`3e9b4b68…`), with the index digest in `repoDigests`; with `--platform linux/arm64` it
+  scanned `2e1a7aa4…`; `--platform linux/mips64le` failed with "no child with platform
+  linux/mips64le in index …"; the amd64 manifest scanned with `--platform linux/arm64` failed
+  with "mismatched platform (expected linux/arm64): image platform="linux/amd64" does not match
+  user specified platform="linux/arm64"". Syft's `--platform` help: "an optional platform
+  specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64',
+  'linux')". OBSERVED. So a single-platform manifest is never scanned as another platform, and
+  an index digest alone leaves the platform to the host.
+- **Platforms of the images fixproof's docs and live tests use** (read with crane, 2026-10-04):
+  `certbot/certbot` v2.6.0, v2.7.0 and v5.8.0 are indexes of `linux/amd64`, `linux/arm/v6` and
+  `linux/arm64`; `certbot/certbot@sha256:0a228a84…` is v2.7.0's single `linux/amd64` manifest;
+  the `python` image in the README's minikube example has five Linux platforms, the alpine ones
+  seven and eight, the almalinux ones four, `debian:12.0-slim` eight (`linux/arm64/v8` among
+  them); `ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f884306…` is a single
+  `linux/amd64` manifest, not an index. OBSERVED.

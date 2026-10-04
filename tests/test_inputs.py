@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from fixproof.errors import InputError
-from fixproof.inputs import load_fix, load_scope
+from fixproof.inputs import MAX_INPUT_BYTES, load_fix, load_scope
 
 DIGEST = "sha256:" + "0123456789abcdef" * 4
 CVE = "CVE-2099-0001"  # synthetic: test data names no real CVE
@@ -149,3 +149,18 @@ def test_unreadable_and_malformed_files(tmp_path: Path) -> None:
         load_scope(write(tmp_path, "registries: [unclosed\n"))
     with pytest.raises(InputError, match="<root>: Input should be a valid dictionary"):
         load_fix(write(tmp_path, "- just\n- a list\n"), CVE)
+
+
+def test_anchors_aliases_large_files_and_non_utf8_are_refused(tmp_path: Path) -> None:
+    """ADR-0013 item 3: a "billion laughs" alias bomb, an oversized file and binary junk."""
+    bomb = 'a: &a ["x","x"]\nb: &b [*a,*a]\nc: [*b,*b]\n'
+    with pytest.raises(InputError, match=r"anchors and aliases are not allowed \(line 1\)"):
+        load_scope(write(tmp_path, bomb))
+    big = tmp_path / "big.yaml"
+    big.write_bytes(b"# " + b"x" * MAX_INPUT_BYTES + b"\n")
+    with pytest.raises(InputError, match=f"larger than {MAX_INPUT_BYTES} bytes"):
+        load_scope(big)
+    junk = tmp_path / "junk.yaml"
+    junk.write_bytes(b"\xff\xfe\x00")
+    with pytest.raises(InputError, match="not UTF-8 text"):
+        load_scope(junk)

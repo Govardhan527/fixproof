@@ -168,12 +168,31 @@ def _problems(error: ValidationError) -> list[str]:
     return problems
 
 
+MAX_INPUT_BYTES = 1024 * 1024  # ADR-0013: real input files are a few KB
+
+
 def _read_yaml(path: Path) -> Any:
+    """Read a small YAML file with no anchors or aliases (ADR-0013 item 3).
+
+    Aliases let a tiny file expand into a huge document (the "billion laughs" pattern); no
+    fixproof input needs them, so they are refused, as is any file over MAX_INPUT_BYTES.
+    """
     try:
-        text = path.read_text(encoding="utf-8")
+        with path.open("rb") as handle:
+            data = handle.read(MAX_INPUT_BYTES + 1)
     except OSError as exc:
         raise InputError(path, [f"cannot read the file: {exc.strerror or exc}"]) from exc
+    if len(data) > MAX_INPUT_BYTES:
+        raise InputError(path, [f"the file is larger than {MAX_INPUT_BYTES} bytes"])
     try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise InputError(path, [f"not UTF-8 text: {exc.reason}"]) from exc
+    try:
+        for event in yaml.parse(text, Loader=yaml.SafeLoader):
+            if isinstance(event, yaml.AliasEvent) or getattr(event, "anchor", None):
+                line = event.start_mark.line + 1
+                raise InputError(path, [f"YAML anchors and aliases are not allowed (line {line})"])
         return yaml.safe_load(text)
     except yaml.YAMLError as exc:
         raise InputError(path, [f"not valid YAML: {exc}"]) from exc

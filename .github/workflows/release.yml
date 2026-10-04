@@ -1,6 +1,8 @@
-# Release on a version tag (ADR-0013 item 5). A tag like v0.1.0rc1 is a rehearsal that goes to
-# TestPyPI; a tag like v0.1.0 goes to PyPI. Publishing uses PyPI trusted publishing (OIDC, no
-# stored token) from a protected environment. The tag must match the version in pyproject.toml.
+# Release on a version tag (ADR-0013 item 5 and Amendment 2). A tag like v0.1.0rc1 is a rehearsal
+# (a GitHub pre-release); a tag like v0.1.0 is a release. The workflow builds and checks the
+# packages and creates the GitHub release with them, the SBOM and the SHA-256 sums. It does not
+# upload to PyPI and holds no PyPI token: the owner uploads these same files with
+# scripts/publish.sh. The tag must match the version in pyproject.toml.
 # Third-party actions are pinned to full commit SHAs (looked up 2026-10-04).
 name: release
 
@@ -76,44 +78,8 @@ jobs:
             release/
           if-no-files-found: error
 
-  publish-testpypi:
-    if: needs.build.outputs.prerelease == 'true'
-    needs: build
-    runs-on: ubuntu-24.04
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/project/fixproof/
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: dist/
-
-  publish-pypi:
-    if: needs.build.outputs.prerelease == 'false'
-    needs: build
-    runs-on: ubuntu-24.04
-    environment:
-      name: pypi
-      url: https://pypi.org/project/fixproof/
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
-        with:
-          packages-dir: dist/
-
   github-release:
-    needs: [build, publish-testpypi, publish-pypi]
-    if: always() && needs.build.result == 'success' && (needs.publish-testpypi.result == 'success' || needs.publish-pypi.result == 'success')
+    needs: build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -126,9 +92,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PRERELEASE: ${{ needs.build.outputs.prerelease }}
         run: |
+          version="${GITHUB_REF_NAME#v}"
           flag=""
-          if [ "$PRERELEASE" = "true" ]; then flag="--prerelease"; fi
+          install="Install: pip install fixproof==${version}"
+          if [ "$PRERELEASE" = "true" ]; then
+            flag="--prerelease"
+            install="A release candidate, not uploaded to PyPI: install the attached wheel"
+          fi
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" $flag \
-            --title "fixproof ${GITHUB_REF_NAME#v}" \
-            --notes "Built and published by the release workflow. Install: pip install fixproof==${GITHUB_REF_NAME#v} (TestPyPI for release candidates). The SBOM and SHA-256 sums of the packages are attached." \
+            --title "fixproof ${version}" \
+            --notes "${install}. The SBOM and the SHA-256 sums of the packages are attached." \
             dist/* release/*

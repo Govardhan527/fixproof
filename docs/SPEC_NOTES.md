@@ -1100,7 +1100,8 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   `UsageError.exit_code = 2`, which is why `fixproof` maps usage errors to its own exit code 3.
   VERIFIED.
 
-- **Release plumbing (M6, ADR-0013 item 5, read 2026-10-04):**
+- **Release plumbing (M6, ADR-0013 item 5, read 2026-10-04; since Amendment 2 the release no
+  longer uses trusted publishing, `pypa/gh-action-pypi-publish` or TestPyPI):**
   - PyPI trusted publishing (`pypi/warehouse` docs, `docs/user/trusted-publishers/`): a "pending"
     publisher becomes a normal publisher on first use and "does **not** create a project or
     reserve a name"; the publishing job "must" have `id-token: write`; the docs' example uses an
@@ -1115,7 +1116,8 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     given, which the workflow does. VERIFIED (`uv export --help` and a local run).
   - Pre-releases: the workflow parses the version with `packaging.version.Version`, refuses a
     non-canonical spelling (`str(Version(v)) != v`, so `0.1.0c1` or `0.1.0-rc1` are refused), and
-    sends any version whose `is_prerelease` is true (a, b, rc and dev releases, §9) to TestPyPI;
+    makes any version whose `is_prerelease` is true (a, b, rc and dev releases, §9) a GitHub
+    pre-release (before Amendment 2: sent it to TestPyPI);
     checked locally for `0.1.0`, `0.1.0rc1`, `0.1.0.dev1`, `0.1.0a1`, `0.1.0c1`, `0.1.0-rc1`.
     VERIFIED (packaging 26.3).
   - `pypa/gh-action-pypi-publish` v1.14.2 `action.yml`: input `repository-url` (default
@@ -1146,6 +1148,23 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     nothing). VERIFIED (installed package).
   - The CI `demo` job (`make demo` from a fresh runner) took 4 min 15 s in run 37165585399.
     OBSERVED.
+- **Upload with twine (ADR-0013 Amendment 2, read 2026-10-04):**
+  - twine 7.0.0 (`twine upload --help`, `twine check --help`): `upload --non-interactive` never
+    asks for a username or password and fails when the credentials are missing; `-r/--repository`
+    names "a section in the config file"; `--config-file` is "The .pypirc config file to use";
+    `check --strict` "Fail[s] on warnings". VERIFIED. Both 0.1.0 packages pass
+    `twine check --strict` (local run, 2026-10-04). OBSERVED.
+  - PyPI API tokens (`https://pypi.org/help/`): "Set your username to `__token__`" and "Set your
+    password to the token value, including the `pypi-` prefix"; a token can be created "for an
+    entire PyPI account, in which case, the token will work for all projects associated with that
+    account", or limited "to a specific project". VERIFIED. That a token limited to another
+    project cannot upload fixproof's first release is inferred from this, not observed.
+    UNVERIFIED.
+  - gh 2.99.0 help: `gh release download TAG --repo OWNER/REPO --dir DIR --pattern GLOB` (the
+    flag repeats) downloads only the matching assets; `gh release view TAG --json isPrerelease
+    --jq .isPrerelease` prints `true` or `false`. VERIFIED.
+  - The name `fixproof` was still free on pypi.org and test.pypi.org on 2026-10-04 (404 from
+    `/pypi/fixproof/json` on both, before the first upload). OBSERVED.
 
 ## 19. Live-check ground truth (ADR-0008)
 

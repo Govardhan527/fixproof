@@ -637,3 +637,33 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      512 MiB; vers has no writer in fixproof, so item 3's round-trip covers purls (every type) and
      both parsers are fuzzed for "ValueError only"; `make demo` takes `FIXPROOF_DEMO_DIR`; CI also
      runs `make demo-down`; `make release-dry` builds exactly what the release does.
+- **Amendment 2 (2026-10-04, the owner: "i have pypi credentials there use them and same config
+  details and owner", pointing at the release setup of their other published package).** It
+  replaces trusted publishing in item 5 and the TestPyPI parts of Amendment 1, items 1 to 3. This
+  departs from the project plan's CI line ("publish with PyPI trusted publishing") on the owner's
+  instruction.
+  1. *Upload.* Uploading to PyPI is the owner's step, as for their other package:
+     `scripts/publish.sh vX.Y.Z` downloads the wheel and sdist that the release workflow attached
+     to the GitHub release, refuses them unless that release's `SHA256SUMS` names exactly those
+     two files and they match it, runs `twine check --strict`, and uploads them with twine 7.0.0
+     and the credentials in the owner's `~/.pypirc` (`--non-interactive`). PyPI therefore gets the
+     same bytes as the GitHub release. GitHub holds no PyPI token, and no project tooling reads,
+     prints or logs one.
+  2. *The workflow* on tags `v*` keeps the Amendment 1 checks (canonical version, commit on a
+     green `main`, one release per tag at a time), builds and checks the packages, and creates the
+     GitHub release with the packages, the SBOM and the sums. It no longer publishes, so no
+     pending publishers or GitHub environments are needed. `scripts/check_package.sh` (the CI
+     `package` job, the release and `make release-dry`) also runs `twine check --strict`, so a
+     README that PyPI cannot render fails before any tag.
+  3. *Rehearsal without TestPyPI.* The owner's configuration is for PyPI, so the tag `v0.1.0rc1`
+     makes a GitHub pre-release only. Its wheel is installed in a fresh environment and run on a
+     real image, and `scripts/publish.sh v0.1.0rc1` checks the packages and stops: a pre-release
+     is never uploaded. Then come the final commit (`0.1.0`, the README install from PyPI), the
+     tag `v0.1.0` and the owner's upload, and the release is checked on GitHub, in the tags on
+     `origin` and in PyPI's JSON API (each sha256 against `SHA256SUMS`).
+  4. *Owner metadata.* The package author is Govardhan Yadava <govardhan@seccrypto.dev>, the
+     identity of the owner's PyPI account and of their other package.
+  5. *First upload.* A PyPI token can be limited to one project (SPEC_NOTES §18). If the token in
+     `~/.pypirc` is limited to the other package, the first upload of `fixproof` is expected to
+     be refused and to need a token for the whole account; a token limited to `fixproof` can
+     replace it afterwards.

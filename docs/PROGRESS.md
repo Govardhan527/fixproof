@@ -266,10 +266,12 @@ Packaging, docs, demo, hardening only.
       found the gate section had no options table or console example.
 - [x] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs
       (7d28898); green in CI 37165585399 (job `package`).
-- [ ] Add the CI `release` job (tag `v*`: build, SBOM, PyPI trusted publishing), only after M6;
-      TestPyPI rehearsal first (ADR-0013 item 5 and Amendment 1): `.github/workflows/release.yml`
-      written (86428d3) and hardened after the reviews; needs the owner's TestPyPI pending
-      publisher and environments, then the rehearsal tag `v0.1.0rc1`.
+- [ ] Add the CI `release` job (tag `v*`: build, SBOM, GitHub release), only after M6
+      (ADR-0013 item 5, Amendments 1 and 2): `.github/workflows/release.yml` written (86428d3)
+      and hardened after the reviews. On the owner's instruction (2026-10-04) PyPI upload is the
+      owner's step with `scripts/publish.sh` and their `~/.pypirc`, not trusted publishing; the
+      workflow no longer publishes. Next: the rehearsal tag `v0.1.0rc1` (a GitHub pre-release
+      only), then `v0.1.0` and the owner's upload.
 - [x] M6 spec and scope reviews (2026-10-04): nothing out of scope. Fixed: pre-releases detected
       with `packaging` (dev releases were missed); the release checks the commit is on a green
       `main`; README links absolute for the PyPI page; limits documented; test gaps closed (make

@@ -15,6 +15,10 @@ from fixproof.errors import FixproofError
 from fixproof.inputs import Cluster
 from fixproof.model import ImageRef, WorkloadAsset, expand_docker_name
 
+# ADR-0013 item 3: (connect, read) seconds for every API call, so a silent API server ends the
+# run with the reason instead of hanging it (the client's `_request_timeout`, SPEC_NOTES §12)
+API_TIMEOUT = (10, 60)
+
 
 class InventoryError(FixproofError):
     """A cluster could not be read (kubeconfig, permissions or connection)."""
@@ -90,7 +94,8 @@ class KubernetesSource:
 
     def pods(self, namespace: str) -> list[PodInfo]:
         listing = self._call(
-            f"list pods in {namespace}", lambda: self._core.list_namespaced_pod(namespace)
+            f"list pods in {namespace}",
+            lambda: self._core.list_namespaced_pod(namespace, _request_timeout=API_TIMEOUT),
         )
         pods = []
         for pod in listing.items:
@@ -131,7 +136,9 @@ class KubernetesSource:
     def replica_set_controller(self, namespace: str, name: str) -> tuple[str, str] | None:
         replica_set = self._call(
             f"get replicaset {name} in {namespace}",
-            lambda: self._apps.read_namespaced_replica_set(name, namespace),
+            lambda: self._apps.read_namespaced_replica_set(
+                name, namespace, _request_timeout=API_TIMEOUT
+            ),
         )
         return _controller(replica_set.metadata.owner_references)
 

@@ -9,6 +9,7 @@ from kubernetes.client.exceptions import ApiException
 
 from fixproof.inputs import Cluster
 from fixproof.inventory import (
+    API_TIMEOUT,
     ContainerInfo,
     InventoryError,
     KubernetesSource,
@@ -165,14 +166,18 @@ class FakeCore:
     def __init__(self, pods: list[Any], error: Exception | None = None) -> None:
         self._pods, self._error = pods, error
 
-    def list_namespaced_pod(self, namespace: str) -> Any:
+    def list_namespaced_pod(self, namespace: str, _request_timeout: Any = None) -> Any:
+        assert _request_timeout == API_TIMEOUT  # every call has a timeout (ADR-0013)
         if self._error:
             raise self._error
         return k8s.V1PodList(items=self._pods)
 
 
 class FakeApps:
-    def read_namespaced_replica_set(self, name: str, namespace: str) -> Any:
+    def read_namespaced_replica_set(
+        self, name: str, namespace: str, _request_timeout: Any = None
+    ) -> Any:
+        assert _request_timeout == API_TIMEOUT
         return k8s.V1ReplicaSet(
             metadata=k8s.V1ObjectMeta(name=name, owner_references=[owner("Deployment", "web")])
         )
@@ -260,3 +265,15 @@ def test_a_missing_context_is_an_inventory_error(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(k8s_config, "new_client_from_config", missing)
     with pytest.raises(InventoryError, match="cannot load kubeconfig context 'nope'"):
         KubernetesSource("nope")
+
+
+def test_a_silent_api_server_is_an_inventory_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A read timeout from the client becomes exit 3 with the reason (ADR-0013 item 3)."""
+    from urllib3.exceptions import ReadTimeoutError
+
+    timeout = ReadTimeoutError(
+        None, "/api/v1/namespaces/demo/pods", "Read timed out. (read timeout=60)"
+    )
+    patch_client(monkeypatch, FakeCore([], timeout))
+    with pytest.raises(InventoryError, match=r"ctx: list pods in demo: .*Read timed out"):
+        inventory(Cluster(context="ctx", namespaces=("demo",)))

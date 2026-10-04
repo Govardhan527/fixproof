@@ -553,7 +553,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      0, an unreadable one 2); the live suite checks KEV against the live CISA feed.
 - **Consequence:** SUCCESS TEST steps 2 and 3 can be checked end to end; every run records the
   KEV feed it used or why it could not.
-- **Amendment 1 (2026-10-04, from the M5 scope and spec reviews; to confirm with the owner):**
+- **Amendment 1 (2026-10-04, from the M5 scope and spec reviews; confirmed by the owner
+  2026-10-04):**
   details the build settled that the items above do not spell out.
   1. *Exit 2 and the SUCCESS TEST wording.* Step 3 says the gate exits "zero otherwise". The
      owner's answer to item 1 ("exit 2, fail the build") reads "otherwise" as "proven gone":

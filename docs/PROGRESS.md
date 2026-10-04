@@ -244,8 +244,9 @@ CI gate, KEV enrichment, HTML report, CycloneDX VEX.
       is unavailable and a test shows it changes no exit code; the integration evidence no
       longer depends on cisa.gov; SPEC_NOTES gained the CSP, OCI layout, registry API,
       CycloneDX field and serial-number, library and local-build facts; ADR-0012 Amendment 1
-      records the details the build settled (waiting for the owner's confirmation); three ideas
-      parked.
+      records the details the build settled (confirmed by the owner 2026-10-04); three ideas
+      parked. `main` = 6b09f36, CI 37164132919 green on all eight jobs. **M5 closed
+      2026-10-04** (owner: "confirm and close M5").
 
 ## M6 (weeks 9-10)
 
@@ -257,12 +258,11 @@ Packaging, docs, demo, hardening only.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M5, done-criterion met in branch CI; closing.
-- **`main` = 9826d7d, green** (CI 37135400013). Work branch `m5` holds M5 (ADR-0012, KEV,
-  CycloneDX, HTML, gate, real-data tests, README, review fixes); branch CI 37137847475 and
-  37138302512 green, live 37138305026 green. The review-fix commits go through the branch again
-  before `main`.
-- **Waiting on the owner:** (1) confirm ADR-0012 Amendment 1; (2) "push" to move `main`;
-  (3) close M5.
-- **Next steps, in order:** branch CI green twice with the review fixes; `main` on "push"; record
-  the run; close M5; then M6 (packaging, `make demo` for the whole SUCCESS TEST, hardening).
+- **Date:** 2026-10-04. **Current milestone:** M5 closed; M6 started (ADR-0013 accepted).
+- **`main` = 6b09f36, green** (CI 37164132919, all eight jobs); the M5 branch was deleted.
+- **M6 decisions (owner, 2026-10-04):** release to PyPI with trusted publishing, TestPyPI first;
+  version 0.1.0; `make demo` locally and in CI; hardening: safe YAML inputs, Kubernetes API
+  timeouts, tool output limits, property-based tests.
+- **Next steps, in order:** the hardening slices; `make demo` and its CI job; docs-match-CLI test;
+  packaging 0.1.0; branch CI twice; `main` on "push"; M6 reviews; the release job; the owner sets
+  up the PyPI and TestPyPI pending publishers; rehearsal tag to TestPyPI; final tag.

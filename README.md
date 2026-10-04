@@ -761,7 +761,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M2 | Image verification with both checks, evidence bundle, `verify` command, 8 fixture images in CI | done |
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
-| M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | built; green in CI; closing |
+| M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
 | M6 | Packaging, docs, end-to-end demo, hardening | planned |
 
 ---

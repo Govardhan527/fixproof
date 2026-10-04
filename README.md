@@ -588,7 +588,24 @@ unknown         fixproof-crio/fixproof-crio/local-only-64d94bdb8c-svc4h/app  Dep
                 registry not in scope: localhost; fixproof did not read the image
 ```
 
-Managed clusters (EKS, GKE, AKS) are not tested yet; see [Limitations](#limitations).
+**Managed clusters and cloud registries** *(the sign-in message below is not in 0.1.0.post1)*.
+Managed clusters sign in through an exec plugin in the kubeconfig: `aws eks update-kubeconfig`
+writes one that runs `aws eks get-token`, `gcloud container clusters get-credentials` one that
+runs `gke-gcloud-auth-plugin`, and AKS uses [kubelogin](https://github.com/Azure/kubelogin).
+fixproof uses such a kubeconfig as kubectl does: run fixproof as an identity your cloud maps to
+the read-only account below. If the plugin fails (an expired session, say), fixproof stops with
+exit 3 and the plugin's own message. Cloud registries sign in through a Docker credential
+helper in `~/.docker/config.json`, for example Amazon ECR's:
+
+```json
+{ "credHelpers": { "123456789012.dkr.ecr.eu-west-1.amazonaws.com": "ecr-login" } }
+```
+
+with `docker-credential-ecr-login` on `PATH`; crane, Syft and Grype all ask the helper, and
+fixproof never sees the credential. Both mechanisms (an exec plugin with
+`client.authentication.k8s.io/v1beta1` and `v1`, and a helper in `credHelpers` or `credsStore`)
+are tested on every change, on a kind cluster; EKS, GKE and AKS themselves are not, see
+[Limitations](#limitations).
 
 **Access.** fixproof needs `get` and `list` on `pods` and `replicasets` in the namespaces it
 reads, and nothing else. [`deploy/kubernetes/`](https://github.com/Govardhan527/fixproof/tree/main/deploy/kubernetes/) ships a ServiceAccount and a
@@ -828,9 +845,10 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
   UTF-8, at most 1 MiB, and without YAML anchors or aliases; each Kubernetes API call gives up
   after 10 s connecting or 60 s waiting for an answer (exit 3 with the reason); Syft or Grype
   output beyond 512 MiB stops the tool and the verdict is `unknown`, never `fixed`.
-- **Not tested yet on:** managed clusters (EKS, GKE, AKS) and their sign-in plugins; cloud
-  registry credential helpers (ECR, Artifact Registry, ACR). The read-only account and token work
-  on any conformant API server, but these have not been run.
+- **Not tested yet on:** managed clusters (EKS, GKE, AKS) and cloud registries (ECR, Artifact
+  Registry, ACR) themselves. The mechanisms they use, a kubeconfig exec plugin and a Docker
+  credential helper, are tested on kind on every change, and the read-only account works on any
+  conformant API server; each cloud's own plugin and identity mapping have not been run.
 
 
 ---

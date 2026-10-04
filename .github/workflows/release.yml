@@ -41,7 +41,7 @@ jobs:
           test "${GITHUB_REF_NAME}" = "v${version}" || {
             echo "tag ${GITHUB_REF_NAME} does not match version ${version}" >&2; exit 1; }
           # PEP 440 (SPEC_NOTES §9): refuse non-canonical spellings; any pre- or dev release is a
-          # rehearsal for TestPyPI
+          # rehearsal (a GitHub pre-release, never uploaded to PyPI)
           uv run --frozen python - "$version" >> "$GITHUB_OUTPUT" <<'PY'
           import sys
           from packaging.version import Version

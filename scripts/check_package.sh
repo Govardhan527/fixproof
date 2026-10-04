@@ -2,7 +2,7 @@
 # Build the wheel and sdist, install the wheel into a fresh environment, and check it works as
 # a user would get it (ADR-0013 item 4): the command runs, the version is the project's, and the
 # packaged schemas (the official ones included) validate the example documents. `twine check`
-# fails on metadata PyPI would reject or a README it cannot render (ADR-0013 Amendment 2).
+# fails if PyPI could not render the long description, the README (ADR-0013 Amendment 2).
 #   scripts/check_package.sh WORKDIR
 set -euo pipefail
 

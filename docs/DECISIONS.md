@@ -729,6 +729,17 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   and a Docker Hub login for large scopes. The README's "One platform per image" limitation is
   replaced. Expected results in the live and integration tests change wherever an image has
   several platforms.
+- **Amendment 1 (2026-10-04, from the M7 spec and scope reviews; for the owner to confirm):**
+  1. *A new pinned tool.* crane joins Syft and Grype in ADR-0002's stack, installed the same way
+     (a pinned release, checked against its SHA-256); it is chosen here because it reads
+     registries exactly as the two scanners do, so fixproof itself still never reads a credential.
+  2. *`--jobs`* (ADR-0011) now counts image platforms scanned at the same time, not images; the
+     results stay the same for any value.
+  3. *The two tools must read one image in `verify` too.* ADR-0012's rule for `gate` (if Syft and
+     Grype report different image IDs, the verdict is `unknown`) now applies to every platform
+     checked by `verify` as well; it can only turn a verdict into `unknown`, never `fixed`.
+  4. *The variant the tools report* is read from Syft's `architectureVariant` (SPEC_NOTES §20), so
+     a single-platform image's platform is recorded in full (`linux/arm/v7`).
 
 ## ADR-0015: M7 item 2: managed-cluster sign-in, proven without a cloud account
 

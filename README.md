@@ -97,7 +97,7 @@ flowchart TD
 Both tools read the image straight from the registry by digest (no Docker daemon needed, nothing
 is run). fixproof checks that the digest the tools scanned is the one you asked for. A
 multi-platform image is checked on each of its Linux platforms ([details](#multi-platform-images);
-not in 0.1.0.post1; in the next release).
+not in 0.1.0.post1).
 
 ```mermaid
 sequenceDiagram
@@ -361,7 +361,7 @@ gets `403 Forbidden` outside its namespaces.
 
 **Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/) or
 [pipx](https://pipx.pypa.io/), network access to your registries, and Syft 1.54.0 and Grype
-0.119.0 on `PATH` (and crane 0.22.1, which lists an image's platforms: not in 0.1.0.post1; in the next release). fixproof itself
+0.119.0 on `PATH` (and crane 0.22.1, which lists an image's platforms; not needed by 0.1.0.post1). fixproof itself
 is pure Python; the scanner install script below fetches the Linux x86-64 builds (on other
 platforms, install those versions from their release pages).
 
@@ -485,7 +485,7 @@ to catch mistakes while you type.
 
 ### Multi-platform images
 
-*(Not in 0.1.0.post1; in the next release.)*
+*(Not in 0.1.0.post1.)*
 
 Many images are an index of several platforms (`linux/amd64`, `linux/arm64`, …), and each node or
 laptop pulls the one for its own CPU. fixproof reads the image's manifest with
@@ -591,8 +591,9 @@ unknown         fixproof-crio/fixproof-crio/local-only-64d94bdb8c-svc4h/app  Dep
 **Managed clusters and cloud registries** *(the sign-in message below is not in 0.1.0.post1)*.
 Managed clusters sign in through an exec plugin in the kubeconfig: `aws eks update-kubeconfig`
 writes one that runs `aws eks get-token`, `gcloud container clusters get-credentials` one that
-runs `gke-gcloud-auth-plugin`, and AKS uses [kubelogin](https://github.com/Azure/kubelogin).
-fixproof uses such a kubeconfig as kubectl does: run fixproof as an identity your cloud maps to
+runs `gke-gcloud-auth-plugin`, and AKS clusters with Microsoft Entra sign-in use the
+[kubelogin](https://github.com/Azure/kubelogin) plugin. fixproof uses such a kubeconfig as kubectl
+does: run fixproof as an identity your cloud maps to
 the read-only account below. If the plugin fails (an expired session, say), fixproof stops with
 exit 3 and the plugin's own message. Cloud registries sign in through a Docker credential
 helper in `~/.docker/config.json`, for example Amazon ECR's:
@@ -828,11 +829,12 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 ## Limitations
 
 - **Linux platforms only.** A multi-platform image's Linux platforms are checked; others (for
-  example `windows/amd64`) are named as not checked. In 0.1.0.post1 only the host's platform was
-  scanned (not in 0.1.0.post1; in the next release: every platform, see [Multi-platform images](#multi-platform-images)). A local
-  multi-platform OCI archive given to `gate` is checked for the platform the tools pick.
-- **Docker Hub limits.** Each platform checked is one more manifest read, which Docker Hub
-  counts toward its pull limits: for a large scope, list `platforms` and sign in to Docker Hub.
+  example `windows/amd64`) are named as not checked. 0.1.0.post1 scanned only the host's platform
+  (see [Multi-platform images](#multi-platform-images)). A multi-platform OCI archive given to
+  `gate` is checked for the host's platform only, the one Syft and Grype pick.
+- **Docker Hub limits.** Docker Hub counts a pull of a multi-architecture image once per
+  architecture, so checking every platform uses more of its pull limit: for a large scope, list
+  `platforms` and sign in to Docker Hub.
 - **A shared blind spot.** Grype uses Syft's cataloguing internally, so a package Syft cannot
   see (for example, a vendored copy without package metadata) is invisible to both checks. The
   two checks are independent in their decision (advisory data versus your stated fix), not in

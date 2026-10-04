@@ -1,10 +1,12 @@
-"""The evidence bundle (ADR-0007 item 7): formats `bundle` 1.2.0 and `manifest` 1.0.0.
+"""The evidence bundle (ADR-0007 item 7): formats `bundle` 2.0.0 and `manifest` 1.0.0.
 
     <out>/openvex.json            the VEX document (ADR-0005)
     <out>/cyclonedx.json          the same verdicts as CycloneDX 1.6 VEX (ADR-0012)
     <out>/report.html             a self-contained summary page for people (ADR-0012)
     <out>/bundle.json             run, inputs, tool versions, every asset's verdict and results
-    <out>/raw/NNN-<method>.json   each method's tool output, sanitised (fixproof.sanitize)
+    <out>/raw/NNN-<method>.json   each method's tool output, sanitised (fixproof.sanitize); for
+                                  an image with several platforms (ADR-0014),
+                                  raw/NNN-<os>-<arch>[-<variant>]-<method>.json
     <out>/manifest.json           SHA-256 and size of every other file, sorted by path
 
 Workloads running the same image share its method outcomes, so its raw files are written once,
@@ -15,6 +17,7 @@ overwritten, so evidence once written stays as it was.
 """
 
 import hashlib
+import re
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -29,10 +32,20 @@ from fixproof.canonical import iso, to_json
 from fixproof.errors import FixproofError
 from fixproof.kev import Kev
 from fixproof.methods import MethodOutcome
-from fixproof.model import Asset, AssetVerdict, Contract, CveId, MethodResult, Text, Verdict
+from fixproof.model import (
+    Asset,
+    AssetVerdict,
+    Contract,
+    CveId,
+    MethodResult,
+    NotChecked,
+    Text,
+    Verdict,
+)
 from fixproof.validation import check_cyclonedx, check_openvex
 
-BUNDLE_VERSION: Literal["1.2.0"] = "1.2.0"  # 1.1.0: workload `owner` (ADR-0010); 1.2.0: `kev`
+# 1.1.0: workload `owner` (ADR-0010); 1.2.0: `kev` (ADR-0012); 2.0.0: per-platform (ADR-0014)
+BUNDLE_VERSION: Literal["2.0.0"] = "2.0.0"
 MANIFEST_VERSION: Literal["1.0.0"] = "1.0.0"
 Sha256 = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 
@@ -60,19 +73,32 @@ class Summary(Contract):
     unknown: int
 
 
+class PlatformRecord(Contract):
+    platform: Text = Field(description="os/architecture[/variant], e.g. linux/arm64.")
+    digest: str = Field(description="The platform's manifest digest the tools read.")
+    verdict: Verdict
+    reason: Text
+    results: tuple[MethodResult, ...]
+    scanned: dict[str, dict[str, str]] = Field(
+        description="Per method: the image ID, manifest digest and platform the tool scanned."
+    )
+
+
 class AssetRecord(Contract):
     index: int = Field(ge=1)
     asset: Asset
     verdict: Verdict
     reason: Text
-    results: tuple[MethodResult, ...]
-    scanned: dict[str, dict[str, str]] = Field(
-        description="Per method: the manifest digest and platform the tool scanned."
+    platforms: tuple[PlatformRecord, ...] = Field(
+        description="Every platform checked (ADR-0014); empty when the image was not read."
+    )
+    not_checked: tuple[NotChecked, ...] = Field(
+        description="Platforms of the image index that were not checked, and why."
     )
 
 
 class Bundle(Contract):
-    schema_version: Literal["1.2.0"]
+    schema_version: Literal["2.0.0"]
     fixproof_version: Text
     started: Text
     finished: Text
@@ -107,6 +133,17 @@ def summarise(verdicts: Sequence[AssetVerdict]) -> Summary:
     )
 
 
+def _raw_part(platform: str, digest: str, names: Sequence[str]) -> str:
+    """The platform part of a raw file name: none for a single platform, `linux-arm-v7-` for one
+    of several, with the digest's first hex digits when an index lists a platform twice."""
+    if len(names) < 2:
+        return ""
+    part = re.sub(r"[^a-z0-9.]+", "-", platform.lower()).strip("-")
+    if names.count(platform) > 1:
+        part += "-" + digest.removeprefix("sha256:")[:12]
+    return part + "-"
+
+
 def check_output_dir(out: Path) -> None:
     """Raise OutputExistsError unless `out` is missing or an empty directory."""
     if out.exists() and (not out.is_dir() or any(out.iterdir())):
@@ -136,27 +173,43 @@ def write_bundle(
     records, tools = [], []
     raw_refs: dict[int, str] = {}  # id() of a shared outcome -> its raw file
     for index, assessment in enumerate(assessments, start=1):
-        results, scanned = [], {}
-        for outcome in assessment.outcomes:
-            method = outcome.result.method.value
-            raw_ref = raw_refs.get(id(outcome))
-            if raw_ref is None and outcome.raw is not None:
-                raw_ref = raw_refs[id(outcome)] = f"raw/{index:03d}-{method}.json"
-                files[raw_ref] = to_json(outcome.raw)
-            results.append(outcome.result.model_copy(update={"raw_ref": raw_ref}))
-            if outcome.scanned:
-                scanned[method] = dict(outcome.scanned)
-            if outcome.tool and outcome.tool not in tools:
-                tools.append(outcome.tool)
         verdict = assessment.verdict
+        names = [platform.platform for platform in verdict.platforms]
+        platforms = []
+        for platform in verdict.platforms:
+            results, scanned = [], {}
+            for outcome in assessment.outcomes:
+                if (outcome.platform, outcome.digest) != (platform.platform, platform.digest):
+                    continue
+                method = outcome.result.method.value
+                raw_ref = raw_refs.get(id(outcome))
+                if raw_ref is None and outcome.raw is not None:
+                    where = _raw_part(platform.platform, platform.digest, names)
+                    raw_ref = raw_refs[id(outcome)] = f"raw/{index:03d}-{where}{method}.json"
+                    files[raw_ref] = to_json(outcome.raw)
+                results.append(outcome.result.model_copy(update={"raw_ref": raw_ref}))
+                if outcome.scanned:
+                    scanned[method] = dict(outcome.scanned)
+                if outcome.tool and outcome.tool not in tools:
+                    tools.append(outcome.tool)
+            platforms.append(
+                PlatformRecord(
+                    platform=platform.platform,
+                    digest=platform.digest,
+                    verdict=platform.verdict,
+                    reason=platform.reason,
+                    results=tuple(results),
+                    scanned=scanned,
+                )
+            )
         records.append(
             AssetRecord(
                 index=index,
                 asset=verdict.asset,
                 verdict=verdict.verdict,
                 reason=verdict.reason,
-                results=tuple(results),
-                scanned=scanned,
+                platforms=tuple(platforms),
+                not_checked=verdict.not_checked,
             )
         )
     bundle = Bundle(

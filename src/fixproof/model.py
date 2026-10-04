@@ -151,11 +151,56 @@ class Verdict(StrEnum):
     UNKNOWN = "unknown"
 
 
+class PlatformVerdict(Contract):
+    """One platform of an image (ADR-0014): the manifest the tools read and its verdict."""
+
+    platform: Text = Field(description="os/architecture[/variant], e.g. linux/arm64.")
+    digest: str = Field(description="The platform's manifest digest; empty if never read.")
+    verdict: Verdict
+    reason: Text
+    results: tuple[MethodResult, ...] = ()
+
+
+class NotChecked(Contract):
+    """A platform of an image index that fixproof did not check, and why (ADR-0014)."""
+
+    platform: Text
+    digest: Text
+    reason: Text
+
+
 class AssetVerdict(Contract):
     asset: Asset
     verdict: Verdict
     reason: Text
-    results: tuple[MethodResult, ...] = ()
+    results: tuple[MethodResult, ...] = Field(
+        default=(), description="Every method result behind the verdict, all platforms."
+    )
+    platforms: tuple[PlatformVerdict, ...] = ()
+    not_checked: tuple[NotChecked, ...] = ()
+
+
+# SPEC_NOTES §20: `os/architecture[/variant]` as an image index names a platform.
+PLATFORM_PATTERN = r"^[a-z0-9]+/[a-z0-9_]+(/[a-z0-9.]+)?$"
+Platform = Annotated[str, StringConstraints(pattern=PLATFORM_PATTERN)]
+
+
+def normalise_platform(platform: str) -> str:
+    """The platform in containerd's normal form (SPEC_NOTES §20), for matching only.
+
+    `amd64/v1` is `amd64`, `arm64/v8` is `arm64`, `arm` is `arm/v7`, `i386` is `386`.
+    """
+    os_name, _, rest = platform.lower().partition("/")
+    arch, _, variant = rest.partition("/")
+    if arch == "i386":
+        arch, variant = "386", ""
+    elif (arch, variant) in (("amd64", "v1"), ("arm64", "8"), ("arm64", "v8")):
+        variant = ""
+    elif arch == "arm" and variant in ("", "7"):
+        variant = "v7"
+    elif arch == "arm" and variant in ("5", "6", "8"):
+        variant = f"v{variant}"
+    return f"{os_name}/{arch}/{variant}" if variant else f"{os_name}/{arch}"
 
 
 def is_cve_id(value: str) -> bool:

@@ -13,7 +13,7 @@ from fixproof.model import Verdict
 from fixproof.validation import build_validator, load_schema, schema_errors
 from fixproof.verify import assess
 from fixproof.vex import build_document
-from scenario import AUTHOR, FINISH, FIX_YAML, KEV, SCOPE_YAML, START, runner
+from scenario import AUTHOR, FINISH, FIX_YAML, KEV, SCOPE_YAML, START, VULNERABLE, runner
 from tool_outputs import CVE, MARKER
 
 FIX = FixFile.model_validate(yaml.safe_load(FIX_YAML))
@@ -78,14 +78,17 @@ def test_bundle_record(tmp_path: Path) -> None:
     )
     assert bundle["inputs"]["fix_sha256"] == hashlib.sha256(FIX_YAML.encode()).hexdigest()
     first = bundle["assets"][0]
-    assert [r["raw_ref"] for r in first["results"]] == [
+    (platform,) = first["platforms"]  # a single-platform image: one record, no platform in names
+    assert [r["raw_ref"] for r in platform["results"]] == [
         "raw/001-grype.json",
         "raw/001-sbom_version.json",
     ]
     assert first["asset"]["kind"] == "image"
-    assert first["scanned"]["grype"]["platform"] == "linux/amd64"
+    assert platform["platform"] == platform["scanned"]["grype"]["platform"] == "linux/amd64"
+    assert platform["digest"] == VULNERABLE.digest
+    assert first["not_checked"] == []
     third = bundle["assets"][2]
-    assert third["results"][0]["raw_ref"] is None
+    assert third["platforms"][0]["results"][0]["raw_ref"] is None
     assert "grype exited 1: ERROR failed to fetch image" in third["reason"]
     tools = {tool["name"]: tool for tool in bundle["tools"]}
     assert tools["grype"]["db"]["schemaVersion"] == "v6.1.9"
@@ -156,3 +159,14 @@ def test_an_invalid_cyclonedx_document_writes_nothing(tmp_path: Path) -> None:
             kev=KEV,
         )
     assert not (tmp_path / "out").exists()
+
+
+def test_raw_file_names_say_the_platform_and_never_collide() -> None:
+    from fixproof.bundle import _raw_part
+
+    one, two = "sha256:" + "a" * 64, "sha256:" + "b" * 64
+    assert _raw_part("linux/amd64", one, ["linux/amd64"]) == ""  # one platform: names as before
+    assert _raw_part("linux/arm/v7", two, ["linux/amd64", "linux/arm/v7"]) == "linux-arm-v7-"
+    twice = ["linux/amd64", "linux/amd64"]  # an index may list a platform twice
+    assert _raw_part("linux/amd64", one, twice) == "linux-amd64-aaaaaaaaaaaa-"
+    assert _raw_part("linux/amd64", two, twice) == "linux-amd64-bbbbbbbbbbbb-"

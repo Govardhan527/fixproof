@@ -11,6 +11,7 @@ from fixproof import sanitize
 from fixproof.inputs import FixFile, FixPackage
 from fixproof.methods import MethodOutcome, Unusable, outcome, parse_output, scanned_image, target
 from fixproof.model import Asset, Method, MethodStatus
+from fixproof.platforms import Target
 from fixproof.purl import identity
 from fixproof.tools import Runner, run_tool
 from fixproof.versions import VersionError, is_fixed
@@ -46,8 +47,10 @@ def _where(artifact: dict[str, Any]) -> str:
     return str(locations[0].get("path", "?"))
 
 
-def assess(asset: Asset, fix: FixFile, run: Runner = run_tool) -> MethodOutcome:
-    argument, image = target(asset)
+def assess(
+    asset: Asset, fix: FixFile, run: Runner = run_tool, platform: Target | None = None
+) -> MethodOutcome:
+    argument, image = target(asset, platform)
     try:
         document = parse_output("syft", run("syft", [argument, "-o", "json"], ENV))
         descriptor, schema = document["descriptor"], document["schema"]

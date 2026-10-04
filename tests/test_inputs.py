@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from fixproof.errors import InputError
-from fixproof.inputs import MAX_INPUT_BYTES, load_fix, load_scope
+from fixproof.inputs import MAX_INPUT_BYTES, load_closed, load_fix, load_scope
 
 DIGEST = "sha256:" + "0123456789abcdef" * 4
 CVE = "CVE-2099-0001"  # synthetic: test data names no real CVE
@@ -164,3 +164,41 @@ def test_anchors_aliases_large_files_and_non_utf8_are_refused(tmp_path: Path) ->
     junk.write_bytes(b"\xff\xfe\x00")
     with pytest.raises(InputError, match="not UTF-8 text"):
         load_scope(junk)
+
+
+TWO = "[linux/amd64, linux/arm64]"
+PLATFORMS_SCOPE = f"""\
+schema_version: "1.1.0"
+registries: [localhost:5001]
+images: [localhost:5001/fixproof/app@{DIGEST}]
+platforms: [linux/amd64, linux/arm64]
+"""
+
+
+def test_scope_and_closed_files_may_list_platforms_from_version_1_1_0(tmp_path: Path) -> None:
+    assert load_scope(write(tmp_path, PLATFORMS_SCOPE)).platforms == ("linux/amd64", "linux/arm64")
+    assert load_scope(write(tmp_path, SCOPE)).platforms is None  # 1.0.0 files are unchanged
+    closed = (
+        'schema_version: "1.1.0"\nplatforms: [linux/arm/v7]\nclosed:\n  - cve: CVE-2023-32681\n'
+        "    packages:\n      - {ecosystem: pypi, name: requests, fixed_version: '2.31.0'}\n"
+    )
+    assert load_closed(write(tmp_path, closed)).platforms == ("linux/arm/v7",)
+
+
+@pytest.mark.parametrize(
+    ("replace", "by", "reason"),
+    [
+        ('schema_version: "1.1.0"', 'schema_version: "1.0.0"', "platforms needs schema_version"),
+        (TWO, "[linux/arm64, linux/arm64/v8]", "each platform may be listed only once"),
+        (TWO, "[linux/arm, linux/arm/v7]", "each platform may be listed only once"),
+        (TWO, "[]", "platforms, when given, names at least one platform"),
+        (TWO, "[amd64]", "platforms.0: String should match pattern"),
+        (TWO, "[Linux/AMD64]", "platforms.0: String should match pattern"),
+        ('schema_version: "1.1.0"', 'schema_version: "1.2.0"', "schema_version"),
+    ],
+)  # fmt: skip
+def test_invalid_platforms(tmp_path: Path, replace: str, by: str, reason: str) -> None:
+    assert replace in PLATFORMS_SCOPE
+    with pytest.raises(InputError) as caught:
+        load_scope(write(tmp_path, PLATFORMS_SCOPE.replace(replace, by)))
+    assert reason in problems(caught)

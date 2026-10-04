@@ -11,6 +11,15 @@
         "kev": {
           "$ref": "#/$defs/Kev"
         },
+        "platforms": {
+          "default": [],
+          "description": "The CVE's verdict on each platform checked.",
+          "items": {
+            "$ref": "#/$defs/PlatformLine"
+          },
+          "title": "Platforms",
+          "type": "array"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
@@ -197,6 +206,90 @@
       "title": "KevFeed",
       "type": "object"
     },
+    "NotChecked": {
+      "additionalProperties": false,
+      "description": "A platform of an image index that fixproof did not check, and why (ADR-0014).",
+      "properties": {
+        "digest": {
+          "minLength": 1,
+          "title": "Digest",
+          "type": "string"
+        },
+        "platform": {
+          "minLength": 1,
+          "title": "Platform",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "platform",
+        "digest",
+        "reason"
+      ],
+      "title": "NotChecked",
+      "type": "object"
+    },
+    "PlatformLine": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "title": "Digest",
+          "type": "string"
+        },
+        "platform": {
+          "minLength": 1,
+          "title": "Platform",
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        }
+      },
+      "required": [
+        "platform",
+        "digest",
+        "verdict"
+      ],
+      "title": "PlatformLine",
+      "type": "object"
+    },
+    "PlatformRead": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "title": "Digest",
+          "type": "string"
+        },
+        "platform": {
+          "minLength": 1,
+          "title": "Platform",
+          "type": "string"
+        },
+        "scanned": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "description": "Per tool: the image ID, manifest digest and platform it read.",
+          "title": "Scanned",
+          "type": "object"
+        }
+      },
+      "required": [
+        "platform",
+        "digest",
+        "scanned"
+      ],
+      "title": "PlatformRead",
+      "type": "object"
+    },
     "Summary": {
       "additionalProperties": false,
       "properties": {
@@ -231,16 +324,32 @@
       "type": "string"
     }
   },
-  "$id": "https://github.com/Govardhan527/fixproof/schemas/gate-result/1.0.0",
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/gate-result/2.0.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`fixproof gate --json` (format `gate-result`, 1.0.0).",
+  "description": "`fixproof gate --json` (format `gate-result`, 2.0.0).",
   "properties": {
     "image": {
       "description": "The image as given on the command line.",
       "minLength": 1,
       "title": "Image",
       "type": "string"
+    },
+    "not_checked": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/NotChecked"
+      },
+      "title": "Not Checked",
+      "type": "array"
+    },
+    "platforms": {
+      "description": "What was read, per platform.",
+      "items": {
+        "$ref": "#/$defs/PlatformRead"
+      },
+      "title": "Platforms",
+      "type": "array"
     },
     "results": {
       "items": {
@@ -249,19 +358,8 @@
       "title": "Results",
       "type": "array"
     },
-    "scanned": {
-      "additionalProperties": {
-        "additionalProperties": {
-          "type": "string"
-        },
-        "type": "object"
-      },
-      "description": "Per tool: the image ID, manifest digest and platform it read.",
-      "title": "Scanned",
-      "type": "object"
-    },
     "schema_version": {
-      "const": "1.0.0",
+      "const": "2.0.0",
       "title": "Schema Version",
       "type": "string"
     },
@@ -282,7 +380,7 @@
   "required": [
     "schema_version",
     "image",
-    "scanned",
+    "platforms",
     "tools",
     "summary",
     "results"

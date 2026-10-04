@@ -80,10 +80,10 @@ def test_each_workload_gets_its_image_verdict_and_each_image_is_scanned_once() -
     calls: list[tuple[str, str]] = []
     assessments = assess(FIX, SCOPE, counting_runner(calls), lambda context: Cluster())
     assert sorted(calls) == sorted(
-        (tool, f"registry:{image.reference}")
-        for tool in ("grype", "syft")
-        for image in (VULNERABLE, FIXED, BROKEN)
-    )  # PRIVATE is outside the allowlist and is never read
+        [(tool, f"registry:{image.reference}") for tool in ("grype", "syft")
+         for image in (VULNERABLE, FIXED, BROKEN)]
+        + [("crane", "manifest") for _ in (VULNERABLE, FIXED, BROKEN)]
+    )  # PRIVATE is outside the allowlist and is never read  # fmt: skip
     found = [
         (a.verdict.asset.location if isinstance(a.verdict.asset, WorkloadAsset) else "image",
          a.verdict.verdict)
@@ -134,7 +134,7 @@ def test_shared_evidence_is_written_once_and_vex_is_per_image(tmp_path: Path) ->
         "005-grype.json",
         "005-sbom_version.json",
     ]
-    refs = [[r.raw_ref for r in record.results] for record in bundle.assets]
+    refs = [[r.raw_ref for p in record.platforms for r in p.results] for record in bundle.assets]
     assert refs[0] == refs[1] == refs[2] == ["raw/001-grype.json", "raw/001-sbom_version.json"]
     assert bundle.summary.model_dump() == {"fixed": 1, "still_affected": 3, "unknown": 3}
     assert {s["products"][0]["@id"]: s["status"] for s in vex["statements"]} == {

@@ -334,13 +334,13 @@
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "os": "linux",
       "repoDigests": [
-        "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+        "localhost:5001/fixproof/demo-app@sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337"
       ],
       "tags": [],
-      "userInput": "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+      "userInput": "localhost:5001/fixproof/demo-app@sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337"
     },
     "name": "localhost:5001/fixproof/demo-app",
     "type": "image",
-    "version": "sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627"
+    "version": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337"
   }
 }

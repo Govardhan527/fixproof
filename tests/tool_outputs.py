@@ -19,7 +19,78 @@ from fixproof.tools import ToolRun
 
 FIXTURES = Path(__file__).parent / "fixtures" / "tools"
 CVE = "CVE-2023-32681"  # real advisory; Grype must know it (SPEC_NOTES §17)
-DIGEST = "sha256:" + hashlib.sha256(b"fixproof/demo-app").hexdigest()
+OCI_MANIFEST = "application/vnd.oci.image.manifest.v1+json"
+OCI_INDEX = "application/vnd.oci.image.index.v1+json"
+# Every synthetic manifest by its digest, so the fake `crane` can answer for any image built here
+MANIFESTS: dict[str, bytes] = {}
+
+
+def _register(document: dict[str, Any]) -> str:
+    data = json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
+    digest = "sha256:" + hashlib.sha256(data).hexdigest()
+    MANIFESTS[digest] = data
+    return digest
+
+
+def manifest_digest(name: str) -> str:
+    """The digest of a synthetic single-platform image manifest named `name`."""
+    config = "sha256:" + hashlib.sha256(name.encode()).hexdigest()
+    return _register(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_MANIFEST,
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": config,
+                "size": 1,
+            },
+            "layers": [],
+            "annotations": {"org.opencontainers.image.title": name},
+        }
+    )
+
+
+def index_digest(entries: Sequence[tuple[str, str]], attestations: bool = True) -> str:
+    """The digest of a synthetic image index of (digest, os/arch[/variant]) entries; each platform
+    gets a BuildKit attestation entry too, as Docker Hub images have (SPEC_NOTES §20)."""
+    manifests: list[dict[str, Any]] = []
+    for digest, platform in entries:
+        os_name, arch, *variant = platform.split("/")
+        described = {
+            "os": os_name,
+            "architecture": arch,
+            **({"variant": variant[0]} if variant else {}),
+        }
+        manifests.append(
+            {"mediaType": OCI_MANIFEST, "digest": digest, "size": 1, "platform": described}
+        )
+        if attestations:
+            manifests.append(
+                {
+                    "mediaType": OCI_MANIFEST,
+                    "digest": manifest_digest(f"attestation of {digest}"),
+                    "size": 1,
+                    "annotations": {
+                        "vnd.docker.reference.digest": digest,
+                        "vnd.docker.reference.type": "attestation-manifest",
+                    },
+                    "platform": {"architecture": "unknown", "os": "unknown"},
+                }
+            )
+    return _register({"schemaVersion": 2, "mediaType": OCI_INDEX, "manifests": manifests})
+
+
+def crane(reference: str) -> ToolRun:
+    """What `crane manifest` prints for a synthetic image, or its error for any other."""
+    digest = reference.partition("@")[2]
+    if digest in MANIFESTS:
+        return ToolRun(0, MANIFESTS[digest], "")
+    return ToolRun(
+        1, b"", f"Error: fetching manifest {reference}: MANIFEST_UNKNOWN: manifest unknown\n"
+    )
+
+
+DIGEST = manifest_digest("fixproof/demo-app")
 IMAGE = ImageRef(registry="localhost:5001", repository="fixproof/demo-app", digest=DIGEST)
 ASSET = ImageAsset(image=IMAGE)
 MARKER = "must-not-be-stored"
@@ -41,6 +112,8 @@ def runner(
     def run(name: str, args: Sequence[str], env: Mapping[str, str]) -> ToolRun:
         if calls is not None:
             calls.append((name, list(args), dict(env)))
+        if name == "crane" and name not in documents:
+            return crane(args[1])
         answer = documents[name]
         if isinstance(answer, ToolRun):
             return answer
@@ -81,6 +154,10 @@ def image_runner(
     """A fake `run_tool` that answers per tool and per image (`registry:<reference>`)."""
 
     def run(name: str, args: Sequence[str], env: Mapping[str, str]) -> ToolRun:
+        if name == "crane":
+            reference = args[1]
+            answer = by_reference.get(reference, {}).get("crane")
+            return answer if isinstance(answer, ToolRun) else crane(reference)
         reference = args[0].removeprefix("registry:")
         answer = by_reference[reference][name]
         if isinstance(answer, ToolRun):

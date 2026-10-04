@@ -11,6 +11,7 @@ from typing import Any
 from fixproof import sanitize
 from fixproof.methods import MethodOutcome, Unusable, outcome, parse_output, scanned_image, target
 from fixproof.model import Asset, Method, MethodStatus
+from fixproof.platforms import Target
 from fixproof.tools import Runner, run_tool
 
 ENV = {
@@ -31,8 +32,10 @@ def _package(match: dict[str, Any]) -> str:
     return str(artifact.get("purl") or f"{artifact['name']} {artifact['version']}")
 
 
-def assess(asset: Asset, cve: str, run: Runner = run_tool) -> MethodOutcome:
-    argument, image = target(asset)
+def assess(
+    asset: Asset, cve: str, run: Runner = run_tool, platform: Target | None = None
+) -> MethodOutcome:
+    argument, image = target(asset, platform)
     try:
         document = parse_output("grype", run("grype", [argument, "-o", "json"], ENV))
         descriptor = document["descriptor"]

@@ -75,12 +75,15 @@ def test_verify_json_summary(
     report = json.loads(capsys.readouterr().out)
     validator = build_validator(load_schema("verify-summary.schema.json"))
     assert schema_errors(validator, report) == []
-    assert report["schema_version"] == "1.2.0"
+    assert report["schema_version"] == "1.3.0"
     assert report["kev"]["status"] == "not_listed"  # CVE-2023-32681 (the real-feed excerpt)
     assert report["kev"]["feed"]["catalog_version"] == "2026.10.02"
     assert report["summary"] == {"fixed": 1, "still_affected": 1, "unknown": 1}
     assert [a["verdict"] for a in report["assets"]] == ["still_affected", "fixed", "unknown"]
     assert report["assets"][0]["asset"] == VULNERABLE.reference
+    assert report["assets"][0]["platforms"] == [
+        {"platform": "linux/amd64", "digest": VULNERABLE.digest, "verdict": "still_affected"}
+    ]
 
 
 def test_exit_codes_follow_the_worst_verdict() -> None:

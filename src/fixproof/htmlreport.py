@@ -26,6 +26,7 @@ th { background: #f6f8fa; }
 code { font-size: .85em; word-break: break-all; }
 .counts span { display: inline-block; margin-right: 1rem; font-weight: 600; }
 .verdict { font-weight: 600; white-space: nowrap; }
+.platforms { font-size: .85em; color: #555; }
 .fixed { color: #1a7f37; } .still_affected { color: #cf222e; } .unknown { color: #9a6700; }
 .kev { margin: 1rem 0; padding: .6rem .8rem; background: #f6f8fa; border-left: 4px solid #57606a; }
 """
@@ -88,9 +89,14 @@ def _row(record: AssetRecord) -> str:
     else:
         what = "image"
     verdict = record.verdict.value
+    platforms = ""
+    if len(record.platforms) > 1 or record.not_checked:
+        each = [f"{_e(p.platform)}: {_e(p.verdict.value)}" for p in record.platforms]
+        each += [f"{_e(n.platform)}: not checked" for n in record.not_checked]
+        platforms = f'<br><span class="platforms">{" · ".join(each)}</span>'
     return (
         f'<tr><td class="verdict {verdict}">{_e(verdict)}</td><td>{what}</td>'
-        f"<td><code>{_e(image)}</code></td><td>{_e(record.reason)}</td></tr>"
+        f"<td><code>{_e(image)}</code>{platforms}</td><td>{_e(record.reason)}</td></tr>"
     )
 
 

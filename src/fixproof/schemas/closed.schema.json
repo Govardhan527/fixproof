@@ -88,7 +88,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/Govardhan527/fixproof/schemas/closed/1.0.0",
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/closed/1.1.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "`closed.yaml`: CVEs marked closed, which a release must not bring back (ADR-0012 item 3).",
@@ -101,6 +101,23 @@
       "title": "Closed",
       "type": "array"
     },
+    "platforms": {
+      "anyOf": [
+        {
+          "items": {
+            "pattern": "^[a-z0-9]+/[a-z0-9_]+(/[a-z0-9.]+)?$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Which platforms of a multi-platform image to check, as os/arch[/variant] (version 1.1.0; ADR-0014). Without it, every Linux platform is checked.",
+      "title": "Platforms"
+    },
     "registries": {
       "default": [],
       "description": "Registries `gate` may read a registry image from.",
@@ -112,7 +129,10 @@
       "type": "array"
     },
     "schema_version": {
-      "const": "1.0.0",
+      "enum": [
+        "1.0.0",
+        "1.1.0"
+      ],
       "title": "Schema Version",
       "type": "string"
     }

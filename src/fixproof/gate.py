@@ -1,11 +1,12 @@
 """The release gate (ADR-0012 items 1 to 3): is any CVE marked closed back in a built image?
 
 For every CVE in `closed.yaml` it runs both methods on the image and the verdict rule, exactly
-as `verify` does. The image is a registry reference pinned by digest (its registry must be in
-`closed.yaml`), or a just-built image named with an explicit source: `docker:NAME[:TAG]`,
-`docker-archive:PATH` or `oci-archive:PATH`. Each tool reads the image once however many CVEs
-are closed. If the two tools read different images (a tag moved between them, say), nothing can
-be proven and every verdict is `unknown`.
+as `verify` does, on every platform of a registry image (ADR-0014). The image is a registry
+reference pinned by digest (its registry must be in `closed.yaml`), or a just-built image named
+with an explicit source: `docker:NAME[:TAG]`, `docker-archive:PATH` or `oci-archive:PATH`, which
+is one platform. Each tool reads each platform once however many CVEs are closed. If the two
+tools read different images (a tag moved between them, say), nothing can be proven and the
+verdict is `unknown`.
 
 Exit codes: 0 every closed CVE proven gone; 1 at least one is back; 2 none back but at least one
 could not be proven, with the reason; 3 bad input (the CLI).
@@ -18,25 +19,25 @@ from typing import Literal
 from pydantic import Field, JsonValue
 
 from fixproof.bundle import Summary, summarise
+from fixproof.check import check_platform, finish
 from fixproof.errors import FixproofError
 from fixproof.inputs import ClosedFile
 from fixproof.kev import Catalogue, Kev, Unavailable
-from fixproof.methods import MethodOutcome, grype, sbom_version
 from fixproof.model import (
     Asset,
-    AssetVerdict,
     BuildAsset,
     Contract,
     CveId,
     ImageAsset,
     ImageRef,
+    NotChecked,
     Text,
     Verdict,
 )
+from fixproof.platforms import plan
 from fixproof.tools import Runner, ToolRun, run_tool
-from fixproof.verdict import combine
 
-GATE_VERSION: Literal["1.0.0"] = "1.0.0"
+GATE_VERSION: Literal["2.0.0"] = "2.0.0"  # 2.0.0: per-platform reads and verdicts (ADR-0014)
 DAEMON, ARCHIVES = "docker:", ("docker-archive:", "oci-archive:")
 
 
@@ -44,21 +45,37 @@ class GateError(FixproofError):
     """The image argument cannot be gated."""
 
 
+class PlatformLine(Contract):
+    platform: Text
+    digest: str
+    verdict: Verdict
+
+
 class GateLine(Contract):
     cve: CveId
     verdict: Verdict
     reason: Text
     kev: Kev
+    platforms: tuple[PlatformLine, ...] = Field(
+        default=(), description="The CVE's verdict on each platform checked."
+    )
 
 
-class GateResult(Contract):
-    """`fixproof gate --json` (format `gate-result`, 1.0.0)."""
-
-    schema_version: Literal["1.0.0"]
-    image: Text = Field(description="The image as given on the command line.")
+class PlatformRead(Contract):
+    platform: Text
+    digest: str
     scanned: dict[str, dict[str, str]] = Field(
         description="Per tool: the image ID, manifest digest and platform it read."
     )
+
+
+class GateResult(Contract):
+    """`fixproof gate --json` (format `gate-result`, 2.0.0)."""
+
+    schema_version: Literal["2.0.0"]
+    image: Text = Field(description="The image as given on the command line.")
+    platforms: tuple[PlatformRead, ...] = Field(description="What was read, per platform.")
+    not_checked: tuple[NotChecked, ...] = ()
     tools: tuple[dict[str, JsonValue], ...]
     summary: Summary
     results: tuple[GateLine, ...]
@@ -101,14 +118,6 @@ def once_per_call(run: Runner) -> Runner:
     return cached
 
 
-def _same_image(outcomes: Sequence[MethodOutcome]) -> str | None:
-    """Why the tools' reads cannot be trusted together, or None if they read one image."""
-    ids = {o.scanned["image_id"] for o in outcomes if o.scanned.get("image_id")}
-    if len(ids) > 1:
-        return f"the two tools read different images ({', '.join(sorted(ids))})"
-    return None
-
-
 def run_gate(
     closed: ClosedFile,
     image: str,
@@ -117,28 +126,40 @@ def run_gate(
 ) -> GateResult:
     asset = gate_asset(image, closed)
     run = once_per_call(run)
-    lines, verdicts, tools, scanned = [], [], [], {}
+    platforms = plan(asset, closed.platforms, run)
+    lines, verdicts, tools = [], [], []
+    reads: dict[tuple[str, str], dict[str, dict[str, str]]] = {}
     for entry in closed.closed:
-        by_grype = grype.assess(asset, entry.cve, run)
-        by_sbom = sbom_version.assess(asset, entry.fix, run)
-        verdict = combine(asset, by_grype.result, by_sbom.result)
-        mismatch = _same_image((by_grype, by_sbom))
-        if mismatch is not None:
-            verdict = AssetVerdict(asset=asset, verdict=Verdict.UNKNOWN, reason=mismatch)
-        for outcome in (by_grype, by_sbom):
+        checks = [check_platform(asset, target, entry.fix, run) for target in platforms.targets]
+        assessment = finish(asset, platforms, checks)
+        verdict = assessment.verdict
+        for outcome in assessment.outcomes:
             if outcome.tool and outcome.tool not in tools:
                 tools.append(outcome.tool)
             if outcome.scanned:
-                scanned[outcome.result.method.value] = dict(outcome.scanned)
+                read = reads.setdefault((outcome.platform, outcome.digest), {})
+                read[outcome.result.method.value] = dict(outcome.scanned)
         verdicts.append(verdict)
-        status = kev_catalogue.status(entry.cve)
         lines.append(
-            GateLine(cve=entry.cve, verdict=verdict.verdict, reason=verdict.reason, kev=status)
+            GateLine(
+                cve=entry.cve,
+                verdict=verdict.verdict,
+                reason=verdict.reason,
+                kev=kev_catalogue.status(entry.cve),
+                platforms=tuple(
+                    PlatformLine(platform=p.platform, digest=p.digest, verdict=p.verdict)
+                    for p in verdict.platforms
+                ),
+            )
         )
     return GateResult(
         schema_version=GATE_VERSION,
         image=image,
-        scanned=scanned,
+        platforms=tuple(
+            PlatformRead(platform=platform, digest=digest, scanned=scanned)
+            for (platform, digest), scanned in reads.items()
+        ),
+        not_checked=platforms.not_checked,
         tools=tuple(tools),
         summary=summarise(verdicts),
         results=tuple(lines),

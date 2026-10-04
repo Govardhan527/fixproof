@@ -1,22 +1,46 @@
 {
   "assets": [
     {
-      "asset": "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627",
+      "asset": "localhost:5001/fixproof/demo-app@sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+      "not_checked": [],
       "owner": null,
+      "platforms": [
+        {
+          "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+          "platform": "linux/amd64",
+          "verdict": "still_affected"
+        }
+      ],
       "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
       "verdict": "still_affected",
       "workload": null
     },
     {
-      "asset": "localhost:5001/fixproof/demo-fixed@sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7",
+      "asset": "localhost:5001/fixproof/demo-fixed@sha256:24c3a88e00bef522248d1157d3ac9467d311ff3f7a526df004c0e10087881846",
+      "not_checked": [],
       "owner": null,
+      "platforms": [
+        {
+          "digest": "sha256:24c3a88e00bef522248d1157d3ac9467d311ff3f7a526df004c0e10087881846",
+          "platform": "linux/amd64",
+          "verdict": "fixed"
+        }
+      ],
       "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 3 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
       "verdict": "fixed",
       "workload": null
     },
     {
-      "asset": "localhost:5001/fixproof/demo-broken@sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5",
+      "asset": "localhost:5001/fixproof/demo-broken@sha256:63d845dbaa652d79eb5aa54b0216756a074ff46185745fb26bc8d2de82d960eb",
+      "not_checked": [],
       "owner": null,
+      "platforms": [
+        {
+          "digest": "sha256:63d845dbaa652d79eb5aa54b0216756a074ff46185745fb26bc8d2de82d960eb",
+          "platform": "linux/amd64",
+          "verdict": "unknown"
+        }
+      ],
       "reason": "grype failed, so fixed cannot be proven. grype: grype exited 1: ERROR failed to fetch image: unexpected status 500. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
       "verdict": "unknown",
       "workload": null
@@ -37,7 +61,7 @@
     "status": "not_listed"
   },
   "out": "evidence",
-  "schema_version": "1.2.0",
+  "schema_version": "1.3.0",
   "summary": {
     "fixed": 1,
     "still_affected": 1,

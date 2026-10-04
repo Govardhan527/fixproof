@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fixproof.model import Asset, BuildAsset, ImageRef, Method, MethodResult, MethodStatus
+from fixproof.platforms import Target
 from fixproof.tools import ToolRun, last_line
 
 
@@ -20,6 +21,8 @@ class MethodOutcome:
     raw: dict[str, Any] | None = None  # sanitised tool output, stored as evidence
     tool: dict[str, Any] = field(default_factory=dict)  # tool and data versions
     scanned: dict[str, str] = field(default_factory=dict)  # manifest digest and platform
+    platform: str = ""  # the platform this outcome is about (ADR-0014), set by fixproof.check
+    digest: str = ""  # that platform's manifest digest
 
 
 def outcome(
@@ -44,12 +47,15 @@ def parse_output(name: str, run: ToolRun) -> dict[str, Any]:
     return document
 
 
-def target(asset: Asset) -> tuple[str, ImageRef | None]:
+def target(asset: Asset, platform: Target | None = None) -> tuple[str, ImageRef | None]:
     """The tools' argument for an asset, and the digest they must have read, if one is known.
 
     A registry image is read by digest (`registry:`); a local build by the source the user gave,
-    which has no registry digest to check against (ADR-0012 item 2).
+    which has no registry digest to check against (ADR-0012 item 2). A platform target from
+    `fixproof.platforms` (ADR-0014) names its own argument and manifest digest.
     """
+    if platform is not None:
+        return platform.argument, platform.image
     if isinstance(asset, BuildAsset):
         return asset.source, None
     if asset.image is None:
@@ -72,5 +78,6 @@ def scanned_image(name: str, metadata: Any, image: ImageRef | None) -> dict[str,
     return {
         "image_id": str(metadata.get("imageID", "")),
         "manifest_digest": manifest,
-        "platform": f"{metadata.get('os', '?')}/{metadata.get('architecture', '?')}",
+        "platform": f"{metadata.get('os', '?')}/{metadata.get('architecture', '?')}"
+        + (f"/{metadata['variant']}" if metadata.get("variant") else ""),
     }

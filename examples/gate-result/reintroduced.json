@@ -1,5 +1,24 @@
 {
-  "image": "localhost:5001/fixproof/demo-app@sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627",
+  "image": "localhost:5001/fixproof/demo-app@sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+  "not_checked": [],
+  "platforms": [
+    {
+      "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+      "platform": "linux/amd64",
+      "scanned": {
+        "grype": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+          "platform": "linux/amd64"
+        },
+        "sbom_version": {
+          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+          "platform": "linux/amd64"
+        }
+      }
+    }
+  ],
   "results": [
     {
       "cve": "CVE-2023-32681",
@@ -16,6 +35,13 @@
         "reason": null,
         "status": "not_listed"
       },
+      "platforms": [
+        {
+          "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+          "platform": "linux/amd64",
+          "verdict": "still_affected"
+        }
+      ],
       "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
       "verdict": "still_affected"
     },
@@ -43,23 +69,18 @@
         "reason": null,
         "status": "listed"
       },
+      "platforms": [
+        {
+          "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+          "platform": "linux/amd64",
+          "verdict": "fixed"
+        }
+      ],
       "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2021-44228 among 4 matches. sbom_version: no log4j-core package among 1 packages.",
       "verdict": "fixed"
     }
   ],
-  "scanned": {
-    "grype": {
-      "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-      "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-      "platform": "linux/amd64"
-    },
-    "sbom_version": {
-      "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-      "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-      "platform": "linux/amd64"
-    }
-  },
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "summary": {
     "fixed": 1,
     "still_affected": 1,

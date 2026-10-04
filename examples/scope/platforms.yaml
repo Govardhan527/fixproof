@@ -1,0 +1,10 @@
+# Images checked on the two platforms the cluster's nodes run (ADR-0014). Without `platforms`,
+# every Linux platform of a multi-platform image is checked; the others are named as not checked.
+schema_version: "1.1.0"
+registries:
+  - docker.io
+images:
+  - docker.io/certbot/certbot@sha256:92092d214a4eb75d049720d04f7acc50b40ea226d77736bce6a6bf43981b6e86  # v2.6.0
+platforms:
+  - linux/amd64
+  - linux/arm64

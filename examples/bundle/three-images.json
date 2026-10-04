@@ -3,161 +3,188 @@
     {
       "asset": {
         "image": {
-          "digest": "sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627",
+          "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
           "registry": "localhost:5001",
           "repository": "fixproof/demo-app"
         },
         "kind": "image"
       },
       "index": 1,
-      "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
-      "results": [
+      "not_checked": [],
+      "platforms": [
         {
-          "asset": {
-            "image": {
-              "digest": "sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627",
-              "registry": "localhost:5001",
-              "repository": "fixproof/demo-app"
+          "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+          "platform": "linux/amd64",
+          "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
+          "results": [
+            {
+              "asset": {
+                "image": {
+                  "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+                  "registry": "localhost:5001",
+                  "repository": "fixproof/demo-app"
+                },
+                "kind": "image"
+              },
+              "detail": "CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q",
+              "method": "grype",
+              "raw_ref": "raw/001-grype.json",
+              "status": "present"
             },
-            "kind": "image"
-          },
-          "detail": "CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q",
-          "method": "grype",
-          "raw_ref": "raw/001-grype.json",
-          "status": "present"
-        },
-        {
-          "asset": {
-            "image": {
-              "digest": "sha256:bc7e9713316149288ffecb98550e2104cef3edfea7c4390f78b75e8904763627",
-              "registry": "localhost:5001",
-              "repository": "fixproof/demo-app"
+            {
+              "asset": {
+                "image": {
+                  "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+                  "registry": "localhost:5001",
+                  "repository": "fixproof/demo-app"
+                },
+                "kind": "image"
+              },
+              "detail": "requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0)",
+              "method": "sbom_version",
+              "raw_ref": "raw/001-sbom_version.json",
+              "status": "present"
+            }
+          ],
+          "scanned": {
+            "grype": {
+              "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+              "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+              "platform": "linux/amd64"
             },
-            "kind": "image"
+            "sbom_version": {
+              "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+              "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+              "platform": "linux/amd64"
+            }
           },
-          "detail": "requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0)",
-          "method": "sbom_version",
-          "raw_ref": "raw/001-sbom_version.json",
-          "status": "present"
+          "verdict": "still_affected"
         }
       ],
-      "scanned": {
-        "grype": {
-          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-          "platform": "linux/amd64"
-        },
-        "sbom_version": {
-          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-          "platform": "linux/amd64"
-        }
-      },
+      "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
       "verdict": "still_affected"
     },
     {
       "asset": {
         "image": {
-          "digest": "sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7",
+          "digest": "sha256:24c3a88e00bef522248d1157d3ac9467d311ff3f7a526df004c0e10087881846",
           "registry": "localhost:5001",
           "repository": "fixproof/demo-fixed"
         },
         "kind": "image"
       },
       "index": 2,
-      "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 3 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
-      "results": [
+      "not_checked": [],
+      "platforms": [
         {
-          "asset": {
-            "image": {
-              "digest": "sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7",
-              "registry": "localhost:5001",
-              "repository": "fixproof/demo-fixed"
+          "digest": "sha256:24c3a88e00bef522248d1157d3ac9467d311ff3f7a526df004c0e10087881846",
+          "platform": "linux/amd64",
+          "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 3 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
+          "results": [
+            {
+              "asset": {
+                "image": {
+                  "digest": "sha256:24c3a88e00bef522248d1157d3ac9467d311ff3f7a526df004c0e10087881846",
+                  "registry": "localhost:5001",
+                  "repository": "fixproof/demo-fixed"
+                },
+                "kind": "image"
+              },
+              "detail": "no match for CVE-2023-32681 among 3 matches",
+              "method": "grype",
+              "raw_ref": "raw/002-grype.json",
+              "status": "not_present"
             },
-            "kind": "image"
-          },
-          "detail": "no match for CVE-2023-32681 among 3 matches",
-          "method": "grype",
-          "raw_ref": "raw/002-grype.json",
-          "status": "not_present"
-        },
-        {
-          "asset": {
-            "image": {
-              "digest": "sha256:15e7ab49854794a0c6867636256a59986c892ec3c89d252c5eb1762080f44dc7",
-              "registry": "localhost:5001",
-              "repository": "fixproof/demo-fixed"
+            {
+              "asset": {
+                "image": {
+                  "digest": "sha256:24c3a88e00bef522248d1157d3ac9467d311ff3f7a526df004c0e10087881846",
+                  "registry": "localhost:5001",
+                  "repository": "fixproof/demo-fixed"
+                },
+                "kind": "image"
+              },
+              "detail": "requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed",
+              "method": "sbom_version",
+              "raw_ref": "raw/002-sbom_version.json",
+              "status": "not_present"
+            }
+          ],
+          "scanned": {
+            "grype": {
+              "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+              "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+              "platform": "linux/amd64"
             },
-            "kind": "image"
+            "sbom_version": {
+              "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+              "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+              "platform": "linux/amd64"
+            }
           },
-          "detail": "requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed",
-          "method": "sbom_version",
-          "raw_ref": "raw/002-sbom_version.json",
-          "status": "not_present"
+          "verdict": "fixed"
         }
       ],
-      "scanned": {
-        "grype": {
-          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-          "platform": "linux/amd64"
-        },
-        "sbom_version": {
-          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-          "platform": "linux/amd64"
-        }
-      },
+      "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 3 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
       "verdict": "fixed"
     },
     {
       "asset": {
         "image": {
-          "digest": "sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5",
+          "digest": "sha256:63d845dbaa652d79eb5aa54b0216756a074ff46185745fb26bc8d2de82d960eb",
           "registry": "localhost:5001",
           "repository": "fixproof/demo-broken"
         },
         "kind": "image"
       },
       "index": 3,
-      "reason": "grype failed, so fixed cannot be proven. grype: grype exited 1: ERROR failed to fetch image: unexpected status 500. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
-      "results": [
+      "not_checked": [],
+      "platforms": [
         {
-          "asset": {
-            "image": {
-              "digest": "sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5",
-              "registry": "localhost:5001",
-              "repository": "fixproof/demo-broken"
+          "digest": "sha256:63d845dbaa652d79eb5aa54b0216756a074ff46185745fb26bc8d2de82d960eb",
+          "platform": "linux/amd64",
+          "reason": "grype failed, so fixed cannot be proven. grype: grype exited 1: ERROR failed to fetch image: unexpected status 500. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
+          "results": [
+            {
+              "asset": {
+                "image": {
+                  "digest": "sha256:63d845dbaa652d79eb5aa54b0216756a074ff46185745fb26bc8d2de82d960eb",
+                  "registry": "localhost:5001",
+                  "repository": "fixproof/demo-broken"
+                },
+                "kind": "image"
+              },
+              "detail": "grype exited 1: ERROR failed to fetch image: unexpected status 500",
+              "method": "grype",
+              "raw_ref": null,
+              "status": "error"
             },
-            "kind": "image"
+            {
+              "asset": {
+                "image": {
+                  "digest": "sha256:63d845dbaa652d79eb5aa54b0216756a074ff46185745fb26bc8d2de82d960eb",
+                  "registry": "localhost:5001",
+                  "repository": "fixproof/demo-broken"
+                },
+                "kind": "image"
+              },
+              "detail": "requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed",
+              "method": "sbom_version",
+              "raw_ref": "raw/003-sbom_version.json",
+              "status": "not_present"
+            }
+          ],
+          "scanned": {
+            "sbom_version": {
+              "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+              "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+              "platform": "linux/amd64"
+            }
           },
-          "detail": "grype exited 1: ERROR failed to fetch image: unexpected status 500",
-          "method": "grype",
-          "raw_ref": null,
-          "status": "error"
-        },
-        {
-          "asset": {
-            "image": {
-              "digest": "sha256:4ec20905c48062b918c5b8687c5c35a60a9f1319679891694d06fcdad6efe4a5",
-              "registry": "localhost:5001",
-              "repository": "fixproof/demo-broken"
-            },
-            "kind": "image"
-          },
-          "detail": "requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed",
-          "method": "sbom_version",
-          "raw_ref": "raw/003-sbom_version.json",
-          "status": "not_present"
+          "verdict": "unknown"
         }
       ],
-      "scanned": {
-        "sbom_version": {
-          "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
-          "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
-          "platform": "linux/amd64"
-        }
-      },
+      "reason": "grype failed, so fixed cannot be proven. grype: grype exited 1: ERROR failed to fetch image: unexpected status 500. sbom_version: requests 2.31.0 at /usr/local/lib/python3.12/site-packages/requests-2.31.0.dist-info/METADATA is fixed.",
       "verdict": "unknown"
     }
   ],
@@ -166,7 +193,7 @@
   "fixproof_version": "0.0.0",
   "inputs": {
     "fix_sha256": "0c528e0a34ef9816b18a8ba46820e8daab9d19ee1eb02bd6b0d593e22c9e2876",
-    "scope_sha256": "4b82977774c420ac0e1e8843dafee43060ce64918b8932de3ed0e72968d6038c"
+    "scope_sha256": "89f3629ed1af43eccf53cff29ad2e500837c5fb79d36ea1d81876e813b673ffd"
   },
   "kev": {
     "entry": null,
@@ -181,7 +208,7 @@
     "reason": null,
     "status": "not_listed"
   },
-  "schema_version": "1.2.0",
+  "schema_version": "2.0.0",
   "started": "2026-10-02T09:00:00Z",
   "summary": {
     "fixed": 1,

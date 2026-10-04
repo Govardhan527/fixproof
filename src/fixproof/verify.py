@@ -1,31 +1,44 @@
-"""Verifying a scope (ADR-0007, ADR-0010, ADR-0011): images and cluster workloads.
+"""Verifying a scope (ADR-0007, ADR-0010, ADR-0011, ADR-0014): images and cluster workloads.
 
-Every distinct image digest is scanned once with both methods, up to `jobs` images at a time.
-An image named in `scope.yaml` gets its own verdict; every workload running an image takes that
-image's verdict and shares its evidence. A workload whose image cannot be resolved, or comes
-from a registry outside the allowlist, is `unknown` with the reason, and its image is never
-read. The result is the same, in the same order, for any `jobs`.
+Every distinct image digest is checked once, on each of its platforms (ADR-0014), up to `jobs`
+platform scans at a time. An image named in `scope.yaml` gets its own verdict; every workload
+running an image takes that image's verdict and shares its evidence. A workload whose image
+cannot be resolved, or comes from a registry outside the allowlist, is `unknown` with the
+reason, and its image is never read. The result is the same, in the same order, for any `jobs`.
 """
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 from fixproof.bundle import Assessment
+from fixproof.check import check_platform, finish
 from fixproof.inputs import FixFile, ScopeFile
 from fixproof.inventory import KubernetesSource, PodSource, inventory
-from fixproof.methods import grype, sbom_version
 from fixproof.model import AssetVerdict, ImageAsset, ImageRef, Verdict
+from fixproof.platforms import plan
 from fixproof.tools import Runner, run_tool
-from fixproof.verdict import combine
 
 DEFAULT_JOBS = 4  # ADR-0011: about 1.2 GB at peak (SPEC_NOTES §12, measured)
 
 
-def _scan(image: ImageRef, fix: FixFile, run: Runner) -> Assessment:
-    asset = ImageAsset(image=image)
-    by_grype = grype.assess(asset, fix.cve, run)
-    by_sbom = sbom_version.assess(asset, fix, run)
-    return Assessment(combine(asset, by_grype.result, by_sbom.result), (by_grype, by_sbom))
+def _check_images(
+    images: dict[str, ImageRef], fix: FixFile, scope: ScopeFile, run: Runner, jobs: int
+) -> dict[str, Assessment]:
+    """Each image's assessment: its platforms listed, then every platform scanned."""
+    assets = {ref: ImageAsset(image=image) for ref, image in images.items()}
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
+        planned = {
+            ref: pool.submit(plan, asset, scope.platforms, run) for ref, asset in assets.items()
+        }
+        plans = {ref: future.result() for ref, future in planned.items()}
+        checked = {
+            ref: [pool.submit(check_platform, assets[ref], t, fix, run) for t in p.targets]
+            for ref, p in plans.items()
+        }
+        return {
+            ref: finish(assets[ref], plans[ref], [future.result() for future in futures])
+            for ref, futures in checked.items()
+        }
 
 
 def assess(
@@ -47,9 +60,7 @@ def assess(
         image = workload.asset.image
         if workload.problem is None and image is not None and image.registry in scope.registries:
             to_scan.setdefault(image.reference, image)
-    with ThreadPoolExecutor(max_workers=jobs) as pool:
-        futures = {ref: pool.submit(_scan, image, fix, run) for ref, image in to_scan.items()}
-        scans = {ref: future.result() for ref, future in futures.items()}
+    scans = _check_images(to_scan, fix, scope, run, jobs)
 
     assessments = [scans[image.reference] for image in scope.image_refs]
     for workload in workloads:

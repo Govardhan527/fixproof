@@ -2,48 +2,48 @@
   "files": [
     {
       "path": "bundle.json",
-      "sha256": "56b1abba8e9320089fe038e4d5208977b2f0ebfb03c7545d4eae83c815d58f81",
-      "size": 7784
+      "sha256": "f730eb7dade8c913d020089a99c935557f39b31e2576cb5672f3cdf9a15c9d4e",
+      "size": 9769
     },
     {
       "path": "cyclonedx.json",
-      "sha256": "9b75a95cd0a58f8e34ac4aa59cfc0251e30b88397cc8016234131467f9d9181b",
+      "sha256": "3e7d38dd03cb707610253356a9078ccf56eea9535b1107c84f05d5a9c79eb228",
       "size": 4349
     },
     {
       "path": "openvex.json",
-      "sha256": "5f7db886f69bfe8e489c9215f8df9c374a4a402e261fc28b702768570cb8cee2",
+      "sha256": "bc16c74c21db6bda764eda5c10fd76e5fd2de0709062cbf5a0f90c72d90f142c",
       "size": 3363
     },
     {
       "path": "raw/001-grype.json",
-      "sha256": "c980488ecdda1208bdaea907f1b073fdc08621e2173c988611682db5c6f726da",
+      "sha256": "5e4cbe3053e005a7bece54b0a737c6fec200a637ff2c93406123ed395739fed7",
       "size": 30353
     },
     {
       "path": "raw/001-sbom_version.json",
-      "sha256": "f9edabd8fdc043d7e08104d677c4bc6e42e0d07d848bc979d4b20732dde425f8",
+      "sha256": "98e7475f6eebaa1702cead388b8d3bf0c9f42f393465f88dd758da71eb13aee1",
       "size": 9965
     },
     {
       "path": "raw/002-grype.json",
-      "sha256": "aa55dc74847a549b92cec73066ad7e6cfe9db6e10a838910647e09c6bf8c6761",
+      "sha256": "6614fbb71143ee127dc1788455cb49f19621786b725e1936f1cfa9ed34b42c7c",
       "size": 23202
     },
     {
       "path": "raw/002-sbom_version.json",
-      "sha256": "10cc403234a78d7337d6e5f559939a1153975443dc4bb861f07190df832cb101",
+      "sha256": "2029cfb24012d88727ae16c690087bdf8a279373ce9100eefe4db930e209c474",
       "size": 9971
     },
     {
       "path": "raw/003-sbom_version.json",
-      "sha256": "5b0c3dcd468bc97b258a65e737bb79d6685524009aaa6493a876d7195abf537d",
+      "sha256": "f92e572b66d10ef619cd6dc0b56eec00372b2d24094b0f1497e442f6a396fefa",
       "size": 9974
     },
     {
       "path": "report.html",
-      "sha256": "518da5cc3572ed1426d461f8825a3ad64ec2de10caf00f4f08e4a44805e3bfa1",
-      "size": 3206
+      "sha256": "7b9340f0a922eb5384bcd1f78596cd5e20ce30ba85853794a9dc5459d11fb07b",
+      "size": 3252
     }
   ],
   "schema_version": "1.0.0"

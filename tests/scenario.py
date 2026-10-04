@@ -17,7 +17,7 @@ from fixproof import kev
 from fixproof.canonical import to_json
 from fixproof.model import ImageRef
 from fixproof.tools import ToolRun
-from tool_outputs import CVE, IMAGE, for_image, image_runner, output
+from tool_outputs import CVE, IMAGE, MANIFESTS, for_image, image_runner, manifest_digest, output
 
 START = datetime(2026, 10, 2, 9, 0, 0, tzinfo=UTC)
 FINISH = datetime(2026, 10, 2, 9, 1, 30, tzinfo=UTC)
@@ -28,7 +28,7 @@ KEV = kev.load(START, lambda url: KEV_FEED).status(CVE)  # CVE-2023-32681: not l
 
 
 def image(repository: str) -> ImageRef:
-    digest = "sha256:" + hashlib.sha256(repository.encode()).hexdigest()
+    digest = manifest_digest(repository)
     return ImageRef(registry="localhost:5001", repository=repository, digest=digest)
 
 
@@ -98,4 +98,18 @@ def install_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
             encoding="utf-8",
         )
         script.chmod(script.stat().st_mode | stat.S_IXUSR)
+    # `crane manifest REF` prints each synthetic manifest by its digest, as the real one would
+    cases = []
+    for digest, data in MANIFESTS.items():
+        path = bin_dir / f"manifest-{digest.removeprefix('sha256:')}.json"
+        path.write_bytes(data)
+        cases.append(f'  *@{digest}) cat "{path}" ;;')
+    crane = bin_dir / "crane"
+    crane.write_text(
+        '#!/bin/sh\ncase "$2" in\n'
+        + "\n".join(cases)
+        + '\n  *) echo "Error: fetching manifest $2: MANIFEST_UNKNOWN" >&2; exit 1 ;;\nesac\n',
+        encoding="utf-8",
+    )
+    crane.chmod(crane.stat().st_mode | stat.S_IXUSR)
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin:/bin")

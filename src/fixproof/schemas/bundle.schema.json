@@ -30,28 +30,26 @@
           "title": "Index",
           "type": "integer"
         },
+        "not_checked": {
+          "description": "Platforms of the image index that were not checked, and why.",
+          "items": {
+            "$ref": "#/$defs/NotChecked"
+          },
+          "title": "Not Checked",
+          "type": "array"
+        },
+        "platforms": {
+          "description": "Every platform checked (ADR-0014); empty when the image was not read.",
+          "items": {
+            "$ref": "#/$defs/PlatformRecord"
+          },
+          "title": "Platforms",
+          "type": "array"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
           "type": "string"
-        },
-        "results": {
-          "items": {
-            "$ref": "#/$defs/MethodResult"
-          },
-          "title": "Results",
-          "type": "array"
-        },
-        "scanned": {
-          "additionalProperties": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object"
-          },
-          "description": "Per method: the manifest digest and platform the tool scanned.",
-          "title": "Scanned",
-          "type": "object"
         },
         "verdict": {
           "$ref": "#/$defs/Verdict"
@@ -62,8 +60,8 @@
         "asset",
         "verdict",
         "reason",
-        "results",
-        "scanned"
+        "platforms",
+        "not_checked"
       ],
       "title": "AssetRecord",
       "type": "object"
@@ -408,6 +406,86 @@
       "title": "MethodStatus",
       "type": "string"
     },
+    "NotChecked": {
+      "additionalProperties": false,
+      "description": "A platform of an image index that fixproof did not check, and why (ADR-0014).",
+      "properties": {
+        "digest": {
+          "minLength": 1,
+          "title": "Digest",
+          "type": "string"
+        },
+        "platform": {
+          "minLength": 1,
+          "title": "Platform",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "platform",
+        "digest",
+        "reason"
+      ],
+      "title": "NotChecked",
+      "type": "object"
+    },
+    "PlatformRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "description": "The platform's manifest digest the tools read.",
+          "title": "Digest",
+          "type": "string"
+        },
+        "platform": {
+          "description": "os/architecture[/variant], e.g. linux/arm64.",
+          "minLength": 1,
+          "title": "Platform",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/MethodResult"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "scanned": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "description": "Per method: the image ID, manifest digest and platform the tool scanned.",
+          "title": "Scanned",
+          "type": "object"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        }
+      },
+      "required": [
+        "platform",
+        "digest",
+        "verdict",
+        "reason",
+        "results",
+        "scanned"
+      ],
+      "title": "PlatformRecord",
+      "type": "object"
+    },
     "Summary": {
       "additionalProperties": false,
       "properties": {
@@ -507,7 +585,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/Govardhan527/fixproof/schemas/bundle/1.2.0",
+  "$id": "https://github.com/Govardhan527/fixproof/schemas/bundle/2.0.0",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -541,7 +619,7 @@
       "description": "The CVE's CISA KEV status and the feed used (ADR-0012)."
     },
     "schema_version": {
-      "const": "1.2.0",
+      "const": "2.0.0",
       "title": "Schema Version",
       "type": "string"
     },

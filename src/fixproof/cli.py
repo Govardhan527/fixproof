@@ -21,6 +21,7 @@ from fixproof.gate import GateLine, GateResult, run_gate
 from fixproof.inputs import load_closed, load_fix, load_scope
 from fixproof.model import AssetVerdict, Verdict, WorkloadAsset
 from fixproof.report import verify_summary
+from fixproof.verdict import platform_lines
 from fixproof.verify import DEFAULT_JOBS, assess
 from fixproof.vex import build_document
 
@@ -69,7 +70,7 @@ def verify(
     author: Annotated[str, typer.Option(help="Who issues the VEX document (OpenVEX author).")],
     as_json: Annotated[bool, typer.Option("--json", help="Print the summary as JSON.")] = False,
     jobs: Annotated[
-        int, typer.Option(min=1, help="How many images to scan at the same time.")
+        int, typer.Option(min=1, help="How many image platforms to scan at the same time.")
     ] = DEFAULT_JOBS,
 ) -> None:
     """Check every image and workload in scope with Grype and the SBOM version check, then
@@ -129,7 +130,11 @@ def _human(item: AssetVerdict) -> str:
         head = f"{asset.location}{owner}\n{pad}{image}"
     else:
         head = image
-    return f"{item.verdict.value:<15} {head}\n{pad}{item.reason}"
+    if len(item.platforms) > 1 or item.not_checked:
+        why = f"\n{pad}".join(platform_lines(item.platforms, item.not_checked))
+    else:
+        why = item.reason
+    return f"{item.verdict.value:<15} {head}\n{pad}{why}"
 
 
 @app.command()
@@ -171,13 +176,21 @@ def _gate_kev(line: GateLine) -> str:
     return "not in CISA KEV" if line.kev.status == "not_listed" else "CISA KEV unavailable"
 
 
-def _gate_human(result: GateResult) -> str:
-    read = "; ".join(
+def _read(scanned: dict[str, dict[str, str]]) -> str:
+    return "; ".join(
         f"{tool}: image ID {s.get('image_id') or '?'}, manifest {s.get('manifest_digest') or '?'}, "
         f"{s.get('platform', '?')}"
-        for tool, s in sorted(result.scanned.items())
+        for tool, s in sorted(scanned.items())
     )
-    lines = [f"image {result.image} ({read or 'not read'})"]
+
+
+def _gate_human(result: GateResult) -> str:
+    if len(result.platforms) == 1 and not result.not_checked:
+        lines = [f"image {result.image} ({_read(result.platforms[0].scanned) or 'not read'})"]
+    else:
+        lines = [f"image {result.image}" + ("" if result.platforms else " (not read)")]
+        lines.extend(f"  {p.platform}: {_read(p.scanned)}" for p in result.platforms)
+        lines.extend(f"  not checked: {n.platform} ({n.reason})" for n in result.not_checked)
     unavailable = {line.kev.reason for line in result.results if line.kev.status == "unavailable"}
     lines.extend(f"KEV: unavailable ({reason})" for reason in sorted(r for r in unavailable if r))
     pad = " " * 16

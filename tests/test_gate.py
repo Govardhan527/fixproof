@@ -133,7 +133,7 @@ def test_a_reintroduced_cve_is_still_affected_and_each_tool_runs_once() -> None:
     result = run_gate(
         CLOSED, VULNERABLE.reference, CATALOGUE, counted(image_runner(answers()), calls)
     )
-    assert sorted(calls) == ["grype", "syft"]  # once each, for two closed CVEs
+    assert sorted(calls) == ["crane", "grype", "syft"]  # once each, for two closed CVEs
     assert [(line.cve, line.verdict) for line in result.results] == [
         (CVE, Verdict.STILL_AFFECTED),
         (LOG4SHELL, Verdict.FIXED),
@@ -141,8 +141,11 @@ def test_a_reintroduced_cve_is_still_affected_and_each_tool_runs_once() -> None:
     assert result.results[1].kev.status == "listed"
     assert result.results[0].kev.status == "not_listed"
     assert result.summary.model_dump() == {"fixed": 1, "still_affected": 1, "unknown": 0}
-    assert set(result.scanned) == {"grype", "sbom_version"}
-    assert result.scanned["grype"]["image_id"] == result.scanned["sbom_version"]["image_id"]
+    (read,) = result.platforms  # a single-platform image
+    assert (read.platform, read.digest) == ("linux/amd64", VULNERABLE.digest)
+    assert set(read.scanned) == {"grype", "sbom_version"}
+    assert read.scanned["grype"]["image_id"] == read.scanned["sbom_version"]["image_id"]
+    assert [p.verdict for p in result.results[0].platforms] == [Verdict.STILL_AFFECTED]
 
 
 def test_a_fixed_image_passes_and_an_unreadable_one_cannot_be_proven() -> None:
@@ -157,9 +160,11 @@ def test_a_local_build_is_gated_where_it_was_built() -> None:
     calls: list[tuple[str, list[str], dict[str, str]]] = []
     documents = {"grype": output("grype", "vulnerable"), "syft": output("syft", "vulnerable")}
     result = run_gate(CLOSED, "docker:app:ci", CATALOGUE, runner(documents, calls))
-    assert [call[1][0] for call in calls] == ["docker:app:ci", "docker:app:ci"]
+    assert [call[1][0] for call in calls] == ["docker:app:ci", "docker:app:ci"]  # no crane
     assert result.results[0].verdict is Verdict.STILL_AFFECTED
-    assert result.scanned["grype"]["image_id"].startswith("sha256:")
+    (read,) = result.platforms  # a local build is the one platform the tools read
+    assert read.platform == "linux/amd64"
+    assert read.scanned["grype"]["image_id"].startswith("sha256:")
 
 
 def test_two_tools_reading_different_images_prove_nothing() -> None:
@@ -216,7 +221,7 @@ def test_cli_json_is_a_valid_gate_result(
     assert gate_cli(tmp_path, monkeypatch, VULNERABLE.reference, "--json") == cli.EXIT_AFFECTED
     result = json.loads(capsys.readouterr().out)
     assert schema_errors(build_validator(load_schema("gate-result.schema.json")), result) == []
-    assert result["schema_version"] == "1.0.0"
+    assert result["schema_version"] == "2.0.0"
     assert [line["verdict"] for line in result["results"]] == ["still_affected", "fixed"]
 
 

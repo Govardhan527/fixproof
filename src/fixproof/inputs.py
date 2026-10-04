@@ -11,13 +11,22 @@ import yaml
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from fixproof.errors import InputError
-from fixproof.model import Contract, CveId, ImageRef, Registry, Text, is_cve_id
+from fixproof.model import (
+    Contract,
+    CveId,
+    ImageRef,
+    Platform,
+    Registry,
+    Text,
+    is_cve_id,
+    normalise_platform,
+)
 from fixproof.purl import NAMESPACE_RULES, build
 from fixproof.vers import check_vers
 
 FIX_VERSION = "1.0.0"
-SCOPE_VERSION = "1.0.0"
-CLOSED_VERSION = "1.0.0"
+SCOPE_VERSION = "1.1.0"  # 1.1.0: `platforms` (ADR-0014)
+CLOSED_VERSION = "1.1.0"  # 1.1.0: `platforms` (ADR-0014)
 
 Ecosystem = Literal["deb", "rpm", "apk", "pypi", "npm", "maven"]
 
@@ -86,19 +95,42 @@ class ClosedCve(Contract):
         return FixFile(schema_version="1.0.0", cve=self.cve, packages=self.packages)
 
 
+def _platforms_field() -> Any:
+    return Field(
+        default=None,
+        description="Which platforms of a multi-platform image to check, as os/arch[/variant] "
+        "(version 1.1.0; ADR-0014). Without it, every Linux platform is checked.",
+    )
+
+
+def _check_platforms(version: str, platforms: tuple[str, ...] | None) -> None:
+    """`platforms` needs version 1.1.0 and names each platform once (in normal form)."""
+    if platforms is None:
+        return
+    if version == "1.0.0":
+        raise ValueError('platforms needs schema_version "1.1.0"')
+    if not platforms:
+        raise ValueError("platforms, when given, names at least one platform")
+    normal = [normalise_platform(p) for p in platforms]
+    if len(set(normal)) != len(normal):
+        raise ValueError("each platform may be listed only once (linux/arm64 is linux/arm64/v8)")
+
+
 class ClosedFile(Contract):
     """`closed.yaml`: CVEs marked closed, which a release must not bring back (ADR-0012 item 3)."""
 
-    schema_version: Literal["1.0.0"]
+    schema_version: Literal["1.0.0", "1.1.0"]
     registries: tuple[Registry, ...] = Field(
         default=(), description="Registries `gate` may read a registry image from."
     )
+    platforms: tuple[Platform, ...] | None = _platforms_field()
     closed: Annotated[tuple[ClosedCve, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if len(set(self.registries)) != len(self.registries):
             raise ValueError("each registry may be listed only once")
+        _check_platforms(self.schema_version, self.platforms)
         cves = [entry.cve for entry in self.closed]
         if len(set(cves)) != len(cves):
             raise ValueError("each CVE may be listed only once")
@@ -125,10 +157,11 @@ class Cluster(Contract):
 class ScopeFile(Contract):
     """`scope.yaml`: what fixproof may look at, and the registries it may read from."""
 
-    schema_version: Literal["1.0.0"]
+    schema_version: Literal["1.0.0", "1.1.0"]
     registries: Annotated[tuple[Registry, ...], Field(min_length=1)]
     images: tuple[ImageReference, ...] = ()
     clusters: tuple[Cluster, ...] = ()
+    platforms: tuple[Platform, ...] | None = _platforms_field()
 
     @field_validator("images")
     @classmethod
@@ -142,6 +175,7 @@ class ScopeFile(Contract):
     def _consistent(self) -> Self:
         if len(set(self.registries)) != len(self.registries):
             raise ValueError("each registry may be listed only once")
+        _check_platforms(self.schema_version, self.platforms)
         if not self.images and not self.clusters:
             raise ValueError("scope names no images and no clusters")
         contexts = [cluster.context for cluster in self.clusters]

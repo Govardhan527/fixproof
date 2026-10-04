@@ -11,6 +11,7 @@ named as not checked. A local build is one platform, whatever the tools read.
 
 import hashlib
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -63,13 +64,23 @@ def platform_name(platform: dict[str, Any]) -> str:
     return f"{name}/{platform['variant']}" if platform.get("variant") else name
 
 
+# crane's error line: "Error: fetching manifest REF: GET URL: CODE: message" (SPEC_NOTES §20)
+_CRANE_PREFIX = re.compile(r"^Error: fetching manifest \S+: (?:GET \S+: )?")
+
+
+def _registry_answer(stderr: str) -> str:
+    """The registry's answer from crane's error, without the reference and URL it repeats,
+    so the answer (UNAUTHORIZED, MANIFEST_UNKNOWN, ...) survives the one-line limit."""
+    return last_line(_CRANE_PREFIX.sub("", last_line(stderr, limit=4096)))
+
+
 def _manifest(image: ImageRef, run: Runner) -> dict[str, Any]:
     """The manifest at the image's digest, or ValueError with the reason."""
     done = run("crane", ["manifest", image.reference], {})
     if done.problem:
         raise ValueError(done.problem)
     if done.exit_code != 0:
-        raise ValueError(f"crane exited {done.exit_code}: {last_line(done.stderr)}")
+        raise ValueError(f"crane exited {done.exit_code}: {_registry_answer(done.stderr)}")
     if "sha256:" + hashlib.sha256(done.stdout).hexdigest() != image.digest:
         raise ValueError(f"the manifest crane read does not hash to {image.digest}")
     try:

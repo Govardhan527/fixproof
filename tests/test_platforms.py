@@ -55,6 +55,18 @@ def index_of(*entries: dict[str, object]) -> str:
 
 
 DENIED = "fetching manifest x: UNAUTHORIZED: authentication required"
+# As crane printed it for the demo's password-protected registry (CI run 37214109784)
+LONG = "fixproof/requests-2.31.0"
+_AT = (
+    f"localhost:5002/{LONG}@sha256:cf04212b39db42034b25f004988da2e5f92c925b36ad4f90fa914734fbf6d813"
+)
+ANSWER = "UNAUTHORIZED: authentication required"
+MAP = f"[map[Action:pull Class: Name:{LONG} Type:repository]]"
+REAL_DENIAL = (
+    f"Error: fetching manifest {_AT}: GET http://localhost:5002/v2/{LONG}/manifests/"
+    f"{_AT.split('@')[1]}: UNAUTHORIZED: authentication required; "
+    f"[map[Action:pull Class: Name:{LONG} Type:repository]]\n"
+)
 
 
 def test_a_single_platform_image_is_one_target_read_by_its_own_digest() -> None:
@@ -167,7 +179,8 @@ ARRAY = registered([])  # type: ignore[arg-type]
     ("digest", "answer", "reason"),
     [
         (AMD64, ToolRun(0, b"", "", problem="crane not found on PATH"), "crane not found on PATH"),
-        (AMD64, ToolRun(1, b"", f"Error: {DENIED}\n"), f"crane exited 1: Error: {DENIED}"),
+        (AMD64, ToolRun(1, b"", f"Error: {DENIED}\n"), f"crane exited 1: {ANSWER}"),
+        (AMD64, ToolRun(1, b"", REAL_DENIAL), f"crane exited 1: {ANSWER}; {MAP}"),
         (AMD64, ToolRun(0, MANIFESTS[ARM64], ""), f"crane read does not hash to {AMD64}"),
         ("sha256:" + "0" * 64, ToolRun(0, b"not json", ""), "does not hash to"),
         (NESTED, None, "holds another index"),

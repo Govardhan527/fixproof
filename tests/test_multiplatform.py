@@ -126,8 +126,9 @@ def test_an_image_whose_platforms_cannot_be_listed_is_unknown_and_not_scanned() 
     )
     (assessment,) = assess(FIX, listed, counted(calls))
     assert assessment.verdict.verdict is Verdict.UNKNOWN
-    assert assessment.verdict.reason.startswith(
-        "the image's platforms could not be listed: crane exited 1: Error: fetching manifest"
+    assert assessment.verdict.reason == (
+        "the image's platforms could not be listed: "
+        "crane exited 1: MANIFEST_UNKNOWN: manifest unknown"
     )
     assert assessment.verdict.platforms == ()
     assert assessment.outcomes == ()

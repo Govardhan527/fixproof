@@ -681,6 +681,19 @@ gets both checks and the verdict rule, as in `verify`, and the output names the 
 manifest digest that were read. If the two checks read different images (a tag moved between
 them, say), nothing is proven and every closed CVE is `unknown`.
 
+On a workstation, the same check:
+
+```console
+$ docker build -t app:ci .
+$ fixproof gate --closed closed.yaml --image docker:app:ci
+```
+
+| Option | Meaning |
+|---|---|
+| `--closed` | Path to `closed.yaml` |
+| `--image` | The built image: `docker:NAME[:TAG]`, `docker-archive:PATH`, `oci-archive:PATH`, or a registry image pinned by digest |
+| `--json` | Print the result as JSON instead of text |
+
 | Exit | Meaning |
 |---|---|
 | `0` | Every closed CVE is proven gone from this image: ship |

@@ -121,7 +121,7 @@ def test_a_credential_helper_opens_the_private_registry_to_every_tool(
     username, password = base64.b64decode(auth).decode().split(":", 1)
     answer = tmp_path / "helper-answer.json"
     answer.write_text(
-        json.dumps({"ServerURL": AUTH, "Username": username, "Secret": password}),
+        json.dumps({"Username": username, "Secret": password}),  # `get`'s answer (SPEC_NOTES §21)
         encoding="utf-8",
     )
     bin_dir = tmp_path / "bin"

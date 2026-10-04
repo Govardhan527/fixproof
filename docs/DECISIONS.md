@@ -729,3 +729,34 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   and a Docker Hub login for large scopes. The README's "One platform per image" limitation is
   replaced. Expected results in the live and integration tests change wherever an image has
   several platforms.
+
+## ADR-0015: M7 item 2: managed-cluster sign-in, proven without a cloud account
+
+- **Date:** 2026-10-04. **Status:** Accepted (the owner's approval of the recommended options,
+  recorded in ADR-0014; the recommendation was to prove the sign-in mechanisms on kind, since a
+  real EKS, GKE or AKS run needs the owner's cloud account, which that approval does not cover).
+- **Context:** managed clusters sign kubectl in through a kubeconfig **exec plugin**, a command
+  that prints a short-lived token, and cloud registries through a **Docker credential helper**
+  named in the Docker config. fixproof had only been run with a token in the kubeconfig and a
+  password in `auths`. The Kubernetes client runs exec plugins itself, but when one fails it only
+  logs the error (SPEC_NOTES §21), and the run then failed with the API server's bare refusal
+  (`401 Unauthorized`, or `403 Forbidden` where anonymous requests are let in).
+- **Decision:**
+  1. **A failing exec plugin is named.** While the kubeconfig loads, fixproof collects what the
+     client logs; a plugin failure stops the run with exit 3 and "cannot sign in to kubeconfig
+     context …: its exec plugin failed: …" with the plugin's own message (one line, URL
+     credentials masked), said once.
+  2. **Proven on kind in CI, with no cloud account:** the reader account's token moved out of
+     the kubeconfig into a store an exec plugin reads, with `client.authentication.k8s.io/v1beta1`
+     and `v1`, gives the SUCCESS TEST result, and the token appears nowhere in what fixproof
+     prints or writes; a plugin that fails gives exit 3 with its message and no evidence. A Docker
+     credential helper, named in `credHelpers` and as the `credsStore`, gives crane, Syft and
+     Grype the password-protected registry, so the private workload gets a real verdict, and the
+     password appears nowhere either. Unit tests run the real client offline against plugins
+     that succeed and that fail in each way the client reports.
+  3. **The README** says how to point fixproof at a managed cluster and a cloud registry (the
+     kubeconfig the cloud's CLI writes; the cloud's own credential helper) and keeps saying
+     plainly that EKS, GKE and AKS themselves are not tested.
+- **Consequences:** the two mechanisms every managed cluster and cloud registry relies on are
+  tested on every push to `main`; what stays unproven is each cloud's own plugin and identity
+  mapping, which needs a real account.

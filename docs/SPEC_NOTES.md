@@ -1347,3 +1347,53 @@ All retrieved 2026-10-02.
   seven and eight, the almalinux ones four, `debian:12.0-slim` eight (`linux/arm64/v8` among
   them); `ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f884306…` is a single
   `linux/amd64` manifest, not an index. OBSERVED.
+
+## 21. Signing in to clusters and registries (M7, ADR-0015, read 2026-10-04)
+
+- **Exec plugins** (Kubernetes docs, `kubernetes/website`
+  `content/en/docs/reference/access-authn-authz/authentication.md`, SHA-256
+  `556a320e3f9d11861a5ec2a6e48df45ccaf83d991a0e1a07db1754b4d968b47e`): a kubeconfig user's `exec`
+  names a `command`, `args`, `env` and an `apiVersion` of `client.authentication.k8s.io/v1beta1`
+  or `client.authentication.k8s.io/v1`; the plugin can "read the version from the ExecCredential
+  object in the KUBERNETES_EXEC_INFO environment variable" and prints an `ExecCredential` whose
+  `status` holds a `token` (and optionally `expirationTimestamp`); "The `user.exec.interactiveMode`
+  field is optional in `client.authentication.k8s.io/v1beta1` and required in
+  `client.authentication.k8s.io/v1`", `Never` meaning the plugin never needs standard input.
+  VERIFIED.
+- **The Python client's exec support** (kubernetes 36.0.3, `kubernetes/config/exec_provider.py`,
+  SHA-256 `fcabd94d65fff11f645e21c6a39778d5c6eb3c19b89bfa5d0c18dd968a09bd65`;
+  `kubernetes/config/kube_config.py`, SHA-256
+  `d3d764a18c70338bc9364db6664d9960ece21e76d4dd1b5dfe2e138034dc025c`): `ExecProvider.run` sets
+  `KUBERNETES_EXEC_INFO`, runs the command, and raises `exec: process returned N. <stderr>`,
+  `exec: failed to decode process output: …` or `exec: plugin api version X does not match Y`;
+  `_load_from_exec_plugin` catches any of these and only calls `logging.error(str(e))` (and logs
+  `exec: missing token or clientCertificateData field in plugin output` itself), so loading the
+  kubeconfig succeeds without credentials. A token is sent as `Bearer <token>` (the client's
+  `BearerToken` auth setting, header `authorization`), and a refresh hook runs the plugin again.
+  VERIFIED (source) and OBSERVED (a local run, 2026-10-04).
+- **Docker credential helpers** (`docker/cli` `docs/reference/commandline/login.md`, SHA-256
+  `e906ed8689789d42eeaf30a87f0bd4c8207488438221c5d41724ae6afa599117`): `credsStore` names one
+  helper for every registry and `credHelpers` maps a registry domain to a helper, by "the suffix
+  of the program to use (i.e. everything after `docker-credential-`)"; "The `get` command takes a
+  string payload from the standard input. That payload carries the server address", and "writes a
+  JSON payload to `STDOUT`" with `Username` and `Secret`. `docker/docker-credential-helpers`
+  v0.9.9 (`README.md`, SHA-256
+  `d764dd0ddbcef3593c8f8d0b67663d86cad356eec5d76c16a97621c1a0b8089e`) says the same of `get`;
+  its `credentials/error.go` (SHA-256
+  `bb4ef685725dbe4ad608fab388f3f8da9a6bb8480284166ddc8169dfaeac9b07`) defines "credentials not
+  found in native keychain" as the not-found answer, compared after trimming whitespace.
+  VERIFIED.
+- **What the clouds' tools write** (read 2026-10-04; fixproof is not run against them, ADR-0015):
+  Amazon EKS user guide, "Connect kubectl to an EKS cluster by creating a kubeconfig file":
+  "Amazon EKS uses the `aws eks get-token` command with `kubectl` for cluster authentication",
+  and the kubeconfig is written with `aws eks update-kubeconfig --region region-code --name
+  my-cluster`. GKE, "Install kubectl and configure cluster access": "kubectl and other Kubernetes
+  clients require an authentication plugin, `gke-gcloud-auth-plugin`, which uses the Client-go
+  Credential Plugins framework", with `gcloud container clusters get-credentials CLUSTER_NAME
+  --location=CONTROL_PLANE_LOCATION`. `Azure/kubelogin` v0.2.20 `README.md` (SHA-256
+  `105b9c2efc72370a816d4109451287b8760474a2c4a5fc00d60a5094dfa1db74`): "This is a client-go
+  credential (exec) plugin implementing azure authentication". `awslabs/amazon-ecr-credential-helper`
+  v0.12.0 `README.md` (SHA-256
+  `e55c6f8f661d08d96d788b4b0452f57e927030b128b1cf3cc9d5a8a653ce1acf`): place
+  `docker-credential-ecr-login` on `PATH` and map `"<aws_account_id>.dkr.ecr.<region>.amazonaws.com":
+  "ecr-login"` under `credHelpers`. VERIFIED.

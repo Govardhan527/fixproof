@@ -620,7 +620,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
 - **Consequence:** the SUCCESS TEST is one command anyone can run and CI proves on every change;
   the README is held to the CLI by a test; fixproof refuses or reports, rather than hangs or
   runs out of memory on, hostile or broken inputs; a user can `pip install fixproof`.
-- **Amendment 1 (2026-10-04, from the M6 spec and scope reviews; to confirm with the owner):**
+- **Amendment 1 (2026-10-04, from the M6 spec and scope reviews; confirmed by the owner
+  2026-10-04):**
   1. *Release safety.* The release workflow refuses a tag that is not the project's canonical
      PEP 440 version, refuses a tagged commit that is not on `main` or whose CI run on `main` did
      not pass, sends every pre-release (a, b, rc or dev) to TestPyPI, and never runs two releases

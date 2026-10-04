@@ -275,7 +275,7 @@ Packaging, docs, demo, hardening only.
       `main`; README links absolute for the PyPI page; limits documented; test gaps closed (make
       targets both ways, purls of every type, the purl parser fuzzed, a real silent API server, an
       oversized output reaching `unknown`); `make demo-down` in CI; 18 release and packaging
-      facts recorded. ADR-0013 Amendment 1 waits for the owner. Second branch run
+      facts recorded. ADR-0013 Amendment 1 confirmed by the owner 2026-10-04. Second branch run
       37166399390 green, again "SUCCESS TEST: PASS (3/3 steps)".
 
 ## Last session (resume here)
@@ -284,8 +284,9 @@ Packaging, docs, demo, hardening only.
 - **`main` = 4a7e714, green** (CI 37164741543; M5 closed). Work branch `m6` holds M6: hardening,
   `make demo` and its CI job, the README-to-CLI test, 0.1.0 packaging, the release workflow and
   the review fixes. Branch runs 37165585399 and 37166399390 green ("SUCCESS TEST: PASS").
-- **Waiting on the owner:** (1) confirm ADR-0013 Amendment 1; (2) "push" to move `main` (after the
-  review fixes pass on the branch); (3) on test.pypi.org add a pending trusted publisher
+- **Review-fix runs 37167191406 and 37167684642 green** (kind 42, "SUCCESS TEST: PASS" in both).
+  Amendment 1 confirmed and `main` moved on the owner's "confirm and push".
+- **Waiting on the owner:** (3) on test.pypi.org add a pending trusted publisher
   (project `fixproof`, owner `Govardhan527`, repository `fixproof`, workflow `release.yml`,
   environment `testpypi`) and create the GitHub environments `testpypi` and `pypi` (with a
   required reviewer on `pypi`); (4) the rehearsal tag.

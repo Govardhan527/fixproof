@@ -773,6 +773,7 @@ $ fixproof gate --closed closed.yaml --image docker:app:ci
 | `--closed` | Path to `closed.yaml` |
 | `--image` | The built image: `docker:NAME[:TAG]`, `docker-archive:PATH`, `oci-archive:PATH`, or a registry image pinned by digest |
 | `--json` | Print the result as JSON instead of text |
+| `--out` | A **new or empty** directory to keep the decision in (*not in 0.1.0.post1*): `gate.json` (the result, the fixproof version, start and end times, the SHA-256 of `closed.yaml`), each tool's sanitised output under `raw/`, and `manifest.json` with the SHA-256 of every file |
 
 | Exit | Meaning |
 |---|---|

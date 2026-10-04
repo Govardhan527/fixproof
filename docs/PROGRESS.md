@@ -321,7 +321,8 @@ cloud accounts, and the other parked items.
       asserts every platform of the index a pod names is checked, and the live suite checks
       linux/amd64 and linux/arm64 of real images against the same ground truth.
 - [ ] Managed-cluster sign-in, proven on kind without a cloud account (ADR-0015).
-- [ ] An evidence bundle for `gate` (ADR-0016).
+- [ ] An evidence bundle for `gate` (ADR-0016): `gate --out DIR` writes `gate.json`
+      (`gate-bundle` 1.0.0), the raw tool output once per platform, and `manifest.json`.
 - [ ] M7 spec and scope reviews.
 
 ## Last session (resume here)

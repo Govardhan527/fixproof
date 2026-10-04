@@ -101,6 +101,20 @@ jobs:
           uv run --frozen pip-audit --strict --disable-pip --require-hashes \
             --requirement "$RUNNER_TEMP/requirements.txt"
 
+  # ADR-0013 item 4: the wheel a user would install builds, installs into a fresh environment,
+  # reports the project's version and validates documents with its packaged schemas.
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.9"
+      - name: Build, install in a fresh environment and check the wheel
+        run: scripts/check_package.sh "$RUNNER_TEMP/package"
+
   # ADR-0007 item 10: real Syft and Grype against the 8 fixture images. ADR-0010 item 9: the kind
   # demo cluster (scripts/demo_cluster.sh pins kind, kubectl, the node image, registry:2 and
   # httpd by digest) with the 6 SUCCESS TEST workloads and 2 real certbot releases.

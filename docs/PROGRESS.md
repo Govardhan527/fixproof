@@ -255,11 +255,15 @@ Packaging, docs, demo, hardening only.
 - [x] README with diagrams, a live demo and a user guide (owner request, 2026-10-02; written
       early, to be kept true as M4 to M6 land).
 - [x] M6 design accepted: ADR-0013 (owner answered the four questions 2026-10-04).
-- [ ] Hardening: safe YAML inputs (1 MB, no anchors or aliases); Kubernetes API timeouts; tool
-      output read up to 512 MB; property-based tests of the comparators and parsers.
-- [ ] `make demo` (`scripts/demo.sh`, `scripts/success_test.py`) and the CI `demo` job.
-- [ ] A test that holds the README to the CLI (options, exit codes, make targets).
-- [ ] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs.
+- [x] Hardening: safe YAML inputs (1 MB, no anchors or aliases); Kubernetes API timeouts; tool
+      output read up to 512 MB; property-based tests of the comparators and parsers (e7ad5c3,
+      377f46a, bf9af2e, 82b41eb).
+- [ ] `make demo` (`scripts/demo.sh`, `scripts/success_test.py`) and the CI `demo` job:
+      written (c4f03a7); its first CI run is pending.
+- [x] A test that holds the README to the CLI (options, exit codes, make targets) (10fce03); it
+      found the gate section had no options table or console example.
+- [ ] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs:
+      written; passes locally (the installed wheel validates the examples); CI pending.
 - [ ] Add the CI `release` job (tag `v*`: build, SBOM, PyPI trusted publishing), only after M6;
       TestPyPI rehearsal first (ADR-0013 item 5).
 

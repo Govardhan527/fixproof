@@ -1,14 +1,21 @@
 [project]
 name = "fixproof"
-version = "0.0.0"
+version = "0.1.0"
 description = "Per-asset proof that a remediated CVE is gone from container images and Kubernetes workloads, emitted as OpenVEX plus an evidence bundle."
+readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Govardhan" }]
 requires-python = ">=3.12"
+keywords = ["vulnerability", "vex", "openvex", "cyclonedx", "sbom", "kubernetes", "cve", "kev"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
     "Typing :: Typed",
 ]
 # Runtime dependencies are added in the milestone that first uses them (ADR-0002).
@@ -26,6 +33,12 @@ dependencies = [
     "rfc3987-syntax>=1.1.0",
     "typer>=0.27",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Govardhan527/fixproof"
+Source = "https://github.com/Govardhan527/fixproof"
+Issues = "https://github.com/Govardhan527/fixproof/issues"
+Changelog = "https://github.com/Govardhan527/fixproof/blob/main/docs/PROGRESS.md"
 
 [project.scripts]
 fixproof = "fixproof.cli:main"

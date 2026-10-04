@@ -350,7 +350,7 @@ two versions from their release pages). fixproof is not on PyPI yet.
 ```console
 $ uv tool install git+https://github.com/Govardhan527/fixproof
 $ fixproof --version
-fixproof 0.0.0
+fixproof 0.1.0
 ```
 
 **2. Install the pinned scanners** (Syft 1.54.0 and Grype 0.119.0; each download is checked

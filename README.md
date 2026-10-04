@@ -95,7 +95,9 @@ flowchart TD
 ### One image, step by step
 
 Both tools read the image straight from the registry by digest (no Docker daemon needed, nothing
-is run). fixproof checks that the digest the tools scanned is the one you asked for.
+is run). fixproof checks that the digest the tools scanned is the one you asked for. A
+multi-platform image is checked on each of its Linux platforms ([details](#multi-platform-images);
+not in 0.1.0.post1; in the next release).
 
 ```mermaid
 sequenceDiagram
@@ -112,6 +114,9 @@ sequenceDiagram
     FP->>KEV: download the feed once (HTTPS), check its schema
     KEV-->>FP: is the CVE known exploited? (never changes a verdict)
     loop every image in scope.yaml
+        FP->>Reg: crane manifest IMAGE@DIGEST (one platform, or an index of several)
+    end
+    loop every platform of every image (its own manifest digest)
         FP->>Grype: grype registry:IMAGE@DIGEST -o json
         Grype->>Reg: read manifest and layers (read-only)
         Grype-->>FP: matches, incl. related ids (GHSA to CVE), DB version
@@ -120,6 +125,7 @@ sequenceDiagram
         Syft-->>FP: every package and version found
         FP->>FP: compare each copy of the package with the fix,<br/>then apply the verdict rule
     end
+    FP->>FP: one verdict per image from its platforms
     FP->>FP: strip image config, file listings and tool config<br/>from what is stored
     FP-->>You: openvex.json, cyclonedx.json, report.html,<br/>bundle.json, raw/, manifest.json, exit code
 ```
@@ -355,8 +361,9 @@ gets `403 Forbidden` outside its namespaces.
 
 **Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/) or
 [pipx](https://pipx.pypa.io/), network access to your registries, and Syft 1.54.0 and Grype
-0.119.0 on `PATH`. fixproof itself is pure Python; the scanner install script below fetches the
-Linux x86-64 builds (on other platforms, install those two versions from their release pages).
+0.119.0 on `PATH` (and crane 0.22.1, which lists an image's platforms: not in 0.1.0.post1; in the next release). fixproof itself
+is pure Python; the scanner install script below fetches the Linux x86-64 builds (on other
+platforms, install those versions from their release pages).
 
 **1. Install fixproof** from [PyPI](https://pypi.org/project/fixproof/), in an environment of its
 own:
@@ -448,10 +455,11 @@ tracker, Red Hat security data, Alpine secdb, GitHub advisories), not from the s
 
 | Field | Required | Meaning |
 |---|---|---|
-| `schema_version` | yes | `"1.0.0"` |
+| `schema_version` | yes | `"1.0.0"`, or `"1.1.0"` to use `platforms` |
 | `registries` | yes | The allowlist: registry hosts fixproof may read from (`host[:port]`). |
 | `images` | `images`, `clusters` or both | Full references **pinned by digest**: `registry/repository@sha256:<64 hex>`. The registry host is required (no implied Docker Hub) and must be in `registries`. Tags are refused: a tag can move, a digest cannot. |
 | `clusters` | `images`, `clusters` or both | Running workloads to check: each entry names a kubeconfig `context` and the `namespaces` to read. See [Kubernetes workloads](#kubernetes-workloads). |
+| `platforms` | no (1.1.0) | Which platforms of a multi-platform image to check, e.g. `[linux/amd64, linux/arm64]`; without it, every Linux platform. See [Multi-platform images](#multi-platform-images). |
 
 ```yaml
 schema_version: "1.0.0"
@@ -475,12 +483,51 @@ or `skopeo inspect docker://IMAGE:TAG`. JSON Schemas for both files ship in
 [`src/fixproof/schemas/`](https://github.com/Govardhan527/fixproof/tree/main/src/fixproof/schemas/); point your editor's YAML schema support at them
 to catch mistakes while you type.
 
+### Multi-platform images
+
+*(Not in 0.1.0.post1; in the next release.)*
+
+Many images are an index of several platforms (`linux/amd64`, `linux/arm64`, …), and each node or
+laptop pulls the one for its own CPU. fixproof reads the image's manifest with
+[crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane), then checks every
+Linux platform through that platform's own manifest digest, so a verdict never describes a
+platform it did not check:
+
+- the image is `fixed` only if every platform checked is `fixed`, `still_affected` if any platform
+  is, and `unknown` otherwise;
+- each platform gets its own line, verdict and evidence (illustrative):
+
+```text
+still_affected  docker.io/team/app@sha256:4c1c5b3a…
+                2 platforms checked: linux/amd64 fixed, linux/arm64 still_affected.
+                linux/amd64: both methods agree the vulnerable component is gone. grype: … sbom_version: …
+                linux/arm64: both methods find the vulnerable component. grype: … sbom_version: …
+                Not checked: linux/arm/v7 (not in platforms).
+```
+
+To check only the platforms your nodes run, list them (`scope.yaml` 1.1.0; `closed.yaml` 1.1.0
+takes the same list for `gate`):
+
+```yaml
+schema_version: "1.1.0"
+registries: [docker.io]
+images:
+  - docker.io/team/app@sha256:4c1c5b3a5e2e6d7f8a9b0c1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7
+platforms: [linux/amd64, linux/arm64]
+```
+
+`linux/arm64` also matches `linux/arm64/v8`, and `linux/arm` matches `linux/arm/v7`, as containerd
+matches them. A single-platform image is checked whatever its platform; build attestations in an
+index are not platforms. crane reads registries exactly as Syft and Grype do (the same Docker
+config and credential helpers), and fixproof itself never reads a credential.
+
 ### Kubernetes workloads
 
 fixproof lists the pods in each namespace and takes every container's image from its status
 (`imageID`): the digest the node actually pulled, not the tag in the pod spec. Init containers
-count; ephemeral debug containers do not. Each image is scanned once however many pods run it,
-and every workload gets that image's verdict, shown with its pod name and owner. Example output
+count; ephemeral debug containers do not. Each image is scanned once however many pods run it
+(on each of its platforms), and every workload gets that image's verdict, shown with its pod
+name and owner. Example output
 (illustrative; names and digests invented):
 
 ```text
@@ -584,7 +631,7 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | `--out` | A **new or empty** directory. fixproof never overwrites evidence. |
 | `--author` | Who issues the VEX (OpenVEX `author`), e.g. your team and address |
 | `--json` | Print a machine-readable summary on stdout ([schema](https://github.com/Govardhan527/fixproof/blob/main/src/fixproof/schemas/verify-summary.schema.json), [example](https://github.com/Govardhan527/fixproof/blob/main/examples/verify-summary/three-images.json)) |
-| `--jobs` | How many images to scan at the same time (default 4; each scan peaks at about 300 MB). The results are the same for any value; `--jobs 1` scans one at a time. |
+| `--jobs` | How many image platforms to scan at the same time (default 4; each scan peaks at about 300 MB). The results are the same for any value; `--jobs 1` scans one at a time. |
 
 ---
 
@@ -606,8 +653,8 @@ $ fixproof verify --cve CVE-2023-4911 --fix fix.yaml --scope scope.yaml \
 | `openvex.json` | One OpenVEX v0.2.0 statement per image, validated against the official schema before it is written |
 | `cyclonedx.json` | The same verdicts as CycloneDX 1.6 VEX, one entry per image, validated against the official 1.6.2 schema before it is written |
 | `report.html` | A self-contained page for people: the counts, the KEV status, and every image or workload with its verdict, digest and reason. No JavaScript; it loads nothing from the network. |
-| `bundle.json` | Run times, fixproof version, SHA-256 of `fix.yaml` and `scope.yaml`, Syft/Grype/DB versions, the CISA KEV feed used (or why it could not be read), and per image or workload: verdict, reason, both check results, scanned image ID, manifest digest and platform; a workload also has its cluster, namespace, pod, container and owner |
-| `raw/NNN-grype.json`, `raw/NNN-sbom_version.json` | Each tool's own output for asset NNN, minus anything that is not package metadata (see below). Workloads running the same image share its files. |
+| `bundle.json` | Run times, fixproof version, SHA-256 of `fix.yaml` and `scope.yaml`, Syft/Grype/DB versions, the CISA KEV feed used (or why it could not be read), and per image or workload: verdict, reason, and for each platform checked its manifest digest, verdict, reason, both check results and what each tool scanned, plus the platforms not checked and why; a workload also has its cluster, namespace, pod, container and owner |
+| `raw/NNN-grype.json`, `raw/NNN-sbom_version.json` | Each tool's own output for asset NNN, minus anything that is not package metadata (see below); `raw/NNN-linux-arm64-grype.json` and so on for an image with several platforms. Workloads running the same image share its files. |
 | `manifest.json` | SHA-256 and size of every other file |
 
 ### How verdicts become VEX
@@ -692,7 +739,9 @@ closed:
 daemon), `docker-archive:PATH` (`docker save`), `oci-archive:PATH`, or a registry image pinned
 by digest (optionally written `registry:…`) from a registry in `closed.yaml`. Each closed CVE
 gets both checks and the verdict rule, as in `verify`, and the output names the image ID and
-manifest digest that were read. If the two checks read different images (a tag moved between
+manifest digest that were read. A multi-platform registry image is checked on each Linux
+platform, or on those `closed.yaml` 1.1.0 lists in `platforms` ([details](#multi-platform-images);
+not in 0.1.0.post1). If the two checks read different images (a tag moved between
 them, say), nothing is proven and every closed CVE is `unknown`.
 
 On a workstation, the same check:
@@ -760,10 +809,12 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 
 ## Limitations
 
-- **One platform per image.** For a multi-platform image, both tools scan the host's platform
-  (here `linux/amd64`); the bundle records which. A verdict covers that platform only. For a pod,
-  fixproof does not check which platform its node runs (that would need cluster-wide read access
-  to nodes), so a pod on an arm64 node is checked against the platform fixproof scanned.
+- **Linux platforms only.** A multi-platform image's Linux platforms are checked; others (for
+  example `windows/amd64`) are named as not checked. In 0.1.0.post1 only the host's platform was
+  scanned (not in 0.1.0.post1; in the next release: every platform, see [Multi-platform images](#multi-platform-images)). A local
+  multi-platform OCI archive given to `gate` is checked for the platform the tools pick.
+- **Docker Hub limits.** Each platform checked is one more manifest read, which Docker Hub
+  counts toward its pull limits: for a large scope, list `platforms` and sign in to Docker Hub.
 - **A shared blind spot.** Grype uses Syft's cataloguing internally, so a package Syft cannot
   see (for example, a vendored copy without package metadata) is invisible to both checks. The
   two checks are independent in their decision (advisory data versus your stated fix), not in
@@ -795,6 +846,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine and CRI-O nodes, and several images scanned at once (`--jobs`) | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
 | M6 | Packaging, docs, end-to-end demo, hardening; 0.1.0 released on PyPI and GitHub | done |
+| M7 | Every platform of a multi-platform image; managed-cluster sign-in (exec plugins, credential helpers) proven on kind; an evidence bundle for `gate` | in progress |
 
 ---
 

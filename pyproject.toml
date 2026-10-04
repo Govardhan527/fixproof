@@ -1,6 +1,6 @@
 [project]
 name = "fixproof"
-version = "0.1.0"
+version = "0.1.0.post1"
 description = "Per-asset proof that a remediated CVE is gone from container images and Kubernetes workloads, emitted as OpenVEX plus an evidence bundle."
 readme = "README.md"
 license = "Apache-2.0"

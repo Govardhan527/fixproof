@@ -16,7 +16,7 @@ It writes the answer as an [OpenVEX](https://github.com/openvex/spec) document a
 VEX, with an HTML summary and an evidence bundle (every tool output, hashed), and exits with a
 code your CI can act on.
 
-> **Status: 0.1.0, alpha** ([PyPI](https://pypi.org/project/fixproof/)). Image verification is
+> **Status: 0.1.0.post1, alpha** ([PyPI](https://pypi.org/project/fixproof/)). Image verification is
 > exercised weekly against real public images (see [Live demo](#live-demo-a-real-run)).
 > Kubernetes workloads are checked in CI on real nodes with all three common container runtimes:
 > kind (containerd), with the six SUCCESS TEST workloads, real certbot releases and every edge
@@ -314,7 +314,7 @@ Deployments in namespace `fixproof-demo`, five from an open local registry and o
 with an image pull secret; fixproof gets only the read-only `fixproof-reader` token and no
 registry credentials. Scope: [`examples/scope/kind-demo.yaml`](https://github.com/Govardhan527/fixproof/blob/main/examples/scope/kind-demo.yaml).
 Long reasons are abridged with `…`; everything else is as printed. That run predates the KEV
-check, so fixproof 0.1.0 prints one more line, `KEV: …`, before the summary (as in the live demo
+check, so fixproof 0.1.0 and later print one more line, `KEV: …`, before the summary (as in the live demo
 above).
 
 ```console
@@ -364,14 +364,14 @@ own:
 ```console
 $ uv tool install fixproof        # or: pipx install fixproof
 $ fixproof --version
-fixproof 0.1.0
+fixproof 0.1.0.post1
 ```
 
 **2. Install the pinned scanners** (Syft 1.54.0 and Grype 0.119.0; each download is checked
 against its SHA-256 before it is unpacked). Download the script, read it, then run it:
 
 ```console
-$ curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh
+$ curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0.post1/scripts/install_scanners.sh
 $ less install_scanners.sh
 $ bash install_scanners.sh "$HOME/.local/bin"      # any directory on your PATH
 ```
@@ -648,8 +648,8 @@ GitHub Actions:
 ```yaml
 - name: Install fixproof and the scanners
   run: |
-    pipx install fixproof==0.1.0     # GitHub's Ubuntu runners have pipx and Python 3.12
-    curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh
+    pipx install fixproof==0.1.0.post1   # GitHub's Ubuntu runners have pipx and Python 3.12
+    curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0.post1/scripts/install_scanners.sh
     bash install_scanners.sh "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
     grype db update
 - name: Prove the fix

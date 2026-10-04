@@ -1218,6 +1218,12 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
     `1d144c7fb063ac2fb905133160d96b18c2ce99a7de120242540e14f6c5ca31cd`, read 2026-10-04) lists
     "Python 3.12.3" and "Pipx 1.16.7" and no uv, which is why the README's CI example installs
     fixproof with `pipx`. VERIFIED.
+  - Post-releases (PyPA "Version specifiers", "Post-releases"): "Some projects use
+    post-releases to address minor errors in a final release that do not affect the distributed
+    software (for example, correcting an error in the release notes)." Under "Version matching",
+    "Given the version `1.1.post1`", "`== 1.1`" does not match, so a pin must name the
+    post-release. VERIFIED. `packaging` 26.3 reads `0.1.0.post1` as canonical and not a
+    pre-release, and `==0.1.0` does not match it (local run, 2026-10-04). OBSERVED.
   - The name `fixproof` was still free on pypi.org and test.pypi.org on 2026-10-04 (404 from
     `/pypi/fixproof/json` on both, before the first upload). OBSERVED.
 

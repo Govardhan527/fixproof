@@ -330,7 +330,11 @@ cloud accounts, and the other parked items.
 - **Date:** 2026-10-04. **Current milestone:** M7 (the owner's approval is recorded in the M7
   section; it does not cover releases or uploads).
 - **Released:** 0.1.0 and 0.1.0.post1 (Latest) on PyPI and GitHub; `main` = 49f208b, green.
-- **In progress:** M7 item 1 (ADR-0014, every platform) on the work branch `m7-platforms`.
-- **Next steps, in order:** branch CI (two full runs) and the live suite on the branch; `main`;
-  then ADR-0015 (sign-in on kind) and ADR-0016 (`gate` evidence), each through branch CI; the M7
-  reviews. A release of this work is the owner's call.
+- **M7 built** on the work branch `m7`: every platform (ADR-0014 and its Amendment 1), sign-in
+  on kind (ADR-0015), `gate --out` (ADR-0016), and the fixes from the M7 spec and scope reviews.
+  Earlier branch runs: live suite 37214111809 green on linux/amd64 and linux/arm64; full run
+  37215066416 green for the platforms work.
+- **Waiting on the owner:** confirm ADR-0014 Amendment 1 (crane as a new pinned tool); close M7;
+  decide whether to release.
+- **Next steps, in order:** two full green runs on `m7`; `main`; tick the M7 items with their
+  evidence.

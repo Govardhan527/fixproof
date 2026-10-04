@@ -283,7 +283,12 @@ Packaging, docs, demo, hardening only.
       files to https://pypi.org/project/fixproof/0.1.0/, and PyPI's sha256 for each equals
       `SHA256SUMS`. `uv tool install fixproof` and `pipx install fixproof` install 0.1.0 from
       PyPI in fresh environments; the uv install repeated the Certbot check (exit 1) and the gate
-      (exit 1 on v2.6.0).
+      (exit 1 on v2.6.0). **0.1.0.post1 released 2026-10-04** (owner: "release post1"), a
+      docs-only post-release carrying the corrected README to PyPI: `main` = c23af52 (no change
+      under `src/` since `v0.1.0`; branch run 37206221899, `main` CI 37206507543 green), release
+      run 37207094052, GitHub release "fixproof 0.1.0.post1" (Latest); `scripts/publish.sh
+      v0.1.0.post1` uploaded both files, PyPI's sha256 for each equals `SHA256SUMS`, the project
+      page shows the corrected README, and `pip` and `uv` install it in fresh environments.
 - [x] M6 spec and scope reviews (2026-10-04): nothing out of scope. Fixed: pre-releases detected
       with `packaging` (dev releases were missed); the release checks the commit is on a green
       `main`; README links absolute for the PyPI page; limits documented; test gaps closed (make
@@ -304,9 +309,10 @@ Packaging, docs, demo, hardening only.
 
 - **Date:** 2026-10-04. **Current milestone:** none. M0 to M6 are closed (M6 on the owner's
   "Approved", 2026-10-04); the SUCCESS TEST passes via `make demo` in CI on `main`.
-- **fixproof 0.1.0 is released:** https://pypi.org/project/fixproof/0.1.0/ and the GitHub release
-  `v0.1.0` (Latest), the same bytes on both (sha256 checked); installs with `uv tool install
-  fixproof` or `pipx install fixproof`. Details in the M6 release item.
+- **fixproof is released:** 0.1.0 and the docs-only 0.1.0.post1 (Latest) on
+  https://pypi.org/project/fixproof/ and as GitHub releases, the same bytes on both (sha256
+  checked); installs with `uv tool install fixproof` or `pipx install fixproof`. Details in the
+  M6 release item.
 - **Release route (ADR-0013 Amendment 2, confirmed):** bump the version on a branch, prove it in
   CI, move `main`, tag `vX.Y.Z` (the workflow makes the GitHub release), then the owner runs,
   or asks for, `scripts/publish.sh vX.Y.Z`; check the PyPI sha256 values against `SHA256SUMS`.
@@ -315,9 +321,8 @@ Packaging, docs, demo, hardening only.
   stale statements, among them a CI example that used `uv`, which GitHub's Ubuntu runners lack
   (now `pipx`), and a live demo printed by an older build (re-run with 0.1.0 from PyPI): 7c90d90,
   `main` CI 37205274796 green.
-- **Open decision for the owner:** PyPI shows the README as uploaded with 0.1.0, so those eight
-  statements stay stale there until a new upload; a docs-only post-release `0.1.0.post1`
-  (PEP 440) through the same release steps would update it.
+- **0.1.0.post1 is the latest release** (docs-only, on the owner's "release post1"): PyPI and the
+  GitHub release carry the corrected README; details in the M6 release item.
 - **Waiting on the owner:** what comes next. Candidates are in `docs/PARKED.md` (the plan's V2
   items, managed clusters and cloud credential helpers, arm64 nodes, a KEV cache for air-gapped
   use, a gate evidence bundle, more gate sources). Nothing is planned until the owner picks.

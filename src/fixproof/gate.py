@@ -12,17 +12,22 @@ Exit codes: 0 every closed CVE proven gone; 1 at least one is back; 2 none back 
 could not be proven, with the reason; 3 bad input (the CLI).
 """
 
+import hashlib
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, JsonValue
 
-from fixproof.bundle import Summary, summarise
+from fixproof import __version__
+from fixproof.bundle import Summary, check_output_dir, manifest_of, raw_part, summarise
+from fixproof.canonical import iso, to_json
 from fixproof.check import check_platform, finish
 from fixproof.errors import FixproofError
 from fixproof.inputs import ClosedFile
 from fixproof.kev import Catalogue, Kev, Unavailable
+from fixproof.methods import MethodOutcome
 from fixproof.model import (
     Asset,
     BuildAsset,
@@ -123,7 +128,9 @@ def run_gate(
     image: str,
     kev_catalogue: Catalogue | Unavailable,
     run: Runner = run_tool,
+    keep: list[MethodOutcome] | None = None,
 ) -> GateResult:
+    """The gate's result; `keep`, when given, receives every method outcome (ADR-0016)."""
     asset = gate_asset(image, closed)
     run = once_per_call(run)
     platforms = plan(asset, closed.platforms, run)
@@ -133,6 +140,8 @@ def run_gate(
         checks = [check_platform(asset, target, entry.fix, run) for target in platforms.targets]
         assessment = finish(asset, platforms, checks)
         verdict = assessment.verdict
+        if keep is not None:
+            keep.extend(assessment.outcomes)
         for outcome in assessment.outcomes:
             if outcome.tool and outcome.tool not in tools:
                 tools.append(outcome.tool)
@@ -164,3 +173,70 @@ def run_gate(
         summary=summarise(verdicts),
         results=tuple(lines),
     )
+
+
+# ADR-0016: `gate --out DIR` keeps the decision as evidence (format `gate-bundle`, 1.0.0)
+GATE_BUNDLE_VERSION: Literal["1.0.0"] = "1.0.0"
+
+
+class RawFile(Contract):
+    platform: Text
+    digest: str
+    method: Text
+    path: Text
+
+
+class GateBundle(Contract):
+    """`gate.json` in `gate --out`: the decision, what it was made from, and its raw files."""
+
+    schema_version: Literal["1.0.0"]
+    fixproof_version: Text
+    started: Text
+    finished: Text
+    closed_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    raw: tuple[RawFile, ...] = Field(description="Each tool's sanitised output, per platform.")
+    result: GateResult
+
+
+def write_gate_bundle(
+    out: Path,
+    *,
+    result: GateResult,
+    outcomes: Sequence[MethodOutcome],
+    closed_bytes: bytes,
+    started: datetime,
+    finished: datetime,
+    tool_version: str = __version__,
+) -> GateBundle:
+    """Write `gate.json`, `raw/` and `manifest.json` to `out`, which must be new or empty."""
+    check_output_dir(out)
+    names = [p.platform for p in result.platforms]
+    files: dict[str, bytes] = {}
+    raw: list[RawFile] = []
+    for outcome in outcomes:  # the tools ran once per platform; every closed CVE shares it
+        method = outcome.result.method.value
+        if outcome.raw is None or any(
+            (r.platform, r.digest, r.method) == (outcome.platform, outcome.digest, method)
+            for r in raw
+        ):
+            continue
+        path = f"raw/{raw_part(outcome.platform, outcome.digest, names)}{method}.json"
+        files[path] = to_json(outcome.raw)
+        raw.append(
+            RawFile(platform=outcome.platform, digest=outcome.digest, method=method, path=path)
+        )
+    record = GateBundle(
+        schema_version=GATE_BUNDLE_VERSION,
+        fixproof_version=tool_version,
+        started=iso(started),
+        finished=iso(finished),
+        closed_sha256=hashlib.sha256(closed_bytes).hexdigest(),
+        raw=tuple(raw),
+        result=result,
+    )
+    files["gate.json"] = to_json(record.model_dump(mode="json"))
+    files["manifest.json"] = to_json(manifest_of(files).model_dump(mode="json"))
+    (out / "raw").mkdir(parents=True, exist_ok=True)
+    for path, data in files.items():
+        (out / path).write_bytes(data)
+    return record

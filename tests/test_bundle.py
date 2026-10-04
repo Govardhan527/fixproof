@@ -162,7 +162,7 @@ def test_an_invalid_cyclonedx_document_writes_nothing(tmp_path: Path) -> None:
 
 
 def test_raw_file_names_say_the_platform_and_never_collide() -> None:
-    from fixproof.bundle import _raw_part
+    from fixproof.bundle import raw_part as _raw_part
 
     one, two = "sha256:" + "a" * 64, "sha256:" + "b" * 64
     assert _raw_part("linux/amd64", one, ["linux/amd64"]) == ""  # one platform: names as before

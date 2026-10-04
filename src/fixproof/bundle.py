@@ -133,7 +133,7 @@ def summarise(verdicts: Sequence[AssetVerdict]) -> Summary:
     )
 
 
-def _raw_part(platform: str, digest: str, names: Sequence[str]) -> str:
+def raw_part(platform: str, digest: str, names: Sequence[str]) -> str:
     """The platform part of a raw file name: none for a single platform, `linux-arm-v7-` for one
     of several, with the digest's first hex digits when an index lists a platform twice."""
     if len(names) < 2:
@@ -142,6 +142,17 @@ def _raw_part(platform: str, digest: str, names: Sequence[str]) -> str:
     if names.count(platform) > 1:
         part += "-" + digest.removeprefix("sha256:")[:12]
     return part + "-"
+
+
+def manifest_of(files: dict[str, bytes]) -> Manifest:
+    """SHA-256 and size of every file, sorted by path."""
+    return Manifest(
+        schema_version=MANIFEST_VERSION,
+        files=tuple(
+            ManifestEntry(path=path, sha256=hashlib.sha256(data).hexdigest(), size=len(data))
+            for path, data in sorted(files.items())
+        ),
+    )
 
 
 def check_output_dir(out: Path) -> None:
@@ -184,7 +195,7 @@ def write_bundle(
                 method = outcome.result.method.value
                 raw_ref = raw_refs.get(id(outcome))
                 if raw_ref is None and outcome.raw is not None:
-                    where = _raw_part(platform.platform, platform.digest, names)
+                    where = raw_part(platform.platform, platform.digest, names)
                     raw_ref = raw_refs[id(outcome)] = f"raw/{index:03d}-{where}{method}.json"
                     files[raw_ref] = to_json(outcome.raw)
                 results.append(outcome.result.model_copy(update={"raw_ref": raw_ref}))
@@ -231,14 +242,7 @@ def write_bundle(
     from fixproof import htmlreport  # here, not at the top: htmlreport imports this module
 
     files["report.html"] = htmlreport.render(bundle).encode("utf-8")
-    manifest = Manifest(
-        schema_version=MANIFEST_VERSION,
-        files=tuple(
-            ManifestEntry(path=path, sha256=hashlib.sha256(data).hexdigest(), size=len(data))
-            for path, data in sorted(files.items())
-        ),
-    )
-    files["manifest.json"] = to_json(manifest.model_dump(mode="json"))
+    files["manifest.json"] = to_json(manifest_of(files).model_dump(mode="json"))
     for path, data in files.items():
         (out / path).write_bytes(data)
     return bundle

@@ -1,0 +1,126 @@
+{
+  "closed_sha256": "ebd5b3b6c7f56246349d185eacc272f3430e591a10960b1774162342bebf196c",
+  "finished": "2026-10-02T09:01:30Z",
+  "fixproof_version": "0.0.0",
+  "raw": [
+    {
+      "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+      "method": "grype",
+      "path": "raw/grype.json",
+      "platform": "linux/amd64"
+    },
+    {
+      "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+      "method": "sbom_version",
+      "path": "raw/sbom_version.json",
+      "platform": "linux/amd64"
+    }
+  ],
+  "result": {
+    "image": "localhost:5001/fixproof/demo-app@sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+    "not_checked": [],
+    "platforms": [
+      {
+        "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+        "platform": "linux/amd64",
+        "scanned": {
+          "grype": {
+            "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+            "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+            "platform": "linux/amd64"
+          },
+          "sbom_version": {
+            "image_id": "sha256:b79606fb3afea5bd1609ed40b622142f1c98125abcfe89a76a661b0e8e343910",
+            "manifest_digest": "sha256:56272f4e41045942ef0e5255b87e13d401d88990d592065667d44e184d63d4e7",
+            "platform": "linux/amd64"
+          }
+        }
+      }
+    ],
+    "results": [
+      {
+        "cve": "CVE-2023-32681",
+        "kev": {
+          "entry": null,
+          "feed": {
+            "catalog_version": "2026.10.02",
+            "count": 2,
+            "date_released": "2026-10-02T15:19:38.2945Z",
+            "retrieved": "2026-10-02T09:00:00Z",
+            "sha256": "309ae42a2274af04ee9f2aa0915eacac7a3636e6a763aa4b8db011275c5a19b6",
+            "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+          },
+          "reason": null,
+          "status": "not_listed"
+        },
+        "platforms": [
+          {
+            "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+            "platform": "linux/amd64",
+            "verdict": "still_affected"
+          }
+        ],
+        "reason": "both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.30.0 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.30.0 at /usr/local/lib/python3.12/site-packages/requests-2.30.0.dist-info/METADATA is below the fix (2.31.0).",
+        "verdict": "still_affected"
+      },
+      {
+        "cve": "CVE-2021-44228",
+        "kev": {
+          "entry": {
+            "cve": "CVE-2021-44228",
+            "date_added": "2021-12-10",
+            "due_date": "2021-12-24",
+            "known_ransomware_campaign_use": "Known",
+            "product": "Log4j2",
+            "required_action": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+            "vendor_project": "Apache",
+            "vulnerability_name": "Apache Log4j2 Remote Code Execution Vulnerability"
+          },
+          "feed": {
+            "catalog_version": "2026.10.02",
+            "count": 2,
+            "date_released": "2026-10-02T15:19:38.2945Z",
+            "retrieved": "2026-10-02T09:00:00Z",
+            "sha256": "309ae42a2274af04ee9f2aa0915eacac7a3636e6a763aa4b8db011275c5a19b6",
+            "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+          },
+          "reason": null,
+          "status": "listed"
+        },
+        "platforms": [
+          {
+            "digest": "sha256:8daf5ce580964a4e57fdce2626e438e113a8908cf8f0c6572641db7e079a2337",
+            "platform": "linux/amd64",
+            "verdict": "fixed"
+          }
+        ],
+        "reason": "both methods agree the vulnerable component is gone. grype: no match for CVE-2021-44228 among 4 matches. sbom_version: no log4j-core package among 1 packages.",
+        "verdict": "fixed"
+      }
+    ],
+    "schema_version": "2.0.0",
+    "summary": {
+      "fixed": 1,
+      "still_affected": 1,
+      "unknown": 0
+    },
+    "tools": [
+      {
+        "db": {
+          "built": "2026-10-02T06:31:53Z",
+          "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_2026-10-02T00:35:12Z_1790922713.tar.zst?checksum=sha256%3A3c368df5c3624fe083ad646ca3be59525739dfe9caa4b6d14c7f252d155fbd98",
+          "schemaVersion": "v6.1.9"
+        },
+        "name": "grype",
+        "version": "0.119.0"
+      },
+      {
+        "name": "syft",
+        "schema": "16.1.11",
+        "version": "1.54.0"
+      }
+    ]
+  },
+  "schema_version": "1.0.0",
+  "started": "2026-10-02T09:00:00Z"
+}

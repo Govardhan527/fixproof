@@ -17,7 +17,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from fixproof.bundle import BUNDLE_VERSION, MANIFEST_VERSION, Bundle, Manifest
-from fixproof.gate import GATE_VERSION, GateResult
+from fixproof.gate import GATE_BUNDLE_VERSION, GATE_VERSION, GateBundle, GateResult
 from fixproof.inputs import (
     CLOSED_VERSION,
     FIX_VERSION,
@@ -34,6 +34,7 @@ ID_BASE = "https://github.com/Govardhan527/fixproof/schemas"
 FORMATS: dict[str, tuple[type[BaseModel], str]] = {
     "bundle": (Bundle, BUNDLE_VERSION),
     "closed": (ClosedFile, CLOSED_VERSION),
+    "gate-bundle": (GateBundle, GATE_BUNDLE_VERSION),
     "gate-result": (GateResult, GATE_VERSION),
     "fix": (FixFile, FIX_VERSION),
     "manifest": (Manifest, MANIFEST_VERSION),

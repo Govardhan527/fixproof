@@ -17,8 +17,9 @@ from fixproof import __version__, kev
 from fixproof.bundle import check_output_dir, summarise, write_bundle
 from fixproof.cyclonedx import build_bom
 from fixproof.errors import FixproofError
-from fixproof.gate import GateLine, GateResult, run_gate
+from fixproof.gate import GateLine, GateResult, run_gate, write_gate_bundle
 from fixproof.inputs import load_closed, load_fix, load_scope
+from fixproof.methods import MethodOutcome
 from fixproof.model import AssetVerdict, Verdict, WorkloadAsset
 from fixproof.report import verify_summary
 from fixproof.verdict import platform_lines
@@ -151,6 +152,10 @@ def gate(
         ),
     ],
     as_json: Annotated[bool, typer.Option("--json", help="Print the result as JSON.")] = False,
+    out: Annotated[
+        Path | None,
+        typer.Option(help="New or empty directory to keep the decision and the tool output in."),
+    ] = None,
 ) -> None:
     """Block a release that brings back a CVE marked closed. Exit 0 when every closed CVE is
     proven gone from the image, 1 when one is back, 2 when one cannot be proven either way (the
@@ -158,8 +163,21 @@ def gate(
     """
     try:
         closed_file = load_closed(closed)
-        catalogue = kev.load(now(), kev_fetcher)
-        result = run_gate(closed_file, image, catalogue)
+        if out is not None:
+            check_output_dir(out)
+        started = now()
+        catalogue = kev.load(started, kev_fetcher)
+        outcomes: list[MethodOutcome] = []
+        result = run_gate(closed_file, image, catalogue, keep=outcomes)
+        if out is not None:
+            write_gate_bundle(
+                out,
+                result=result,
+                outcomes=outcomes,
+                closed_bytes=closed.read_bytes(),
+                started=started,
+                finished=now(),
+            )
     except (FixproofError, ValueError) as exc:
         typer.echo(f"fixproof: {exc}", err=True)
         raise typer.Exit(EXIT_USAGE) from exc

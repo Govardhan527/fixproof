@@ -7,6 +7,7 @@ intended change with:
 
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -129,3 +130,36 @@ def test_golden_gate_result() -> None:
         path.parent.mkdir(exist_ok=True)
         path.write_bytes(produced)
     assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"
+
+
+def test_golden_gate_bundle(tmp_path: Path) -> None:
+    """`fixproof gate --out` on the scenario's vulnerable image (examples/gate-bundle/)."""
+    from fixproof import kev
+    from fixproof.gate import run_gate, write_gate_bundle
+    from fixproof.inputs import ClosedFile
+    from scenario import KEV_FEED, VULNERABLE, answers
+    from tool_outputs import image_runner
+
+    text = (EXAMPLES / "closed" / "release-gate.yaml").read_bytes()
+    closed = ClosedFile.model_validate(yaml.safe_load(text))
+    closed = closed.model_copy(update={"registries": ("localhost:5001",)})
+    outcomes: list[Any] = []
+    result = run_gate(
+        closed, VULNERABLE.reference, kev.load(START, lambda url: KEV_FEED),
+        image_runner(answers()), keep=outcomes,
+    )  # fmt: skip
+    write_gate_bundle(
+        tmp_path / "out", result=result, outcomes=outcomes, closed_bytes=text,
+        started=START, finished=FINISH, tool_version=TOOL_VERSION,
+    )  # fmt: skip
+    for name in ("gate", "manifest"):
+        produced = (tmp_path / "out" / f"{name}.json").read_bytes()
+        path = (
+            EXAMPLES
+            / ("gate-bundle" if name == "gate" else "manifest")
+            / ("reintroduced.json" if name == "gate" else "gate-reintroduced.json")
+        )
+        if UPDATE:
+            path.parent.mkdir(exist_ok=True)
+            path.write_bytes(produced)
+        assert path.read_bytes() == produced, f"{path} is stale; see this module's docstring"

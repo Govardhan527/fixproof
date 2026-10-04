@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "gate.json",
+      "sha256": "f22dcf3309e39479aca66ee709151c2c1b6b44ac31a1d8fbce5ac58c06d0a774",
+      "size": 5048
+    },
+    {
+      "path": "raw/grype.json",
+      "sha256": "5e4cbe3053e005a7bece54b0a737c6fec200a637ff2c93406123ed395739fed7",
+      "size": 30353
+    },
+    {
+      "path": "raw/sbom_version.json",
+      "sha256": "98e7475f6eebaa1702cead388b8d3bf0c9f42f393465f88dd758da71eb13aee1",
+      "size": 9965
+    }
+  ],
+  "schema_version": "1.0.0"
+}

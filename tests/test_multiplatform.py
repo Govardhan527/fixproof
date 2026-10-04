@@ -245,3 +245,29 @@ def _unavailable() -> Any:
     from fixproof import kev
 
     return kev.Unavailable("offline in this test")
+
+
+def test_the_gate_bundle_keeps_each_platforms_output_under_its_name(tmp_path: Path) -> None:
+    from fixproof.gate import write_gate_bundle
+
+    closed = ClosedFile.model_validate(
+        {
+            "schema_version": "1.0.0",
+            "registries": ["localhost:5001"],
+            "closed": [{"cve": CVE, "packages": FIX.model_dump()["packages"]}],
+        }
+    )
+    outcomes: list[Any] = []
+    result = run_gate(closed, MULTI.reference, _unavailable(), image_runner(answers()), outcomes)
+    record = write_gate_bundle(
+        tmp_path / "out", result=result, outcomes=outcomes, closed_bytes=b"closed",
+        started=START, finished=FINISH,
+    )  # fmt: skip
+    assert [r.path for r in record.raw] == [
+        "raw/linux-amd64-grype.json",
+        "raw/linux-amd64-sbom_version.json",
+        "raw/linux-arm64-grype.json",
+        "raw/linux-arm64-sbom_version.json",
+        "raw/linux-arm-v6-sbom_version.json",  # Grype could not read arm/v6
+    ]
+    assert all((tmp_path / "out" / r.path).is_file() for r in record.raw)

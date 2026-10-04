@@ -1,5 +1,6 @@
 """The release gate (ADR-0012 items 1 to 3): closed.yaml, the image argument, verdicts, the CLI."""
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -16,7 +17,7 @@ from fixproof.model import BuildAsset, ImageAsset, Verdict
 from fixproof.tools import ToolRun
 from fixproof.validation import build_validator, load_schema, schema_errors
 from scenario import BROKEN, FIXED, KEV_FEED, START, VULNERABLE, answers, install_tools
-from tool_outputs import CVE, edited, image_runner, output, runner
+from tool_outputs import CVE, MARKER, edited, image_runner, output, runner
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 LOG4SHELL = "CVE-2021-44228"  # closed too; in KEV (the real-feed excerpt)
@@ -260,3 +261,54 @@ def test_an_unreachable_kev_feed_changes_no_gate_verdict_or_exit_code(
     assert "KEV: unavailable (cannot download the KEV feed: network is unreachable)" in out
     assert f"still_affected  {CVE}  (CISA KEV unavailable)" in out
     assert "BLOCK: 1 of 2 closed CVEs are back in this image." in out
+
+
+def test_cli_out_keeps_the_decision_and_the_tool_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """ADR-0016: `--out` writes gate.json, the raw tool output once per platform and tool
+    however many CVEs are closed, and a manifest of every file."""
+    out = tmp_path / "evidence"
+    code = gate_cli(tmp_path, monkeypatch, VULNERABLE.reference, "--out", str(out))
+    assert code == cli.EXIT_AFFECTED
+    assert "BLOCK: 1 of 2 closed CVEs" in capsys.readouterr().out  # the console is unchanged
+    record = json.loads((out / "gate.json").read_text())
+    assert schema_errors(build_validator(load_schema("gate-bundle.schema.json")), record) == []
+    assert record["closed_sha256"] == hashlib.sha256(CLOSED_YAML.encode()).hexdigest()
+    assert record["started"] == record["finished"] == "2026-10-02T09:00:00Z"
+    assert [line["verdict"] for line in record["result"]["results"]] == ["still_affected", "fixed"]
+    assert [(r["method"], r["path"]) for r in record["raw"]] == [
+        ("grype", "raw/grype.json"),
+        ("sbom_version", "raw/sbom_version.json"),
+    ]
+    assert sorted(p.name for p in (out / "raw").iterdir()) == ["grype.json", "sbom_version.json"]
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert [entry["path"] for entry in manifest["files"]] == [
+        "gate.json", "raw/grype.json", "raw/sbom_version.json",
+    ]  # fmt: skip
+    for entry in manifest["files"]:
+        data = (out / entry["path"]).read_bytes()
+        assert (hashlib.sha256(data).hexdigest(), len(data)) == (entry["sha256"], entry["size"])
+    assert MARKER not in "".join(p.read_text() for p in out.rglob("*.json"))
+
+
+def test_cli_out_never_overwrites_evidence_and_reads_nothing_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "evidence"
+    out.mkdir()
+    (out / "earlier.json").write_text("{}")
+    code = gate_cli(tmp_path, monkeypatch, VULNERABLE.reference, "--out", str(out))
+    assert code == cli.EXIT_USAGE
+    assert "already exists and is not empty" in capsys.readouterr().err
+    assert sorted(p.name for p in out.iterdir()) == ["earlier.json"]
+
+
+def test_cli_without_out_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    before = set(tmp_path.rglob("*"))
+    assert gate_cli(tmp_path, monkeypatch, FIXED.reference) == cli.EXIT_FIXED
+    capsys.readouterr()
+    written = set(tmp_path.rglob("*")) - before
+    assert all("fake-bin" in str(p) or p.suffix == ".yaml" for p in written)  # setup files only

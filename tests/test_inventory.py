@@ -1,5 +1,6 @@
 """Kubernetes inventory (ADR-0010) against a fake cluster and the real client's models."""
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -287,3 +288,88 @@ def test_an_api_server_that_never_accepts_is_an_inventory_error(
     patch_client(monkeypatch, FakeCore([], ConnectTimeoutError("connect timeout=10")))
     with pytest.raises(InventoryError, match="ctx: list pods in demo: connect timeout=10"):
         inventory(Cluster(context="ctx", namespaces=("demo",)))
+
+
+PLUGIN = """\
+import json, os, sys
+info = json.loads(os.environ["KUBERNETES_EXEC_INFO"])  # what a real plugin is given
+mode = sys.argv[1]
+if mode == "expired":
+    print("error: the SSO session has expired; sign in again", file=sys.stderr)
+    sys.exit(1)
+version = "client.authentication.k8s.io/v1alpha1" if mode == "wrong-version" else info["apiVersion"]
+status = {"token": open(sys.argv[2]).read().strip()} if mode == "token" else {}
+print(json.dumps({"apiVersion": version, "kind": "ExecCredential", "status": status}))
+"""
+
+
+def exec_kubeconfig(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, api: str = "v1beta1"
+) -> None:
+    """A kubeconfig whose user signs in through an exec plugin, as managed clusters' do."""
+    import sys
+
+    import yaml
+
+    plugin = tmp_path / "plugin.py"
+    plugin.write_text(PLUGIN, encoding="utf-8")
+    secret = tmp_path / "token"  # the plugin's own credential store, not the kubeconfig
+    secret.write_text("secret-token-from-the-plugin", encoding="utf-8")
+    user = {
+        "exec": {
+            "apiVersion": f"client.authentication.k8s.io/{api}",
+            "command": sys.executable,
+            "args": [str(plugin), mode, str(secret)],
+            "interactiveMode": "Never",
+        }
+    }
+    config = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [{"name": "c", "cluster": {"server": "https://127.0.0.1:1"}}],
+        "users": [{"name": "u", "user": user}],
+        "contexts": [{"name": "managed", "context": {"cluster": "c", "user": "u"}}],
+        "current-context": "managed",
+    }
+    path = tmp_path / "kubeconfig"
+    path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    monkeypatch.setenv("KUBECONFIG", str(path))
+
+
+@pytest.mark.parametrize("api", ["v1beta1", "v1"])
+def test_an_exec_plugin_signs_in_without_a_token_in_the_kubeconfig(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, api: str
+) -> None:
+    exec_kubeconfig(tmp_path, monkeypatch, "token", api)
+    source = KubernetesSource("managed")  # loads the config and runs the plugin; no API call
+    configuration = source._core.api_client.configuration
+    sent = configuration.auth_settings()["BearerToken"]  # the header every API call carries
+    assert (sent["key"], sent["value"]) == ("authorization", "Bearer secret-token-from-the-plugin")
+    assert configuration.refresh_api_key_hook is not None  # it runs the plugin again on expiry
+    assert "secret-token" not in (tmp_path / "kubeconfig").read_text()  # nothing written back
+
+
+@pytest.mark.parametrize(
+    ("mode", "reason"),
+    [
+        ("expired", "exec: process returned 1. error: the SSO session has expired; sign in again"),
+        ("wrong-version", "exec: plugin api version client.authentication.k8s.io/v1alpha1"),
+        ("no-token", "exec: missing token or clientCertificateData field in plugin output"),
+    ],
+)  # fmt: skip
+def test_a_failing_exec_plugin_stops_the_run_with_its_own_message(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    mode: str,
+    reason: str,
+) -> None:
+    exec_kubeconfig(tmp_path, monkeypatch, mode)
+    with pytest.raises(InventoryError) as caught:
+        KubernetesSource("managed")
+    message = str(caught.value)
+    assert message.startswith(
+        "cannot sign in to kubeconfig context 'managed': its exec plugin failed: "
+    )
+    assert reason in message
+    assert capsys.readouterr().err == ""  # said once, by fixproof, not also by the client's log

@@ -4,8 +4,14 @@ fixproof reads with `list` on pods and `get` on replicasets only (deploy/kuberne
 container's image is taken from its status `imageID`, which the kubelet fills with the runtime's
 repository digest (SPEC_NOTES §12). A container without one is kept, with the reason, so it is
 reported as `unknown` rather than dropped.
+
+A kubeconfig may sign in through an exec plugin, as managed clusters do (ADR-0015). The client
+logs a failed plugin instead of raising, and the run would then fail with the API server's bare
+refusal (401, or 403 where anonymous requests are let in); fixproof catches that log and stops
+with the plugin's own message (SPEC_NOTES §21).
 """
 
+import logging
 import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -14,6 +20,7 @@ from typing import Any, Protocol
 from fixproof.errors import FixproofError
 from fixproof.inputs import Cluster
 from fixproof.model import ImageRef, WorkloadAsset, expand_docker_name
+from fixproof.tools import last_line
 
 # ADR-0013 item 3: (connect, read) seconds for every API call, so a silent API server ends the
 # run with the reason instead of hanging it (the client's `_request_timeout`, SPEC_NOTES §12)
@@ -22,6 +29,17 @@ API_TIMEOUT = (10, 60)
 
 class InventoryError(FixproofError):
     """A cluster could not be read (kubeconfig, permissions or connection)."""
+
+
+class _Logged(logging.Handler):
+    """Collects what the Kubernetes client logs while it loads a kubeconfig."""
+
+    def __init__(self) -> None:
+        super().__init__(logging.ERROR)
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
 
 
 @dataclass(frozen=True)
@@ -66,6 +84,9 @@ class KubernetesSource:
         # Imported here so image-only runs never load the Kubernetes client.
         from kubernetes import client, config
 
+        logged = _Logged()
+        root = logging.getLogger()
+        root.addHandler(logged)  # the client logs a failed exec plugin on the root logger
         try:
             api = config.new_client_from_config(
                 # The client reads KUBECONFIG once, at import; read it now instead.
@@ -77,6 +98,14 @@ class KubernetesSource:
             )
         except (config.ConfigException, OSError, TypeError) as exc:
             raise InventoryError(f"cannot load kubeconfig context {context!r}: {exc}") from exc
+        finally:
+            root.removeHandler(logged)
+        failed = [m for m in logged.messages if m.startswith("exec:")]
+        if failed:
+            raise InventoryError(
+                f"cannot sign in to kubeconfig context {context!r}: its exec plugin failed: "
+                + last_line(failed[-1])
+            )
         self._context = context
         self._core = client.CoreV1Api(api)
         self._apps = client.AppsV1Api(api)

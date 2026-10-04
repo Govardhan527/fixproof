@@ -266,7 +266,7 @@ Packaging, docs, demo, hardening only.
       found the gate section had no options table or console example.
 - [x] Version 0.1.0, package metadata, a CI check that the built wheel installs and runs
       (7d28898); green in CI 37165585399 (job `package`).
-- [ ] Add the CI `release` job (tag `v*`: build, SBOM, GitHub release), only after M6
+- [x] Add the CI `release` job (tag `v*`: build, SBOM, GitHub release), only after M6
       (ADR-0013 item 5, Amendments 1 and 2): `.github/workflows/release.yml` written (86428d3)
       and hardened after the reviews. On the owner's instruction (2026-10-04) PyPI upload is the
       owner's step with `scripts/publish.sh` and their `~/.pypirc`, not trusted publishing; the
@@ -276,7 +276,14 @@ Packaging, docs, demo, hardening only.
       repeated the README live demo on the three Certbot images (`still_affected`, `fixed`,
       `fixed`, exit 1, 76 s, Grype DB v6.1.10), wrote valid OpenVEX and CycloneDX, and gated
       v2.6.0 with exit 1 and v5.8.0 with exit 0; `scripts/publish.sh v0.1.0rc1` checked the sums
-      and `twine check` and stopped (pre-release). Next: `v0.1.0` and the owner's upload.
+      and `twine check` and stopped (pre-release). **Released 2026-10-04:** `main` = e874af4
+      (branch runs 37189050957 and 37189592124, `main` CI 37190137341, all green); tag `v0.1.0`,
+      release run 37190692017, GitHub release "fixproof 0.1.0" (Latest) with the wheel, sdist,
+      SBOM and `SHA256SUMS`; on the owner's "run it", `scripts/publish.sh v0.1.0` uploaded both
+      files to https://pypi.org/project/fixproof/0.1.0/, and PyPI's sha256 for each equals
+      `SHA256SUMS`. `uv tool install fixproof` and `pipx install fixproof` install 0.1.0 from
+      PyPI in fresh environments; the uv install repeated the Certbot check (exit 1) and the gate
+      (exit 1 on v2.6.0).
 - [x] M6 spec and scope reviews (2026-10-04): nothing out of scope. Fixed: pre-releases detected
       with `packaging` (dev releases were missed); the release checks the commit is on a green
       `main`; README links absolute for the PyPI page; limits documented; test gaps closed (make
@@ -284,23 +291,25 @@ Packaging, docs, demo, hardening only.
       oversized output reaching `unknown`); `make demo-down` in CI; 18 release and packaging
       facts recorded. ADR-0013 Amendment 1 confirmed by the owner 2026-10-04. Second branch run
       37166399390 green, again "SUCCESS TEST: PASS (3/3 steps)".
+- [x] Release spec and scope reviews (2026-10-04, `0ecd07b..e874af4`): nothing out of scope.
+      Fixed: SPEC_NOTES §18 gained sourced entries for twine's defaults and what `twine check`
+      checks, `uvx --from`, PyPI token scope and file-name reuse, wheel and sdist file names,
+      `sha256sum`, `authors`, `jobs.<id>.needs`, `==`, YAML 1.1 booleans, gh output and the
+      PyPI, pipx and tag URLs; the `check_package.sh` comment no longer claims more than
+      `twine check` does; a stale TestPyPI comment in the release workflow corrected.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M6, done-criterion met; the first release is in
-  progress.
-- **`main` = a5df745, green** (CI 37188148312: all 10 jobs, "SUCCESS TEST: PASS (3/3 steps)").
-  It holds ADR-0013 Amendment 2 (confirmed by the owner): PyPI upload is the owner's step with
-  `scripts/publish.sh` and their `~/.pypirc`; the tag workflow makes the GitHub release only;
-  the package author is Govardhan Yadava <govardhan@seccrypto.dev>.
-- **Rehearsal passed:** `v0.1.0rc1` is a GitHub pre-release (release run 37188611616); its wheel
-  repeated the README live demo and the gate on real images (see the release item above).
-- **Work branch `release`:** the final release commit (`0.1.0`, the README installs from PyPI
-  and fetches the scanner script from the `v0.1.0` tag).
-- **Waiting on the owner:** after the tag `v0.1.0`, the upload: `scripts/publish.sh v0.1.0`
-  (or say to run it). If PyPI refuses it with 403, the token in `~/.pypirc` is limited to
-  another project and the first upload needs an account-wide token.
-- **Next steps, in order:** two full green branch runs; `main` and its CI; tag `v0.1.0`; the
-  owner's upload; check the GitHub release, the tags on `origin` and PyPI's JSON API sha256
-  values against `SHA256SUMS`; `uv tool install fixproof` in a fresh environment and run it;
-  close M6 (tick the release item, the milestone table, the resume block).
+- **Date:** 2026-10-04. **Current milestone:** M6, every item done; closing it is the owner's
+  call.
+- **fixproof 0.1.0 is released:** https://pypi.org/project/fixproof/0.1.0/ and the GitHub release
+  `v0.1.0` (Latest), the same bytes on both (sha256 checked). `main` = e874af4 for the release;
+  details in the M6 release item.
+- **Release route (ADR-0013 Amendment 2, confirmed):** the tag workflow makes the GitHub release;
+  the owner runs, or asks for, `scripts/publish.sh vX.Y.Z`, which uploads that release's files
+  with twine and `~/.pypirc`.
+- **Work branch `m6-close`:** the release review fixes (SPEC_NOTES §18, two comments) and this
+  record, proven on the branch before `main`.
+- **Waiting on the owner:** "confirm and close M6".
+- **Next steps, in order:** two full green branch runs; `main` and its CI; on the owner's word,
+  close M6 (the milestone table in the README and here).

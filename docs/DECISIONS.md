@@ -667,4 +667,5 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   5. *First upload.* A PyPI token can be limited to one project (SPEC_NOTES §18). If the token in
      `~/.pypirc` is limited to the other package, the first upload of `fixproof` is expected to
      be refused and to need a token for the whole account; a token limited to `fixproof` can
-     replace it afterwards.
+     replace it afterwards. *Outcome (2026-10-04):* it did not arise; the token uploaded
+     fixproof's first release (SPEC_NOTES §18).

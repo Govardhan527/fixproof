@@ -1149,20 +1149,70 @@ Answered questions keep their text and gain the answer, so the reasoning stays o
   - The CI `demo` job (`make demo` from a fresh runner) took 4 min 15 s in run 37165585399.
     OBSERVED.
 - **Upload with twine (ADR-0013 Amendment 2, read 2026-10-04):**
-  - twine 7.0.0 (`twine upload --help`, `twine check --help`): `upload --non-interactive` never
-    asks for a username or password and fails when the credentials are missing; `-r/--repository`
-    names "a section in the config file"; `--config-file` is "The .pypirc config file to use";
-    `check --strict` "Fail[s] on warnings". VERIFIED. Both 0.1.0 packages pass
-    `twine check --strict` (local run, 2026-10-04). OBSERVED.
-  - PyPI API tokens (`https://pypi.org/help/`): "Set your username to `__token__`" and "Set your
-    password to the token value, including the `pypi-` prefix"; a token can be created "for an
-    entire PyPI account, in which case, the token will work for all projects associated with that
-    account", or limited "to a specific project". VERIFIED. That a token limited to another
-    project cannot upload fixproof's first release is inferred from this, not observed.
-    UNVERIFIED.
+  - twine 7.0.0 help (`twine upload --help`, `twine check --help`): `-r/--repository` "The
+    repository (package index) to upload the package to. Should be a section in the config file
+    [default: pypi]"; `--config-file` "The .pypirc config file to use", whose default is
+    `DEFAULT_CONFIG_FILE = '~/.pypirc'` in the twine source (`twine/utils.py`, used by
+    `twine/settings.py`), so `scripts/publish.sh`, which passes neither, uploads with the `pypi`
+    section of `~/.pypirc`; `--non-interactive` "Do not interactively [ask] for
+    username/password if the required credentials are missing" (the help's own verb replaced
+    here by "[ask]"); `check --strict` "Fail on warnings". VERIFIED.
+  - What `twine check` checks (twine 7.0.0, docstring of `twine.commands.check.check`): "Check
+    that a distribution will render correctly on PyPI" and "This is currently only validates
+    ``long_description``", which for fixproof is the README. VERIFIED. Both 0.1.0 packages pass
+    `twine check --strict` (local run, CI run 37190137341). OBSERVED.
+  - `uvx --from twine==7.0.0 twine` (uv 0.12.9 `uvx --help`): `--from` "Use the given package to
+    provide the command". VERIFIED.
+  - PyPI API tokens (`https://pypi.org/help/#apitoken`, "How can I use API tokens to authenticate
+    with PyPI?"): "Set your username to `__token__`" and "Set your password to the token value,
+    including the `pypi-` prefix"; "You can create a token for an entire PyPI account, in which
+    case, the token will work for all projects associated with that account. Alternatively, you
+    can limit a token's scope to a specific project." VERIFIED. The token in the owner's
+    `~/.pypirc` uploaded fixproof's first release on 2026-10-04 (twine: "View at:
+    https://pypi.org/project/fixproof/0.1.0/"), so it is not limited to another project.
+    OBSERVED. What PyPI answers when a token limited to another project uploads a new project
+    was not seen. UNVERIFIED (M6; it did not arise).
+  - File names are never reused (`https://pypi.org/help/#file-name-reuse`): "PyPI does not allow
+    for a filename to be reused, even once a project has been deleted and recreated." This is
+    why an upload cannot be undone. VERIFIED.
+  - Package file names: a wheel is `{distribution}-{version}(-{build tag})?-{python tag}-{abi
+    tag}-{platform tag}.whl` (PyPA "Binary distribution format", "File name convention"); "The
+    file name must be in the form `{name}-{version}.tar.gz`" for an sdist (PyPA "Source
+    distribution format", "Source distribution file name", PEP 625). VERIFIED. `uv build` wrote
+    `fixproof-0.1.0-py3-none-any.whl` and `fixproof-0.1.0.tar.gz` (release run 37190692017).
+    OBSERVED.
+  - `sha256sum` (GNU coreutils 9.4 `--help`): "-c, --check read checksums from the FILEs and
+    check them"; "--strict exit non-zero for improperly formatted checksum lines"; each line is
+    "checksum, a space, a character indicating input mode ('*' for binary, ' ' for text or where
+    binary is insignificant), and name", which is why `publish.sh` strips an optional `*` and
+    the `./` that `sha256sum ./*` writes. VERIFIED.
+  - `authors` in `pyproject.toml` (PyPA "pyproject.toml specification", "authors/maintainers"):
+    "Array of inline tables with string keys and values" with the keys `name` and `email`; with
+    both, "the value goes in Author-email or Maintainer-email as appropriate, with the format
+    `{name} <{email}>`". VERIFIED. PyPI's JSON API gives `author_email` "Govardhan Yadava
+    <govardhan@seccrypto.dev>" for 0.1.0. OBSERVED.
+  - GitHub Actions `jobs.<job_id>.needs` (`github/docs`,
+    `data/reusables/actions/jobs/section-using-jobs-in-a-workflow-needs.md`, SHA-256
+    `cbee2b26a5e4f1f63ae514ccf3d9fa01dc8405da04c94364a65263a5e42d5cfa`): "It can be a string or
+    array of strings. If a job fails or is skipped, all jobs that need it are skipped unless the
+    jobs use a conditional expression that causes the job to continue." VERIFIED.
+  - `==` (PyPA "Version specifiers", "Version matching"): "A version matching clause includes the
+    version matching operator `==` and a version identifier." VERIFIED.
+  - YAML 1.1 booleans (`https://yaml.org/type/bool.html`): the type's regular expression includes
+    `on|On|ON` as true, so PyYAML, a YAML 1.1 loader, reads a workflow's `on:` key as `True`.
+    VERIFIED.
   - gh 2.99.0 help: `gh release download TAG --repo OWNER/REPO --dir DIR --pattern GLOB` (the
-    flag repeats) downloads only the matching assets; `gh release view TAG --json isPrerelease
-    --jq .isPrerelease` prints `true` or `false`. VERIFIED.
+    flag repeats) downloads only the matching assets; `gh release view TAG --json isPrerelease`
+    names the field. VERIFIED. With `--jq .isPrerelease` it printed `true` for `v0.1.0rc1` and
+    `false` for `v0.1.0` (2026-10-04). OBSERVED.
+  - Installing from PyPI (2026-10-04, fresh environments): `uv tool install fixproof` (uv 0.12.9,
+    "Install commands provided by a Python package") and `pipx install fixproof` (pipx
+    1.17.11; documentation at `https://pipx.pypa.io/`, which answers 200) both installed 0.1.0
+    from the index, and the uv install repeated the README live demo. The project page
+    `https://pypi.org/project/fixproof/` answers 200. The README's script URL at the tag,
+    `https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0/scripts/install_scanners.sh`,
+    serves the same bytes as `git show v0.1.0:scripts/install_scanners.sh` (SHA-256
+    `ab711931ed3e6715a5e9c2f15e2235fc6f3926f17871c416a5306d7ef9086f29`). OBSERVED.
   - The name `fixproof` was still free on pypi.org and test.pypi.org on 2026-10-04 (404 from
     `/pypi/fixproof/json` on both, before the first upload). OBSERVED.
 

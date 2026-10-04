@@ -296,20 +296,22 @@ Packaging, docs, demo, hardening only.
       checks, `uvx --from`, PyPI token scope and file-name reuse, wheel and sdist file names,
       `sha256sum`, `authors`, `jobs.<id>.needs`, `==`, YAML 1.1 booleans, gh output and the
       PyPI, pipx and tag URLs; the `check_package.sh` comment no longer claims more than
-      `twine check` does; a stale TestPyPI comment in the release workflow corrected.
+      `twine check` does; a stale TestPyPI comment in the release workflow corrected. **M6
+      closed 2026-10-04** (owner: "Approved", to "confirm and close M6"). Every milestone of the
+      project plan is done, and the SUCCESS TEST passes via `make demo` in CI on `main`.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M6, every item done; closing it is the owner's
-  call.
+- **Date:** 2026-10-04. **Current milestone:** none. M0 to M6 are closed (M6 on the owner's
+  "Approved", 2026-10-04); the SUCCESS TEST passes via `make demo` in CI on `main`.
 - **fixproof 0.1.0 is released:** https://pypi.org/project/fixproof/0.1.0/ and the GitHub release
-  `v0.1.0` (Latest), the same bytes on both (sha256 checked). `main` = e874af4 for the release;
-  details in the M6 release item.
-- **Release route (ADR-0013 Amendment 2, confirmed):** the tag workflow makes the GitHub release;
-  the owner runs, or asks for, `scripts/publish.sh vX.Y.Z`, which uploads that release's files
-  with twine and `~/.pypirc`.
-- **Work branch `m6-close`:** the release review fixes (SPEC_NOTES §18, two comments) and this
-  record, proven on the branch before `main`.
-- **Waiting on the owner:** "confirm and close M6".
-- **Next steps, in order:** two full green branch runs; `main` and its CI; on the owner's word,
-  close M6 (the milestone table in the README and here).
+  `v0.1.0` (Latest), the same bytes on both (sha256 checked); installs with `uv tool install
+  fixproof` or `pipx install fixproof`. Details in the M6 release item.
+- **Release route (ADR-0013 Amendment 2, confirmed):** bump the version on a branch, prove it in
+  CI, move `main`, tag `vX.Y.Z` (the workflow makes the GitHub release), then the owner runs,
+  or asks for, `scripts/publish.sh vX.Y.Z`; check the PyPI sha256 values against `SHA256SUMS`.
+- **Last work:** the release review fixes and this record went through the work branch
+  `m6-close` (two full green runs) to `main`; the run ids are in the M6 items above and in git.
+- **Waiting on the owner:** what comes next. Candidates are in `docs/PARKED.md` (the plan's V2
+  items, managed clusters and cloud credential helpers, arm64 nodes, a KEV cache for air-gapped
+  use, a gate evidence bundle, more gate sources). Nothing is planned until the owner picks.

@@ -781,7 +781,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M3 | Version comparators for deb, rpm, apk, npm, Maven (PyPI in M2) | done |
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine nodes | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
-| M6 | Packaging, docs, end-to-end demo, hardening | built; `make demo` green in CI; 0.1.0 released on PyPI and GitHub |
+| M6 | Packaging, docs, end-to-end demo, hardening; 0.1.0 released on PyPI and GitHub | done |
 
 ---
 

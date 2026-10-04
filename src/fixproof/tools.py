@@ -9,10 +9,16 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
+import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import IO, cast
 
 TIMEOUT_SECONDS = 1800
+MAX_OUTPUT_BYTES = 512 * 1024 * 1024  # ADR-0013; real outputs were 0.3 to 1.8 MB (SPEC_NOTES §12)
+STDERR_TAIL_BYTES = 64 * 1024
 _USERINFO = re.compile(r"://[^/@\s]+@")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
@@ -30,27 +36,67 @@ class ToolRun:
 Runner = Callable[[str, Sequence[str], Mapping[str, str]], ToolRun]
 
 
+def _drain(stream: IO[bytes], limit: int, sink: bytearray, over: threading.Event) -> None:
+    """Copy `stream` into `sink` until it ends or passes `limit` bytes (then set `over`)."""
+    while chunk := stream.read(1 << 20):
+        if len(sink) + len(chunk) > limit:
+            over.set()
+            return
+        sink.extend(chunk)
+
+
 def run_tool(
-    name: str, args: Sequence[str], env: Mapping[str, str], timeout: float = TIMEOUT_SECONDS
+    name: str,
+    args: Sequence[str],
+    env: Mapping[str, str],
+    timeout: float = TIMEOUT_SECONDS,
+    max_output: int = MAX_OUTPUT_BYTES,
 ) -> ToolRun:
-    """Run `name` from PATH with `args`, adding `env` to the inherited environment."""
+    """Run `name` from PATH with `args`, adding `env` to the inherited environment.
+
+    Standard output is read as it comes, up to `max_output` bytes: beyond that the tool is
+    stopped and the run is a problem (ADR-0013 item 3), so a huge or runaway output can neither
+    exhaust memory nor pass for a result. Only the last part of standard error is kept.
+    """
     path = shutil.which(name)
     if path is None:
         return ToolRun(None, b"", "", f"{name} not found on PATH")
-    try:
-        # No shell: a PATH-resolved binary and a list of arguments fixproof built itself.
-        done = subprocess.run(  # noqa: S603
-            [path, *args],
-            capture_output=True,
-            env={**os.environ, **env},
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired:
-        return ToolRun(None, b"", "", f"{name} timed out after {timeout:g} seconds")
-    except OSError as exc:
-        return ToolRun(None, b"", "", f"{name} could not start: {exc.strerror or exc}")
-    return ToolRun(done.returncode, done.stdout, done.stderr.decode("utf-8", errors="replace"))
+    with tempfile.TemporaryFile() as errors:
+        try:
+            # No shell: a PATH-resolved binary and a list of arguments fixproof built itself.
+            process = subprocess.Popen(  # noqa: S603
+                [path, *args], stdout=subprocess.PIPE, stderr=errors, env={**os.environ, **env}
+            )
+        except OSError as exc:
+            return ToolRun(None, b"", "", f"{name} could not start: {exc.strerror or exc}")
+        stdout = cast(IO[bytes], process.stdout)
+        output, over = bytearray(), threading.Event()
+        reader = threading.Thread(target=_drain, args=(stdout, max_output, output, over))
+        reader.start()
+        deadline = time.monotonic() + timeout
+        timed_out = False
+        while process.poll() is None and not over.is_set():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                break
+            try:
+                process.wait(timeout=min(0.2, remaining))
+            except subprocess.TimeoutExpired:
+                continue
+        if timed_out or over.is_set():
+            process.kill()
+        process.wait()
+        reader.join()
+        stdout.close()
+        if timed_out:
+            return ToolRun(None, b"", "", f"{name} timed out after {timeout:g} seconds")
+        if over.is_set():
+            return ToolRun(None, b"", "", f"{name} wrote more than {max_output} bytes of output")
+        size = errors.seek(0, os.SEEK_END)
+        errors.seek(max(0, size - STDERR_TAIL_BYTES))
+        stderr = errors.read().decode("utf-8", errors="replace")
+    return ToolRun(process.returncode, bytes(output), stderr)
 
 
 def last_line(text: str, limit: int = 200) -> str:

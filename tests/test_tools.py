@@ -88,3 +88,43 @@ def test_environment_is_not_modified_for_the_caller(
     fake_tool(tmp_path, monkeypatch, "syft", "true")
     run_tool("syft", [], {"SYFT_CHECK_FOR_APP_UPDATE": "false"})
     assert "SYFT_CHECK_FOR_APP_UPDATE" not in os.environ
+
+
+def test_output_beyond_the_limit_stops_the_tool_and_is_a_problem(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR-0013 item 3: a runaway output is cut off, never read whole, never a result."""
+    yes = shutil.which("yes")
+    assert yes is not None
+    fake_tool(tmp_path, monkeypatch, "grype", f"exec {yes} match")  # writes forever
+    run = run_tool("grype", [], {}, timeout=30, max_output=100_000)
+    assert (run.exit_code, run.stdout) == (None, b"")
+    assert run.problem == "grype wrote more than 100000 bytes of output"
+
+
+def test_output_up_to_the_limit_is_read_whole(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    head = shutil.which("head")
+    yes = shutil.which("yes")
+    assert head is not None
+    assert yes is not None
+    fake_tool(tmp_path, monkeypatch, "syft", f"{yes} x | {head} -c 100000")
+    run = run_tool("syft", [], {}, max_output=100_000)
+    assert (run.exit_code, run.problem, len(run.stdout)) == (0, None, 100_000)
+
+
+def test_only_the_end_of_standard_error_is_kept(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    head = shutil.which("head")
+    yes = shutil.which("yes")
+    assert head is not None
+    assert yes is not None
+    fake_tool(
+        tmp_path, monkeypatch, "grype", f"{yes} e | {head} -c 200000 >&2; echo END >&2; exit 1"
+    )
+    run = run_tool("grype", [], {})
+    assert run.exit_code == 1
+    assert len(run.stderr) == 64 * 1024
+    assert run.stderr.endswith("END\n")

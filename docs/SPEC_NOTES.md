@@ -1312,8 +1312,9 @@ All retrieved 2026-10-02.
 - **Variant normalisation** (`containerd/platforms` v0.2.1, `database.go`, `normalizeArch`,
   SHA-256 `1ae641a9c9982c18aebe3fd30a36f916448d583c11787d9aed9a444549367949`): `amd64` with
   variant `v1` becomes no variant; `arm64` with `8` or `v8` becomes no variant; `arm` with no
-  variant or `7` becomes `v7`, and `5`, `6`, `8` become `v5`, `v6`, `v8`; `i386` is `386`.
-  VERIFIED. fixproof matches `platforms` with these rules, for lower-case input.
+  variant or `7` becomes `v7`, and `5`, `6`, `8` become `v5`, `v6`, `v8`; `i386` is `386`; the
+  architecture and variant are lower-cased first (`strings.ToLower`), and `normalizeOS` lower-cases
+  the OS. VERIFIED. fixproof matches `platforms` with these rules.
 - **crane** (`google/go-containerregistry` v0.22.1, released 2026-09-04, tag commit
   `8a72a424fdecb4caa14f2d525e5d2503331442b5`; asset `go-containerregistry_Linux_x86_64.tar.gz`,
   SHA-256 `0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0`, as in the
@@ -1323,7 +1324,12 @@ All retrieved 2026-10-02.
   printed bytes whose SHA-256 is the index digest, with no trailing newline; on a missing or
   private manifest it exits 1 with one `Error: fetching manifest …` line on stderr (for example
   `MANIFEST_UNKNOWN` or `UNAUTHORIZED: authentication required`); it honours `DOCKER_CONFIG`.
-  OBSERVED (2026-10-04).
+  OBSERVED (local runs, 2026-10-04). The full line for the demo's password-protected registry, in
+  CI run 37214109784: `Error: fetching manifest localhost:5002/fixproof/requests-2.31.0@sha256:…:
+  GET http://localhost:5002/v2/fixproof/requests-2.31.0/manifests/sha256:…: UNAUTHORIZED:
+  authentication required; [map[Action:pull Class: Name:fixproof/requests-2.31.0
+  Type:repository]]`, longer than fixproof's 200-character line, so fixproof drops the repeated
+  `fetching manifest REF: GET URL: ` and keeps the registry's answer. OBSERVED.
 - **Plain HTTP for local registries** (`go-containerregistry` v0.22.1, `pkg/name/registry.go`,
   SHA-256 `88618463d047e23a991fcc6f3b5304ac0a56fce5a7c5b22660f137d6e89999ef`): `Scheme()`
   "returns https scheme for all the endpoints except localhost or when explicitly defined", and
@@ -1338,15 +1344,52 @@ All retrieved 2026-10-02.
   with "mismatched platform (expected linux/arm64): image platform="linux/amd64" does not match
   user specified platform="linux/arm64"". Syft's `--platform` help: "an optional platform
   specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64',
-  'linux')". OBSERVED. So a single-platform manifest is never scanned as another platform, and
-  an index digest alone leaves the platform to the host.
+  'linux')". OBSERVED (local runs). So a single-platform manifest is never scanned as another
+  platform, and an index digest alone leaves the platform to the host. An OCI archive of the whole
+  alpine 3.22 index (`crane pull --format=oci`, tarred with `oci-layout`, `index.json`, `blobs` at
+  the top) scanned as `oci-archive:` gave its `linux/amd64` manifest with no `--platform`, and its
+  `linux/arm64` one (`architectureVariant` `v8`) with `--platform linux/arm64`. OBSERVED (local
+  run, 2026-10-04).
 - **Platforms of the images fixproof's docs and live tests use** (read with crane, 2026-10-04):
   `certbot/certbot` v2.6.0, v2.7.0 and v5.8.0 are indexes of `linux/amd64`, `linux/arm/v6` and
   `linux/arm64`; `certbot/certbot@sha256:0a228a84…` is v2.7.0's single `linux/amd64` manifest;
   the `python` image in the README's minikube example has five Linux platforms, the alpine ones
   seven and eight, the almalinux ones four, `debian:12.0-slim` eight (`linux/arm64/v8` among
   them); `ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f884306…` is a single
-  `linux/amd64` manifest, not an index. OBSERVED.
+  `linux/amd64` manifest, not an index. OBSERVED (local crane runs).
+
+- **The image manifest** (`image-spec` v1.1.1, `manifest.md`, SHA-256
+  `fc35d252c5cc192ce972bbd52b560184ba427a8a374107fc5cdd7442034cd867`): `schemaVersion` "This
+  REQUIRED property specifies the image manifest schema version" (`2` in its examples);
+  `mediaType` "SHOULD be used" and, when used, "MUST contain the media type
+  `application/vnd.oci.image.manifest.v1+json`"; `config` "This REQUIRED property references a
+  configuration object"; the layers list is required. `annotations.md` (SHA-256
+  `e080458d943cb404387adbb1a0d5b95362340203ee98ab50525f07aef7cb02ad`):
+  `org.opencontainers.image.title` "Human-readable title of the image". The BuildKit page above
+  also names `vnd.docker.reference.digest`, the attested manifest. VERIFIED. fixproof tells a
+  manifest from an index by `manifests` versus `config` and `layers`, with `mediaType` checked
+  when present; the tests' synthetic manifests use these fields.
+- **How a platform is written** (`containerd/platforms` v0.2.1, `platforms.go`, SHA-256
+  `09d87751984e388cef9b553ad416bfa33cc36e55fa55ea2303e83967c8ae2964`): "Platform specifiers are in
+  the format `<os>[(<OSVersion>)]|<arch>|<os>[(<OSVersion>)]/<arch>[/<variant>]`", each part
+  matching `^[A-Za-z0-9_-]+$`. VERIFIED. fixproof's `platforms` entries are stricter and its own:
+  `os/arch[/variant]`, lower case, with `.` allowed in the variant for the image-spec's `v8.1`
+  style (`^[a-z0-9]+/[a-z0-9_]+(/[a-z0-9.]+)?$`).
+- **The variant the tools report** (Syft v1.54.0, `syft/source/image_metadata.go`, SHA-256
+  `24c180264668ac473a753312432c5d7acb6b04b1954db8b66953b53284db9ba1`): `Variant string
+  json:"architectureVariant,omitempty"`, next to `architecture` and `os`. VERIFIED. Syft's
+  oci-archive scan of the alpine arm64 manifest reported `"architectureVariant": "v8"` (local run,
+  2026-10-04). OBSERVED. Grype's `source.target` carries the same image fields (§17).
+- **Docker Hub pulls** (Docker docs, "Docker Hub pull usage and limits",
+  https://docs.docker.com/docker-hub/usage/pulls/, read 2026-10-04): "A pull for a multi-arch
+  image will count as one pull for each different architecture"; version checks (`HEAD` on a
+  manifest) do not count. VERIFIED. Checking every platform therefore uses more of the limit.
+- **The live checks on linux/arm64** (ADR-0014): each live case's expected verdict comes from the
+  release or the pins of §19, which name package versions, not architectures; certbot installs
+  from its pinned `tools/requirements.txt` on every platform. The live run 37214111809 on the
+  `m7-platforms` branch found every case's linux/amd64 and linux/arm64 verdicts equal and as
+  expected. OBSERVED. No per-architecture package list was read for the distributions, so "the
+  same versions on arm64" rests on that run. UNVERIFIED (M7).
 
 ## 21. Signing in to clusters and registries (M7, ADR-0015, read 2026-10-04)
 
@@ -1397,3 +1440,34 @@ All retrieved 2026-10-02.
   `e55c6f8f661d08d96d788b4b0452f57e927030b128b1cf3cc9d5a8a653ce1acf`): place
   `docker-credential-ecr-login` on `PATH` and map `"<aws_account_id>.dkr.ecr.<region>.amazonaws.com":
   "ecr-login"` under `credHelpers`. VERIFIED.
+- **The kubeconfig file** (Kubernetes docs, `kubernetes/website`
+  `content/en/docs/concepts/configuration/organize-cluster-access-kubeconfig.md`, SHA-256
+  `3af1a97b48276ddd35a31bbf24962c78c5ae939754fe038f5eec20abc7c8b843`): a file of `kind: Config`
+  with clusters, users and contexts and a `current-context`. VERIFIED. The unit tests' plugin that
+  answers `client.authentication.k8s.io/v1alpha1` stands for any version other than the one asked
+  for. The client keeps the plugin's token as its `BearerToken` setting and sets
+  `client_configuration.refresh_api_key_hook = _refresh_api_key` (`kube_config.py` above, line
+  536). VERIFIED.
+- **A request without credentials** (the authentication page above, "Anonymous requests"): "When
+  enabled, requests that are not rejected by other configured authentication methods are treated
+  as anonymous requests, and given a username of `system:anonymous`"; "a request providing an
+  invalid bearer token would receive a `401 Unauthorized` error"; "Anonymous access is enabled by
+  default if an authorization mode other than `AlwaysAllow` is used", and RBAC requires explicit
+  authorization of `system:anonymous`. VERIFIED. So after a failed exec plugin the API server
+  answers 401, or 403 where anonymous requests are let in; fixproof stops before either.
+- **Which helper the tools ask** (`google/go-containerregistry` v0.22.1, `pkg/authn/keychain.go`,
+  SHA-256 `d3ca9c480e184bfd1e697a7e3f5b6f830620b573fdec68be197b83f311709404`): the default
+  keychain loads the Docker config with `config.Load(os.Getenv("DOCKER_CONFIG"))` and asks
+  `cf.GetAuthConfig(key)`; in `docker/cli` v29.7.2 (the version go-containerregistry v0.22.1
+  requires), `cli/config/configfile/file.go` (SHA-256
+  `6813efbc25791b99096bc2390aac9265eff56506359d2e2fd51c369b50cce23b`), `GetAuthConfig` returns
+  `c.GetCredentialsStore(acKey).Get(acKey)`, and the store is the registry's `credHelpers` entry
+  if there is one, else `credsStore`. VERIFIED. crane, Syft and Grype all asked the helper in the
+  kind test (ADR-0015); the run id is in `docs/PROGRESS.md`. OBSERVED.
+- **AKS** (Microsoft Learn, "Use kubelogin to authenticate users in Azure Kubernetes Service
+  (AKS)", https://learn.microsoft.com/azure/aks/kubelogin-authentication, read 2026-10-04): "The
+  kubelogin plugin in Azure is a client-go credential plugin that implements Microsoft Entra
+  authentication" and "AKS clusters running Kubernetes version 1.24 or later automatically use the
+  kubelogin exec plugin format". VERIFIED. The EKS page above is
+  https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html and the GKE page
+  https://docs.cloud.google.com/kubernetes-engine/docs/how-to/cluster-access-for-kubectl.

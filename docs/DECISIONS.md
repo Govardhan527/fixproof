@@ -638,7 +638,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
      both parsers are fuzzed for "ValueError only"; `make demo` takes `FIXPROOF_DEMO_DIR`; CI also
      runs `make demo-down`; `make release-dry` builds exactly what the release does.
 - **Amendment 2 (2026-10-04, the owner: "i have pypi credentials there use them and same config
-  details and owner", pointing at the release setup of their other published package).** It
+  details and owner", pointing at the release setup of their other published package; confirmed
+  by the owner 2026-10-04: "Yes Approved").** It
   replaces trusted publishing in item 5 and the TestPyPI parts of Amendment 1, items 1 to 3. This
   departs from the project plan's CI line ("publish with PyPI trusted publishing") on the owner's
   instruction.

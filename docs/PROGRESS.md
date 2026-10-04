@@ -293,10 +293,11 @@ Packaging, docs, demo, hardening only.
 - **Work branch `release`:** the author, `twine check --strict` in `check_package.sh`, the
   GitHub-only workflow with `publish.sh` and its tests, Amendment 2, and version `0.1.0rc1`.
   Push run 37173742059 green (package job: both rc1 files pass `twine check --strict`); full
-  runs on the branch before `main` moves.
-- **Waiting on the owner:** confirm Amendment 2, then say go for `main` and the tag
-  `v0.1.0rc1`; later, run the upload `scripts/publish.sh v0.1.0` (or say to run it).
-- **Next steps, in order:** a second full green branch run; `main`; tag `v0.1.0rc1` (GitHub
+  runs 37179164996 and 37179575011 green (all 10 jobs, "SUCCESS TEST: PASS (3/3 steps)").
+- **The owner confirmed Amendment 2 and said go for `main` and `v0.1.0rc1`** (2026-10-04, "Yes
+  Approved"). **Waiting on the owner later:** the upload `scripts/publish.sh v0.1.0` (or say to
+  run it).
+- **Next steps, in order:** `main` and its CI; tag `v0.1.0rc1` (GitHub
   pre-release); install its wheel in a fresh environment and run it on a real image;
   `scripts/publish.sh v0.1.0rc1` (checks, no upload); the final commit (`0.1.0`, README install
   from PyPI) through branch CI to `main`; tag `v0.1.0`; the owner's upload; check the GitHub

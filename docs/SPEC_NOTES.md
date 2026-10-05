@@ -1389,7 +1389,11 @@ All retrieved 2026-10-02.
   from its pinned `tools/requirements.txt` on every platform. The live run 37214111809 on the
   `m7-platforms` branch found every case's linux/amd64 and linux/arm64 verdicts equal and as
   expected. OBSERVED. No per-architecture package list was read for the distributions, so "the
-  same versions on arm64" rests on that run. UNVERIFIED (M7).
+  same versions on arm64" rests on that run. UNVERIFIED (M7). The 0.2.0 release check (local run,
+  2026-10-05, Grype DB v6.1.10 built 2026-10-05) checked all three platforms of each Certbot
+  image in the README's live demo: every platform as expected, requests 2.28.2 on each platform of
+  v2.6.0; and `gate --out` with `platforms: [linux/arm64]` on v2.6.0 checked that platform only and
+  blocked. OBSERVED.
 
 ## 21. Signing in to clusters and registries (M7, ADR-0015, read 2026-10-04)
 

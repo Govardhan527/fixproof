@@ -337,7 +337,9 @@ cloud accounts, and the other parked items.
       the owner's approval is paraphrased, not quoted, in the decision record; 15 facts sourced in
       SPEC_NOTES §20 and §21; ADR-0014 Amendment 1 (crane as a new pinned tool, `--jobs`, the
       one-image rule in `verify`) for the owner to confirm. Two full runs on the work branch
-      `m7` green (37216834030, 37217609032).
+      `m7` green (37216834030, 37217609032); `main` = 93ab3b5, CI 37218502229 green.
+      **M7 closed 2026-10-06** (owner: "Approved", to confirming Amendment 1, closing M7 and
+      releasing it), released as 0.2.0.
 
 ## Last session (resume here)
 

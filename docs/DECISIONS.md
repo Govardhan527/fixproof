@@ -729,7 +729,8 @@ interface change gets one. Status is `Proposed` until the owner approves, then `
   and a Docker Hub login for large scopes. The README's "One platform per image" limitation is
   replaced. Expected results in the live and integration tests change wherever an image has
   several platforms.
-- **Amendment 1 (2026-10-04, from the M7 spec and scope reviews; for the owner to confirm):**
+- **Amendment 1 (2026-10-04, from the M7 spec and scope reviews; confirmed by the owner
+  2026-10-06: "Approved"):**
   1. *A new pinned tool.* crane joins Syft and Grype in ADR-0002's stack, installed the same way
      (a pinned release, checked against its SHA-256); it is chosen here because it reads
      registries exactly as the two scanners do, so fixproof itself still never reads a credential.

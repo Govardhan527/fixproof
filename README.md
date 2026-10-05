@@ -16,7 +16,7 @@ It writes the answer as an [OpenVEX](https://github.com/openvex/spec) document a
 VEX, with an HTML summary and an evidence bundle (every tool output, hashed), and exits with a
 code your CI can act on.
 
-> **Status: 0.1.0.post1, alpha** ([PyPI](https://pypi.org/project/fixproof/)). Image verification is
+> **Status: 0.2.0, alpha** ([PyPI](https://pypi.org/project/fixproof/)). Image verification is
 > exercised weekly against real public images (see [Live demo](#live-demo-a-real-run)).
 > Kubernetes workloads are checked in CI on real nodes with all three common container runtimes:
 > kind (containerd), with the six SUCCESS TEST workloads, real certbot releases and every edge
@@ -96,8 +96,8 @@ flowchart TD
 
 Both tools read the image straight from the registry by digest (no Docker daemon needed, nothing
 is run). fixproof checks that the digest the tools scanned is the one you asked for. A
-multi-platform image is checked on each of its Linux platforms ([details](#multi-platform-images);
-not in 0.1.0.post1).
+multi-platform image is checked on each of its Linux platforms
+([details](#multi-platform-images)).
 
 ```mermaid
 sequenceDiagram
@@ -182,8 +182,8 @@ flowchart LR
 
 ## Live demo: a real run
 
-This is an unedited run from 2026-10-04, with fixproof 0.1.0 installed from PyPI, against three
-public images that fixproof did not build.
+This is an unedited run from 2026-10-05 of fixproof 0.2.0 (built from its release commit), against
+three public images that fixproof did not build.
 
 **The question:** is [CVE-2023-32681](https://github.com/advisories/GHSA-j8r2-6x86-q33q) (Python
 `requests` leaks `Proxy-Authorization` headers; affects `>= 2.3.0, < 2.31.0`, fixed in `2.31.0`)
@@ -220,19 +220,28 @@ images:
   - docker.io/certbot/certbot@sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20  # v5.8.0
 ```
 
-The run (Syft 1.54.0, Grype 0.119.0, Grype DB v6.1.10 built that morning, no registry
-credentials; 100 seconds):
+The run (Syft 1.54.0, Grype 0.119.0, crane 0.22.1, Grype DB v6.1.10 built that morning, no
+registry credentials; 193 seconds for nine platform checks):
 
 ```console
 $ fixproof verify --cve CVE-2023-32681 --fix fix.yaml --scope scope.yaml \
     --out evidence --author "Example VM team <vm@example.com>"
 still_affected  docker.io/certbot/certbot@sha256:92092d214a4eb75d049720d04f7acc50b40ea226d77736bce6a6bf43981b6e86
-                both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.28.2 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.28.2 at /usr/local/lib/python3.10/site-packages/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0).
+                3 platforms checked: linux/amd64 still_affected, linux/arm/v6 still_affected, linux/arm64 still_affected.
+                linux/amd64: both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.28.2 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.28.2 at /usr/local/lib/python3.10/site-packages/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0).
+                linux/arm/v6: both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.28.2 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.28.2 at /usr/local/lib/python3.10/site-packages/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0).
+                linux/arm64: both methods find the vulnerable component. grype: CVE-2023-32681: pkg:pypi/requests@2.28.2 matches GHSA-j8r2-6x86-q33q. sbom_version: requests 2.28.2 at /usr/local/lib/python3.10/site-packages/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0).
 fixed           docker.io/certbot/certbot@sha256:68e0f51ce9037d3b022d446772277beb1e9c0fe801e75fbf87db105ab165ad54
-                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 247 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.10/site-packages/requests-2.31.0.dist-info/METADATA is fixed.
+                3 platforms checked: linux/amd64 fixed, linux/arm/v6 fixed, linux/arm64 fixed.
+                linux/amd64: both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 247 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.10/site-packages/requests-2.31.0.dist-info/METADATA is fixed.
+                linux/arm/v6: both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 247 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.10/site-packages/requests-2.31.0.dist-info/METADATA is fixed.
+                linux/arm64: both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 247 matches. sbom_version: requests 2.31.0 at /usr/local/lib/python3.10/site-packages/requests-2.31.0.dist-info/METADATA is fixed.
 fixed           docker.io/certbot/certbot@sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20
-                both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 33 matches. sbom_version: requests 2.34.2 at /usr/local/lib/python3.14/site-packages/requests-2.34.2.dist-info/METADATA is fixed.
-KEV: CVE-2023-32681 is not in the CISA KEV catalogue (feed 2026.10.02, released 2026-10-02T15:19:38.2945Z)
+                3 platforms checked: linux/amd64 fixed, linux/arm/v6 fixed, linux/arm64 fixed.
+                linux/amd64: both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 33 matches. sbom_version: requests 2.34.2 at /usr/local/lib/python3.14/site-packages/requests-2.34.2.dist-info/METADATA is fixed.
+                linux/arm/v6: both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 33 matches. sbom_version: requests 2.34.2 at /usr/local/lib/python3.14/site-packages/requests-2.34.2.dist-info/METADATA is fixed.
+                linux/arm64: both methods agree the vulnerable component is gone. grype: no match for CVE-2023-32681 among 33 matches. sbom_version: requests 2.34.2 at /usr/local/lib/python3.14/site-packages/requests-2.34.2.dist-info/METADATA is fixed.
+KEV: CVE-2023-32681 is not in the CISA KEV catalogue (feed 2026.10.04, released 2026-10-04T18:52:56.0635Z)
 2 fixed, 1 still_affected, 0 unknown; evidence in evidence
 $ echo $?
 1
@@ -240,6 +249,9 @@ $ echo $?
 
 All three verdicts match the expected answers. Note what the output shows:
 
+- Each Certbot image is an index of three platforms (`linux/amd64`, `linux/arm/v6`,
+  `linux/arm64`); each was checked through its own manifest and got its own line, and the image's
+  verdict comes from all three.
 - Grype reports the PyPI match under its GitHub advisory id (`GHSA-j8r2-…`); fixproof follows the
   advisory's related ids to the CVE, so the match is not missed.
 - The SBOM check names the exact file the version came from.
@@ -255,12 +267,24 @@ evidence/bundle.json
 evidence/cyclonedx.json
 evidence/manifest.json
 evidence/openvex.json
-evidence/raw/001-grype.json
-evidence/raw/001-sbom_version.json
-evidence/raw/002-grype.json
-evidence/raw/002-sbom_version.json
-evidence/raw/003-grype.json
-evidence/raw/003-sbom_version.json
+evidence/raw/001-linux-amd64-grype.json
+evidence/raw/001-linux-amd64-sbom_version.json
+evidence/raw/001-linux-arm-v6-grype.json
+evidence/raw/001-linux-arm-v6-sbom_version.json
+evidence/raw/001-linux-arm64-grype.json
+evidence/raw/001-linux-arm64-sbom_version.json
+evidence/raw/002-linux-amd64-grype.json
+evidence/raw/002-linux-amd64-sbom_version.json
+evidence/raw/002-linux-arm-v6-grype.json
+evidence/raw/002-linux-arm-v6-sbom_version.json
+evidence/raw/002-linux-arm64-grype.json
+evidence/raw/002-linux-arm64-sbom_version.json
+evidence/raw/003-linux-amd64-grype.json
+evidence/raw/003-linux-amd64-sbom_version.json
+evidence/raw/003-linux-arm-v6-grype.json
+evidence/raw/003-linux-arm-v6-sbom_version.json
+evidence/raw/003-linux-arm64-grype.json
+evidence/raw/003-linux-arm64-sbom_version.json
 evidence/report.html
 ```
 
@@ -279,7 +303,7 @@ The VEX statement for the still-affected image (from `openvex.json`, long notes 
     }
   ],
   "status": "affected",
-  "status_notes": "both methods find the vulnerable component. grype: … sbom_version: requests 2.28.2 at …/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0).",
+  "status_notes": "3 platforms checked: linux/amd64 still_affected, linux/arm/v6 still_affected, linux/arm64 still_affected. linux/amd64: both methods find the vulnerable component. grype: … sbom_version: requests 2.28.2 at …/requests-2.28.2.dist-info/METADATA is below the fix (2.31.0). linux/arm/v6: … linux/arm64: …",
   "vulnerability": { "name": "CVE-2023-32681" }
 }
 ```
@@ -290,12 +314,12 @@ be judged later:
 ```json
 "tools": [
   { "name": "grype", "version": "0.119.0",
-    "db": { "schemaVersion": "v6.1.10", "built": "2026-10-04T08:11:47Z", "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_…tar.zst?checksum=sha256%3A2bd874…" } },
+    "db": { "schemaVersion": "v6.1.10", "built": "2026-10-05T06:45:38Z", "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_…tar.zst?checksum=sha256%3A974598…" } },
   { "name": "syft", "version": "1.54.0", "schema": "16.1.11" }
 ],
 "kev": { "status": "not_listed", "entry": null, "reason": null,
-  "feed": { "catalog_version": "2026.10.02", "count": 1733, "date_released": "2026-10-02T15:19:38.2945Z",
-            "retrieved": "2026-10-04T13:13:50Z", "sha256": "d2c8c6…", "url": "https://www.cisa.gov/…/known_exploited_vulnerabilities.json" } }
+  "feed": { "catalog_version": "2026.10.04", "count": 1734, "date_released": "2026-10-04T18:52:56.0635Z",
+            "retrieved": "2026-10-05T18:48:42Z", "sha256": "f51fed…", "url": "https://www.cisa.gov/…/known_exploited_vulnerabilities.json" } }
 ```
 
 Anyone holding the bundle can check that nothing was changed after the run:
@@ -360,10 +384,10 @@ gets `403 Forbidden` outside its namespaces.
 ## Install
 
 **Requirements:** Python 3.12+, [uv](https://docs.astral.sh/uv/) or
-[pipx](https://pipx.pypa.io/), network access to your registries, and Syft 1.54.0 and Grype
-0.119.0 on `PATH` (and crane 0.22.1, which lists an image's platforms; not needed by 0.1.0.post1). fixproof itself
-is pure Python; the scanner install script below fetches the Linux x86-64 builds (on other
-platforms, install those versions from their release pages).
+[pipx](https://pipx.pypa.io/), network access to your registries, and Syft 1.54.0, Grype
+0.119.0 and crane 0.22.1 (which lists an image's platforms) on `PATH`. fixproof itself is pure
+Python; the scanner install script below fetches the Linux x86-64 builds (on other platforms,
+install those versions from their release pages).
 
 **1. Install fixproof** from [PyPI](https://pypi.org/project/fixproof/), in an environment of its
 own:
@@ -371,14 +395,14 @@ own:
 ```console
 $ uv tool install fixproof        # or: pipx install fixproof
 $ fixproof --version
-fixproof 0.1.0.post1
+fixproof 0.2.0
 ```
 
 **2. Install the pinned scanners** (Syft 1.54.0 and Grype 0.119.0; each download is checked
 against its SHA-256 before it is unpacked). Download the script, read it, then run it:
 
 ```console
-$ curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0.post1/scripts/install_scanners.sh
+$ curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.2.0/scripts/install_scanners.sh
 $ less install_scanners.sh
 $ bash install_scanners.sh "$HOME/.local/bin"      # any directory on your PATH
 ```
@@ -485,8 +509,6 @@ to catch mistakes while you type.
 
 ### Multi-platform images
 
-*(Not in 0.1.0.post1.)*
-
 Many images are an index of several platforms (`linux/amd64`, `linux/arm64`, …), and each node or
 laptop pulls the one for its own CPU. fixproof reads the image's manifest with
 [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane), then checks every
@@ -557,8 +579,8 @@ through cri-dockerd (for example minikube with `--container-runtime=docker`) rep
 `docker-pullable://` and Docker's short name, which fixproof expands with Docker's own rule
 (`python` → `docker.io/library/python`, `certbot/certbot` → `docker.io/certbot/certbot`). From
 a minikube node with Docker Engine 29.7.2 (CI run
-[37123230999](https://github.com/Govardhan527/fixproof/actions/runs/37123230999); reasons
-abridged with `…`):
+[37123230999](https://github.com/Govardhan527/fixproof/actions/runs/37123230999), before 0.2.0
+checked every platform of an index; reasons abridged with `…`):
 
 ```text
 still_affected  fixproof-docker/fixproof-docker/certbot-by-tag-7c758fd4f-59xwv/app  Deployment/certbot-by-tag
@@ -588,7 +610,7 @@ unknown         fixproof-crio/fixproof-crio/local-only-64d94bdb8c-svc4h/app  Dep
                 registry not in scope: localhost; fixproof did not read the image
 ```
 
-**Managed clusters and cloud registries** *(the sign-in message below is not in 0.1.0.post1)*.
+**Managed clusters and cloud registries.**
 Managed clusters sign in through an exec plugin in the kubeconfig: `aws eks update-kubeconfig`
 writes one that runs `aws eks get-token`, `gcloud container clusters get-credentials` one that
 runs `gke-gcloud-auth-plugin`, and AKS clusters with Microsoft Entra sign-in use the
@@ -713,8 +735,8 @@ GitHub Actions:
 ```yaml
 - name: Install fixproof and the scanners
   run: |
-    pipx install fixproof==0.1.0.post1   # GitHub's Ubuntu runners have pipx and Python 3.12
-    curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.1.0.post1/scripts/install_scanners.sh
+    pipx install fixproof==0.2.0   # GitHub's Ubuntu runners have pipx and Python 3.12
+    curl -sSfLO https://raw.githubusercontent.com/Govardhan527/fixproof/v0.2.0/scripts/install_scanners.sh
     bash install_scanners.sh "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
     grype db update
 - name: Prove the fix
@@ -758,8 +780,8 @@ daemon), `docker-archive:PATH` (`docker save`), `oci-archive:PATH`, or a registr
 by digest (optionally written `registry:…`) from a registry in `closed.yaml`. Each closed CVE
 gets both checks and the verdict rule, as in `verify`, and the output names the image ID and
 manifest digest that were read. A multi-platform registry image is checked on each Linux
-platform, or on those `closed.yaml` 1.1.0 lists in `platforms` ([details](#multi-platform-images);
-not in 0.1.0.post1). If the two checks read different images (a tag moved between
+platform, or on those `closed.yaml` 1.1.0 lists in `platforms`
+([details](#multi-platform-images)). If the two checks read different images (a tag moved between
 them, say), nothing is proven and every closed CVE is `unknown`.
 
 On a workstation, the same check:
@@ -774,7 +796,7 @@ $ fixproof gate --closed closed.yaml --image docker:app:ci
 | `--closed` | Path to `closed.yaml` |
 | `--image` | The built image: `docker:NAME[:TAG]`, `docker-archive:PATH`, `oci-archive:PATH`, or a registry image pinned by digest |
 | `--json` | Print the result as JSON instead of text |
-| `--out` | A **new or empty** directory to keep the decision in (*not in 0.1.0.post1*): `gate.json` (the result, the fixproof version, start and end times, the SHA-256 of `closed.yaml`), each tool's sanitised output under `raw/`, and `manifest.json` with the SHA-256 of every file |
+| `--out` | A **new or empty** directory to keep the decision in: `gate.json` (the result, the fixproof version, start and end times, the SHA-256 of `closed.yaml`), each tool's sanitised output under `raw/`, and `manifest.json` with the SHA-256 of every file |
 
 | Exit | Meaning |
 |---|---|
@@ -829,9 +851,10 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 ## Limitations
 
 - **Linux platforms only.** A multi-platform image's Linux platforms are checked; others (for
-  example `windows/amd64`) are named as not checked. 0.1.0.post1 scanned only the host's platform
-  (see [Multi-platform images](#multi-platform-images)). A multi-platform OCI archive given to
-  `gate` is checked for the host's platform only, the one Syft and Grype pick.
+  example `windows/amd64`) are named as not checked (see
+  [Multi-platform images](#multi-platform-images)); before 0.2.0 only the host's platform was
+  scanned. A multi-platform OCI archive given to `gate` is checked for the host's platform only,
+  the one Syft and Grype pick.
 - **Docker Hub limits.** Docker Hub counts a pull of a multi-architecture image once per
   architecture, so checking every platform uses more of its pull limit: for a large scope, list
   `platforms` and sign in to Docker Hub.
@@ -867,7 +890,7 @@ A version fixproof cannot parse or compare makes the SBOM check fail, so the ver
 | M4 | Kubernetes: map running pods to image digests on a kind cluster, verdict per workload; also Docker Engine and CRI-O nodes, and several images scanned at once (`--jobs`) | done |
 | M5 | `fixproof gate` for CI, CISA KEV enrichment, HTML report, CycloneDX VEX | done |
 | M6 | Packaging, docs, end-to-end demo, hardening; 0.1.0 released on PyPI and GitHub | done |
-| M7 | Every platform of a multi-platform image; managed-cluster sign-in (exec plugins, credential helpers) proven on kind; an evidence bundle for `gate` | built, not in 0.1.0.post1 |
+| M7 | Every platform of a multi-platform image; managed-cluster sign-in (exec plugins, credential helpers) proven on kind; an evidence bundle for `gate`; 0.2.0 | done |
 
 ---
 

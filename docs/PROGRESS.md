@@ -339,14 +339,21 @@ cloud accounts, and the other parked items.
       one-image rule in `verify`) for the owner to confirm. Two full runs on the work branch
       `m7` green (37216834030, 37217609032); `main` = 93ab3b5, CI 37218502229 green.
       **M7 closed 2026-10-06** (owner: "Approved", to confirming Amendment 1, closing M7 and
-      releasing it), released as 0.2.0.
+      releasing it). **Released as 0.2.0:** a local build of the release commit checked the
+      README's three Certbot images on all nine platforms and `gate --out` on a real image; branch
+      runs 37360187115 and 37361771732 green; `main` = f99d265, CI 37363401625 green on its third
+      attempt (GitHub's "Incident with Actions" left jobs without a runner on the first two; no
+      step had run); tag `v0.2.0`, release run 37379826698, GitHub release "fixproof 0.2.0"
+      (Latest); `scripts/publish.sh v0.2.0` uploaded both files, PyPI's sha256 for each equals
+      `SHA256SUMS`, the project page shows the 0.2.0 README, and `pip install fixproof==0.2.0` in a
+      fresh environment checked real Certbot images on linux/arm64 as expected.
 
 ## Last session (resume here)
 
-- **Date:** 2026-10-04. **Current milestone:** M7, every item done (the owner's approval is
-  recorded in the M7 section; it does not cover releases or uploads).
-- **Released:** 0.1.0 and 0.1.0.post1 (Latest) on PyPI and GitHub. M7 is on `main`, not released.
-- **Waiting on the owner:** confirm ADR-0014 Amendment 1 (crane as a new pinned tool); close M7;
-  decide whether to release this work.
-- **Next steps:** none planned until the owner decides; the remaining candidates are in
-  `docs/PARKED.md`.
+- **Date:** 2026-10-06. **Current milestone:** none; M0 to M7 are closed.
+- **Released:** 0.2.0 (Latest) on https://pypi.org/project/fixproof/ and GitHub: every platform
+  of a multi-platform image checked, sign-in through exec plugins and credential helpers, and
+  `gate --out`. Earlier releases 0.1.0 and 0.1.0.post1.
+- **Next steps:** none planned; the owner picks the next work. Candidates in `docs/PARKED.md`
+  (real EKS, GKE and AKS runs need a cloud account; a KEV cache; more `gate` sources; the plan's
+  V2 items).
